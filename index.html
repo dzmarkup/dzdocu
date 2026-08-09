@@ -1086,31 +1086,31 @@ class Component extends DCLogic {
   buildLabel46AddressHtml(addr) {
     const dims = this.getDims();
     const scale = Math.max(0.28, Math.min(1, dims.w / 6, dims.h / 4)) * 0.7 * 0.85;
-    const lineSize = Math.round(36.94 * scale), postalSize = Math.round(82.2 * scale);
+    const lineSize = Math.round(40 * scale), postalSize = Math.round(82.2 * scale);
     const lineMB = (0.06 * scale).toFixed(3) + 'in';
     const bottomMT = (0.12 * 0.05 * scale).toFixed(3) + 'in';
     const countryMT = (0.12 * 0.05 * scale * 1.5).toFixed(3) + 'in';
     const countryMB = (3 * 0.4).toFixed(2) + 'px';
     const shiftDownIn = (dims.h * 0.11).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;">';
+    let html = '<div style="text-transform:uppercase;margin-left:0.5in;">';
     const returnAddr = (this.state.returnAddressRaw || '').trim();
     if (returnAddr) {
-      const retSize = Math.round(12 * scale);
-      html = '<div style="position:absolute;top:0.15in;left:0.15in;font-size:' + retSize + 'pt;font-weight:400;line-height:1.3;color:#1d1f20;">' + this.escapeHtml(returnAddr).replace(/\n/g, '<br>') + '</div>' + html;
+      const retSize = Math.round(16 * scale);
+      html = '<div style="position:absolute;top:0.08in;left:0.1in;font-size:' + retSize + 'pt;font-weight:400;line-height:1.25;color:#1d1f20;">' + this.escapeHtml(returnAddr).replace(/\n/g, '<br>') + '</div>' + html;
     }
     html += '<div style="display:flex;flex-direction:column;justify-content:flex-end;min-height:' + shiftDownIn + ';">';
-    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.name) + '</div>';
-    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.street) + '</div>';
+    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
+    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
+    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
     if (addr.city || addr.province) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;white-space:nowrap;">';
-      html += '<span>' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="margin-left:auto;">' + this.escapeHtml(addr.province) + '</span>';
+      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
+      html += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
+      html += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
       html += '</div>';
     }
     html += '</div>';
     if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;line-height:1;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.postal) + '</div>';
-    if (addr.country) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;text-align:left;margin-top:calc(' + countryMT + ' + 10px);margin-bottom:' + countryMB + ';">' + this.escapeHtml(addr.country) + '</div>';
+    if (addr.country) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;text-align:left;margin-top:calc(' + countryMT + ' + 10px);margin-bottom:0.12in;">' + this.escapeHtml(addr.country) + '</div>';
     html += '</div>';
     return html;
   }
@@ -1122,14 +1122,14 @@ class Component extends DCLogic {
     const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
     const lineSize = Math.round(54.7 * scale), postalSize = Math.round(98.6 * scale);
     const lineMB = (0.072 * scale).toFixed(3) + 'in', bottomMT = (0.144 * 0.6 * scale).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;">';
-    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.name) + '</div>';
-    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.street) + '</div>';
+    let html = '<div style="text-transform:uppercase;margin-left:0.5in;">';
+    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
+    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
+    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
     if (addr.city || addr.province) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;white-space:nowrap;">';
-      html += '<span>' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="margin-left:auto;">' + this.escapeHtml(addr.province) + '</span>';
+      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
+      html += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
+      html += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
       html += '</div>';
     }
     if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.postal) + '</div>';
@@ -2138,7 +2138,6 @@ class Component extends DCLogic {
      entry screen, where the size buttons are. */
   onDropButtonClick() {
     this.setState(s => ({
-      dropStep: 'choose',
       dropResumeDoc: s.docCreated,
       docCreated: false,
       setupStep: 'size',
@@ -2491,6 +2490,7 @@ class Component extends DCLogic {
           pageHeaderTitles: {},
           pageEmptyMap: {},
           pageAddresses: {},
+          ...(isLabelDoc ? { docCreated: false, setupStep: 'labelAddress', labelAddressRaw: '' } : {}),
         }, () => { this.handleInput(id); this.saveDebounced(); });
       },
 
