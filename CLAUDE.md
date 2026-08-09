@@ -1,14 +1,15 @@
 # DZDocu — working notes for Claude
 
-This repo serves **dzdocu.com**. It is two files: `CNAME` and `index.html`.
-`index.html` is the whole application. Work here and nowhere else.
+This repo serves **dzdocu.com**: `CNAME`, `index.html`, and the `assets/` and
+`fonts/` folders it loads from. `index.html` is the application. Work here and
+nowhere else.
 
 ## There is an older copy of this app elsewhere — ignore it
 
-The same bundled app also sits at `bluejetty.ca/docu/index.html`, in the
-unrelated `bluejetty/bluejetty` repo. That was the test bed before DOCU got its
-own domain. **This repo is the live one.** If the two ever differ, this one
-wins; do not try to reconcile them, and do not go looking for that repo.
+The same app also sits at `bluejetty.ca/docu/index.html`, in the unrelated
+`bluejetty/bluejetty` repo. That was the test bed before DOCU got its own
+domain. **This repo is the live one.** If the two ever differ, this one wins;
+do not try to reconcile them, and do not go looking for that repo.
 
 ## Standing preferences
 
@@ -20,24 +21,25 @@ wins; do not try to reconcile them, and do not go looking for that repo.
   files at their real paths, and a `git bundle` of any unpushed commits.
 - Push to a branch and let the user merge the PR. Do not push to `main`.
 
-## The app is one bundled file — not hand-editable as it stands
+## The app is plain, hand-editable HTML
 
-`index.html` is ~870 KB and self-contained. Nothing loads from disk beside it.
-Structure:
+`index.html` is ~157 KB of ordinary indented markup. **Edit it directly.** It
+was once a single ~870 KB bundle with the assets gzip+base64'd into a JSON
+manifest and the document as one JSON-escaped string; that is gone, along with
+the `json.loads` / re-serialise / `</` escaping ritual it needed. If you
+find notes describing that, they are out of date.
 
-- **Line 378** — JSON manifest of assets (gzip + base64): fonts, React, pdf.js,
-  the docx reader, the `doc-page` web component.
-- **Line 390** — the whole application document as one JSON-escaped string.
+Layout:
 
-To change it: parse line 390 with `json.loads`, edit the extracted HTML, then
-re-serialise. Escaping detail that matters — the original escapes `</` as
-`</`, so apply `.replace('</', '<\\u002F')` after `json.dumps`, and assert
-the round-trip before writing.
+- `assets/*.js` and `fonts/*.woff2` load through ordinary `<script src>` and
+  `@font-face` — React and react-dom among them, as real script tags. Nothing
+  is fetched from `unpkg.com` any more.
+- The application logic is one `<script type="text/x-dc">` block near the end,
+  a single `class Component extends DCLogic`. dc-runtime (`assets/support.js`)
+  evaluates it.
+- The `{{ … }}` bindings in the markup are filled by `renderVals()`.
 
-**Do not strip React or react-dom from the manifest.** They look unreferenced
-because no `<script>` tag names them, but the dc-runtime fetches React from
-`unpkg.com` at boot and the bundler serves the inlined copies in its place.
-Removing them makes the app a blank page with no internet. This was tried.
+Tuning constants live at the top of that script block, above the class.
 
 ## Verify print changes for real
 
@@ -75,17 +77,45 @@ by position — "+ Page" can insert a repeated or blank label mid-run, and a
 positional list makes the return-address toggle rewrite later pages with the
 wrong address. The map is persisted with the document.
 
+## The 4x6 label address block
+
+Sizing and placement are four constants above the class — retune there, do not
+unpick the markup:
+
+- `LABEL46_BODY_LEFT_IN` / `LABEL46_BODY_RIGHT_IN` — the box the delivery
+  address lives in, in inches from the label's left edge. The province (`ON`)
+  is flush against the right edge, so **widening the box is what moves the
+  province right without disturbing the left alignment.**
+- `LABEL46_BODY_BOTTOM_IN` — bottom inset, deliberately tighter than the
+  label's own padding. Postal + country are pinned to the floor of the box with
+  `margin-top:auto`; everything above them gets the height that frees up.
+- `LABEL46_BODY_BOOST` — type scale against the sizes the label shipped with.
+
+Every size inside the block is in `em` against the wrapper, so `fitLabelBody`
+rescales the whole thing by setting one font-size. It runs after the markup is
+in the DOM (it needs real measurements) and steps down 3% at a time until the
+content stops overflowing, with a floor at 45% of base.
+
+**`fitLabelBody` only runs from `setPageAddresses`** — when an address is
+entered or re-rendered. Typing directly into a label does not re-fit it;
+`handleInput` does not call it.
+
 ## Known and unfinished
 
-- **~174 KB of Barlow fonts never render.** The design-system stylesheet sets
-  Barlow on body/buttons/inputs, then the document overrides it all with
+- **~85 KB of the bundled fonts never render.** The design-system stylesheet
+  sets Barlow on body/buttons/inputs, then the document overrides it all with
   `font-family:'Arial Narrow', Arial, sans-serif !important`. Measured live: of
-  15 bundled woff2 files the browser loads exactly one, Barlow Condensed 600,
-  for the "Aa" tab. Removing plain Barlow needs a before/after screenshot diff
-  across the setup screen, font picker and document first.
-- **pdf.js (116 KB) + mammoth (182 KB) load on every visit** but are only used
-  when a PDF or DOCX is dropped. Lazy-loading them would roughly halve the
-  initial download. Largest single win available.
+  the 6 woff2 files the browser fetches exactly one,
+  `barlow-condensed-600-latin.woff2` (22 KB), for the "Aa" tab. The plain
+  Barlow faces are already gone; the leftovers are the 400 weight and the
+  latin-ext/vietnamese subsets. Dropping them needs a before/after screenshot
+  diff across the setup screen, font picker and document first.
+- **`Arial Narrow` is not installed on Linux**, so the labels fall back to
+  Arial there — wider than on a machine that has it. Screenshots taken on this
+  box match what a Linux user sees, not a Windows/Mac one.
+- **pdf.js (313 KB) + mammoth (626 KB) load on every visit** but are only used
+  when a PDF or DOCX is dropped. Together they dwarf everything else in
+  `assets/`. Lazy-loading them is the largest single win available.
 - **~97 lines of dead code**: the marquee-zoom subsystem (59) whose button was
   removed from the markup, so `selecting` can never become true; the resume
   prompt (21); and `applyExecCommand` / `determineSizeOrientation` (17), never
