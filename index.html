@@ -989,18 +989,19 @@ class Component extends DCLogic {
     try { raw = localStorage.getItem(bucketKey); } catch (e) { raw = null; }
     let data = null;
     if (raw) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
-    if (data && Array.isArray(data.pageIds) && data.pageIds.length) {
-      this.pendingSavedData = data;
-      this.pendingResumeBucketKey = bucketKey;
-      this.pendingResumeNextStep = nextStep;
-      this.pendingResumeSizeValue = sizeValue;
-      this.onResumeContinue();
-    } else {
-      const patch = { setupStep: nextStep };
-      if (sizeValue) patch.defaultSize = sizeValue;
-      if (nextStep === 'labelAddress') patch.labelAddressRaw = '';
-      this.setState(patch);
-    }
+    // A saved document is held, not opened. Reopening it here skipped the
+    // orientation question entirely and dropped the user straight into
+    // whatever was saved last — which is what put a dozen pages on screen
+    // when they expected a new one. It is offered once the orientation is
+    // chosen, and only if it matches.
+    this.pendingSavedData = (data && Array.isArray(data.pageIds) && data.pageIds.length) ? data : null;
+    this.pendingResumeBucketKey = bucketKey;
+    this.pendingResumeNextStep = nextStep;
+    this.pendingResumeSizeValue = sizeValue;
+    const patch = { setupStep: nextStep };
+    if (sizeValue) patch.defaultSize = sizeValue;
+    if (nextStep === 'labelAddress') patch.labelAddressRaw = '';
+    this.setState(patch);
   }
 
   onSetupPickLetter() { this.checkSavedForType(this.getStorageKey('letter'), 'orientation', 'letter'); }
@@ -1727,8 +1728,19 @@ class Component extends DCLogic {
   onSetupPickLabel46() { this.finishLabelSizePick('label46'); }
   onSetupPickLabel24() { this.finishLabelSizePick('label24'); }
   onSetupPickLabel1x2() { this.finishLabelSizePick('label1x2'); }
-  onSetupPickPortrait() { this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
-  onSetupPickLandscape() { this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
+  // Reopen the held document only if it is in the orientation just asked for.
+  // A dropped file always wants a new document, so it wins over a saved one.
+  resumeIfSavedMatches(orientation) {
+    const data = this.pendingSavedData;
+    this.pendingSavedData = null;
+    if (!data || (this.pendingDropFiles && this.pendingDropFiles.length)) return false;
+    if ((data.defaultOrientation || data.orientation || 'portrait') !== orientation) return false;
+    this.applySavedData(data);
+    return true;
+  }
+
+  onSetupPickPortrait() { if (this.resumeIfSavedMatches('portrait')) return; this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
+  onSetupPickLandscape() { if (this.resumeIfSavedMatches('landscape')) return; this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
   }
 
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
