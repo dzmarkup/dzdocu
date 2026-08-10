@@ -1876,16 +1876,30 @@ class Component extends DCLogic {
     const idx = ids.indexOf(this.focusedPageId);
     if (idx < 0) return;
     const offset = ids.length ? 1 : 0;
-    if (idx < offset) return;
+    const narrow = window.innerWidth < 900;
+    // A page with no partner beside it — page one, which leads the spread
+    // alone, and a last page with nothing opposite — has nothing to shrink
+    // next to it, which is how every other page is made to stand forward. It
+    // is scaled up instead, by about what a focused page gains over its
+    // partner.
+    const popSolo = (soloId) => {
+      const soloEl = this.sectionEls[soloId];
+      if (!soloEl) return;
+      soloEl.style.transform = 'scale(' + (narrow ? 1.35 : 1.15) + ')';
+      soloEl.style.opacity = '1';
+      soloEl.style.zIndex = '2';
+    };
+    if (idx < offset) { popSolo(this.focusedPageId); return; }
     const pairStart = offset + Math.floor((idx - offset) / 2) * 2;
     const leftId = ids[pairStart], rightId = ids[pairStart + 1];
-    if (!leftId || !rightId) return;
+    if (!leftId) return;
+    if (!rightId) { popSolo(leftId); return; }
     const leftEl = this.sectionEls[leftId], rightEl = this.sectionEls[rightId];
+    console.log('PAIRDBG idx=' + idx + ' pairStart=' + pairStart + ' leftId=' + leftId + ' rightId=' + rightId + ' haveLeft=' + !!leftEl + ' haveRight=' + !!rightEl + ' keys=' + Object.keys(this.sectionEls).join(','));
     if (!leftEl || !rightEl) return;
     const dims = this.getDims();
     const shift = ((dims.w + 0.3) / 2).toFixed(3) + 'in';
     const focusIsLeft = this.focusedPageId === leftId;
-    const narrow = window.innerWidth < 900;
     const shiftAmt = narrow ? ((dims.w + 0.3) * 0.15).toFixed(3) + 'in' : shift;
     const tx = 'translateX(' + (focusIsLeft ? shiftAmt : '-' + shiftAmt) + ')';
     const focusScale = narrow ? 1.35 : 1;
