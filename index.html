@@ -1750,6 +1750,14 @@ class Component extends DCLogic {
     if (isMobile && !this.isLabelSize()) {
       return Math.min(availW / pxW, availH / (pxH * 0.75));
     }
+    // A landscape tabloid is the one page wide enough that fitting its width
+    // still leaves it taller than the window. The others deliberately show at
+    // a readable size and scroll — this one is shown whole.
+    if (this.state.defaultSize === 'tabloid' && this.state.defaultOrientation === 'landscape') {
+      // The desk pads the sheet by 48px top and bottom inside the scaled
+      // wrapper, which availH does not know about.
+      return Math.min(availW / pxW, (availH - 50) / pxH, 1);
+    }
     return Math.min(availW / pxW, availH / (pxH * (isLetterPortrait ? 0.5 : 0.8)), 1);
   }
 
