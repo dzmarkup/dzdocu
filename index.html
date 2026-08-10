@@ -74,6 +74,24 @@
   --color-accent-2: #728fab;
   --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
 
+  /* Setup screens — the dark glass look shared by every step after the first
+     (orientation, label size, paste-raw-address). All derived from
+     --color-accent, so retuning that one token re-tints every step at once
+     rather than needing per-step colors chased down individually.
+     Dark-top-to-lighter-bottom gradient, tinted increasingly toward the
+     accent as it goes down: */
+  --setup-bg-1: color-mix(in srgb, var(--color-accent) 6%, #030712);
+  --setup-bg-2: color-mix(in srgb, var(--color-accent) 22%, #04101d);
+  --setup-bg-3: color-mix(in srgb, var(--color-accent) 40%, #051a2e);
+  --setup-bg-4: color-mix(in srgb, var(--color-accent) 58%, #062544);
+  /* The glass panel itself — a dark, translucent fill with a bright,
+     near-white edge of the accent hue, echoing the DROP-ZONE button. */
+  --setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%);
+  --setup-panel-border: color-mix(in srgb, var(--color-accent) 55%, white 45%);
+  --setup-glow: color-mix(in srgb, var(--color-accent) 70%, #5ac8ff 30%);
+  --setup-text: color-mix(in srgb, var(--color-accent) 15%, white 85%);
+  --setup-text-dim: color-mix(in srgb, var(--color-accent) 20%, #b8d4ea 80%);
+
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
      same step of any role matches the others in visual value. */
   --color-neutral-100: #f5f5f8;
@@ -223,6 +241,10 @@ figcaption {
 .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
 .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+/* The classy treatment shared by every primary button on the setup screens —
+   8.5x11 / 11x17 / LABEL wore it first; Portrait/Landscape, the label sizes
+   and SKIP/Enter now match it rather than repeating the same inline style. */
+.btn-classy { border: 2px solid #000000; box-shadow: 3px 3px 6px 0 rgba(0,0,0,0.7), inset 2px 2px 5px 0 rgba(0,0,0,0.6); }
 .btn-icon { width: 36px; height: 36px; padding: 0; }
 .btn-block { width: 100%; margin-top: var(--space-2); }
 
@@ -525,8 +547,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 <sc-if value="{{ setupOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" sc-camel-on-click="{{ onOverlayBackgroundClick }}" style="position:fixed;inset:0;background:{{ setupOverlayBg }};z-index:50;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+    <!-- The dark-to-accent gradient behind every setup step, not just the
+         first — so orientation, label-size and paste-address share the
+         entry screen's ground. Only the falling text stays scoped to the
+         entry step below; it would look like noise anywhere the user is
+         mid-task rather than arriving. -->
+    <div style="position:fixed;left:0;top:0;width:100vw;height:100vh;background:linear-gradient(to bottom, var(--setup-bg-1) 0%, var(--setup-bg-2) 35%, var(--setup-bg-3) 65%, var(--setup-bg-4) 100%);z-index:0;overflow:hidden;">
     <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
-    <div style="position:fixed;left:0;top:0;width:100vw;height:100vh;background:linear-gradient(to bottom, #030712 0%, #04101d 35%, #051a2e 65%, #062544 100%);z-index:0;overflow:hidden;">
   <div class="mtx-col" style="left:2.2%;font-size:13px;gap:38px;animation:mtx-fall 56.8s linear infinite;animation-delay:-26.9s;"><span>PDF</span><span style="opacity:0.72">TXT</span><span style="opacity:0.59">RTF</span><span style="opacity:0.46">LBL</span><span style="opacity:0.33">PDF</span><span style="opacity:0.20">RTF</span><span style="opacity:0.15">TXT</span></div>
   <div class="mtx-col" style="left:3.7%;font-size:11px;gap:30px;animation:mtx-fall 57.5s linear infinite;animation-delay:-52.7s;"><span>LBL</span><span style="opacity:0.72">RTF</span><span style="opacity:0.59">DOC</span><span style="opacity:0.46">LBL</span><span style="opacity:0.33">DOC</span></div>
   <div class="mtx-col" style="left:5.7%;font-size:10px;gap:22px;animation:mtx-fall 61.3s linear infinite;animation-delay:-10.6s;"><span>DOC</span><span style="opacity:0.72">RTF</span><span style="opacity:0.59">LBL</span><span style="opacity:0.46">RTF</span><span style="opacity:0.33">PDF</span></div>
@@ -602,63 +629,62 @@ textarea.input { min-height: 90px; resize: vertical; }
   <div class="mtx-streak" style="left:88.0%;animation-duration:51.2s;animation-delay:-32.4s;"></div>
   <div class="mtx-streak" style="left:91.5%;animation-duration:54.0s;animation-delay:-10.2s;"></div>
   <div style="position:absolute;left:0;right:0;bottom:0;height:35%;background:linear-gradient(to bottom, transparent 0%, rgba(20,140,255,0.08) 40%, rgba(60,180,255,0.22) 100%);"></div>
+    </sc-if>
 </div>
-</sc-if>
     <div sc-camel-on-click="{{ stopClickBubble }}" style="background:transparent;border-radius:var(--radius-sm,4px);padding:32px 20px;max-width:90vw;box-sizing:border-box;text-align:center;font-family:'Arial Narrow', Arial, sans-serif;position:relative;z-index:10;">
 
       <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
         <div style="position:absolute;left:50%;top:14px;width:340px;height:130px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
         <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
         <div style="background:transparent;border-radius:var(--radius-sm,4px);padding:20px 16px;display:grid;grid-template-columns:repeat(2, minmax(100px, 120px));gap:12px;justify-content:center;">
-          <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:120px;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);">8.5×11</button>
-          <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickTabloid }}" style="width:120px;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);">11×17</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:120px;">8.5×11</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickTabloid }}" style="width:120px;">11×17</button>
           <div></div>
-          <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLabel }}" style="width:120px;grid-column:1 / span 2;justify-self:center;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);">LABEL</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel }}" style="width:120px;grid-column:1 / span 2;justify-self:center;">LABEL</button>
         </div>
       </sc-if>
+      <!-- Every step below shares one glass panel: a translucent, dark-tinted
+           rectangle with a bright accent-toned edge, echoing the DROP-ZONE
+           button rather than the flat light-grey card these used to be. The
+           buttons inside keep the classy black-border-and-shadow treatment
+           8.5x11/11x17/LABEL already wear, via .btn-classy. -->
       <sc-if value="{{ setupStepIsLabelAddress }}" hint-placeholder-val="{{ false }}">
-        <div style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;">
-        <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:24px 32px;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackToSizeStep }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
         <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:flex-start;align-items:flex-start;">
           <div style="text-align:left;">
-            <div style="font-size:12.5px;margin-bottom:6px;color:#1d1f20;line-height:1.3;">RETURN ADDRESS</div>
-            <textarea value="{{ returnAddressValue }}" sc-camel-on-change="{{ onReturnAddressChange }}" placeholder="..." rows="6" style="width:135px;height:82px;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:12.2px;margin-bottom:16px;margin-left:-8px;resize:vertical;{{ returnAddressColorStyle }}"></textarea>
+            <div style="font-size:12.5px;margin-bottom:6px;color:var(--setup-text);line-height:1.3;">RETURN ADDRESS</div>
+            <textarea value="{{ returnAddressValue }}" sc-camel-on-change="{{ onReturnAddressChange }}" placeholder="..." rows="6" style="width:135px;height:82px;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Arial Narrow', Arial, sans-serif;font-size:12.2px;margin-bottom:16px;margin-left:-8px;resize:vertical;{{ returnAddressColorStyle }}"></textarea>
           </div>
           <div style="text-align:left;margin-left:-5px;max-width:100%;margin-top:-16px;">
-            <div style="font-size:20px;margin-top:0;margin-bottom:24px;color:#1d1f20;line-height:1.3;">PASTE RAW ADDRESS</div>
+            <div style="font-size:20px;margin-top:0;margin-bottom:24px;color:var(--setup-text);line-height:1.3;">PASTE RAW ADDRESS</div>
             <textarea value="{{ labelAddressValue }}" sc-camel-on-change="{{ onLabelAddressChange }}" placeholder="PASTE FIRST ADDRESS...
 
 FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE.
 
-MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;color:#1d1f20;"></textarea>
+MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;"></textarea>
             <div>
-              <button class="btn btn-primary" sc-camel-on-click="{{ onLabelAddressContinue }}" style="width:160px;{{ labelAddressBtnStyle }}">{{ labelAddressBtnLabel }}</button>
+              <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onLabelAddressContinue }}" style="width:160px;{{ labelAddressBtnStyle }}">{{ labelAddressBtnLabel }}</button>
             </div>
           </div>
         </div>
         </div>
-        </div>
       </sc-if>
       <sc-if value="{{ setupStepIsLabelSize }}" hint-placeholder-val="{{ false }}">
-        <div style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;">
-        <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:20px 16px;">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:20px 16px;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackToSizeStep }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-            <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLabel46 }}" style="width:120px;">4×6"</button>
-            <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLabel24 }}" style="width:120px;">2×4"</button>
-            <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLabel1x2 }}" style="width:130px;">1×2.625"</button>
+            <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel46 }}" style="width:120px;">4×6"</button>
+            <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel24 }}" style="width:120px;">2×4"</button>
+            <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel1x2 }}" style="width:130px;">1×2.625"</button>
           </div>
-        </div>
         </div>
       </sc-if>
       <sc-if value="{{ setupStepIsOrientation }}" hint-placeholder-val="{{ false }}">
-        <div style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;">
-        <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:20px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">2px;justify-content:center;"&gt;
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:20px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromOrientation }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
-          <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickPortrait }}" style="width:120px;order:{{ portraitOrder }};">Portrait</button>
-          <button class="btn btn-primary" sc-camel-on-click="{{ onSetupPickLandscape }}" style="width:120px;order:{{ landscapeOrder }};">Landscape</button>
-        </div>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickPortrait }}" style="width:120px;order:{{ portraitOrder }};">Portrait</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLandscape }}" style="width:120px;order:{{ landscapeOrder }};">Landscape</button>
         </div>
       </sc-if>
     </div>
@@ -3059,7 +3085,9 @@ class Component extends DCLogic {
       onResumeContinue: () => this.onResumeContinue(),
       onResumeStartNew: () => this.onResumeStartNew(),
       setupStepIsSize: this.state.setupStep === 'size',
-      setupOverlayBg: this.state.setupStep === 'size' ? 'transparent' : '#000000',
+      // The gradient div behind every step now paints the background, so the
+      // overlay itself stays transparent regardless of which step is showing.
+      setupOverlayBg: 'transparent',
       setupStepIsLabelAddress: this.state.setupStep === 'labelAddress',
       setupStepIsLabelSize: this.state.setupStep === 'labelSize',
       onBackToSizeStep: () => this.setState({ setupStep: 'size' }),
