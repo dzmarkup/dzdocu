@@ -453,6 +453,9 @@ textarea.input { min-height: 90px; resize: vertical; }
         <span style="width:1px;height:22px;background:#ccc;margin:0 4px;"></span>
         <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutShowStyle }}" sc-camel-on-click="{{ onToggleLayoutShow }}" title="Show or hide this area">{{ layoutShowLabel }}</button>
         <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;" sc-camel-on-click="{{ onResetLayout }}" title="Back to the standard layout">Reset</button>
+        <sc-if value="{{ layoutBoxIsCustom }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;background:#f3d9d9;" sc-camel-on-click="{{ onDeleteLayoutBox }}" title="Remove this box">Delete</button>
+        </sc-if>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
         <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
@@ -472,6 +475,7 @@ textarea.input { min-height: 90px; resize: vertical; }
       </sc-for>
       <span style="width:1px;height:20px;background:#ccc;margin:0 2px;"></span>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="How far each arrow press moves an edge">{{ layoutStepLabel }}</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a text box to every label of this size">+ Text</button>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutFullMenuStyle }}" sc-camel-on-click="{{ onToggleLayoutFullMenu }}" title="Show the area, edge and reset controls">{{ layoutFullMenuLabel }}</button>
       <button class="btn btn-primary" style="height:24px;font-size:11px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
       <span style="font-size:11px;color:#a33;font-weight:700;">{{ layoutWarning }}</span>
@@ -1193,6 +1197,9 @@ class Component extends DCLogic {
     const saved = (this.state.labelLayouts || {})[this.state.defaultSize] || {};
     const out = {};
     Object.keys(defaults).forEach(k => { out[k] = { ...defaults[k], ...(saved[k] || {}) }; });
+    // Boxes the user added exist only in the saved layout, so they have to be
+    // carried through rather than filtered out against the defaults.
+    Object.keys(saved).forEach(k => { if (!out[k]) out[k] = { ...saved[k] }; });
     return out;
   }
 
@@ -1206,9 +1213,61 @@ class Component extends DCLogic {
       || { l: 0, t: 0, r: 0, b: 0, h: 'left', v: 'top', show: true };
   }
 
-  // Which areas this label size exposes, in panel order.
+  // Which areas this label size exposes, in panel order: the built-in ones
+  // first, then anything added, in the order it was added.
   layoutBoxOrder() {
-    return Object.keys(LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {});
+    const L = this.getLabelLayout();
+    const builtIn = Object.keys(LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {});
+    return builtIn.concat(Object.keys(L).filter(k => L[k].custom));
+  }
+
+  // Panel and chip label for a box. Added boxes are numbered like the page
+  // tabs, and show the start of their own text once they have some.
+  layoutBoxLabel(key) {
+    if (LABEL_BOX_NAMES[key]) return LABEL_BOX_NAMES[key];
+    const L = this.getLabelLayout();
+    const n = Object.keys(L).filter(k => L[k].custom).indexOf(key) + 1;
+    const txt = ((L[key] && L[key].text) || '').replace(/\s+/g, ' ').trim().slice(0, 10);
+    return txt ? n + ' ' + txt : 'Text ' + n;
+  }
+
+  addLayoutTextBox() {
+    const dims = this.getDims();
+    const L = this.getLabelLayout();
+    let i = 1; while (L['t' + i]) i++;
+    const key = 't' + i;
+    this.updateLayoutBox(key, {
+      l: +(dims.w * 0.28).toFixed(3), r: +(dims.w * 0.72).toFixed(3),
+      t: +(dims.h * 0.42).toFixed(3), b: +(dims.h * 0.58).toFixed(3),
+      h: 'left', v: 'top', show: true, custom: true, text: '',
+    });
+    this.setState({ layoutBox: key }, () => { this.markActiveLayoutBox(); this.renderLayoutChrome(); });
+  }
+
+  deleteLayoutBox(key) {
+    const L = this.getLabelLayout();
+    if (!L[key] || !L[key].custom) return;
+    const size = this.state.defaultSize;
+    this.setState(s => {
+      const forSize = { ...((s.labelLayouts || {})[size] || {}) };
+      delete forSize[key];
+      return { labelLayouts: { ...s.labelLayouts, [size]: forSize }, layoutBox: 'main' };
+    }, () => { this.reRenderLabelPages(); this.markActiveLayoutBox(); this.renderLayoutChrome(); this.saveDebounced(); });
+  }
+
+  // Text typed into an added box lives in the layout, not in the page HTML, so
+  // it survives the next address re-render. Written back without re-rendering
+  // so the caret stays where the user put it.
+  syncLayoutBoxText(el) {
+    const size = this.state.defaultSize;
+    const saved = { ...((this.state.labelLayouts || {})[size] || {}) };
+    let changed = false;
+    el.querySelectorAll('[data-lbl-box][data-custom]').forEach(box => {
+      const key = box.getAttribute('data-lbl-box');
+      const text = (box.innerText || '').replace(/\u00a0/g, ' ');
+      if (saved[key] && saved[key].text !== text) { saved[key] = { ...saved[key], text }; changed = true; }
+    });
+    if (changed) this.setState(s => ({ labelLayouts: { ...s.labelLayouts, [size]: saved } }));
   }
 
   // True for any size driven by the box model.
@@ -1299,7 +1358,7 @@ class Component extends DCLogic {
       const r = box.getBoundingClientRect();
       const isActive = key === activeKey;
 
-      const c = chip(LABEL_BOX_NAMES[key] || key, r.left, r.top - 15, isActive);
+      const c = chip(this.layoutBoxLabel(key), r.left, r.top - 15, isActive);
       c.addEventListener('click', ev => {
         ev.preventDefault(); ev.stopPropagation();
         this.selectLayoutBox(key);
@@ -1396,7 +1455,7 @@ class Component extends DCLogic {
   // One absolutely-positioned box of the 4x6 layout. `inner` is the markup
   // that goes inside; the box itself carries the geometry and justification,
   // and its font-size is the single value fitLabelBox rescales.
-  buildLabelBox(key, box, basePt, inner) {
+  buildLabelBox(key, box, basePt, inner, isCustom) {
     // A box is positioned against the editable's padding box, whose origin is
     // the label's own top-left corner — so these are label coordinates
     // directly, and the page padding must NOT be subtracted.
@@ -1418,7 +1477,7 @@ class Component extends DCLogic {
       'font-size:' + basePt.toFixed(2) + 'pt',
     ].join(';');
     const textAlign = box.h === 'center' ? 'center' : box.h === 'right' ? 'right' : 'left';
-    return '<div data-lbl-box="' + key + '" data-base-pt="' + basePt.toFixed(2) + '" style="' + style + ';">'
+    return '<div data-lbl-box="' + key + '"' + (isCustom ? ' data-custom="1"' : '') + ' data-base-pt="' + basePt.toFixed(2) + '" style="' + style + ';">'
       + '<div style="width:100%;text-align:' + textAlign + ';">' + inner + '</div>'
       + '</div>';
   }
@@ -1510,6 +1569,15 @@ class Component extends DCLogic {
       html += this.buildLabelBox('country', L.country, cfg.base,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">' + this.escapeHtml(addr.country) + '</div>');
     }
+    // Boxes the user added. Their text comes from the layout rather than the
+    // address, so re-rendering an address leaves them alone.
+    Object.keys(L).forEach(key => {
+      const box = L[key];
+      if (!box.custom || !box.show) return;
+      html += this.buildLabelBox(key, box, cfg.base,
+        '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">'
+        + this.escapeHtml(box.text || '').replace(/\n/g, '<br>') + '</div>', true);
+    });
     return html;
   }
 
@@ -2231,7 +2299,10 @@ class Component extends DCLogic {
     // fitLabelBox resets to the base size before measuring, so deleting text
     // grows the type back rather than leaving it stuck small.
     const labelEl = this.editableEls[id];
-    if (labelEl && labelEl.querySelector('[data-lbl-box]')) this.fitLabelBody(labelEl);
+    if (labelEl && labelEl.querySelector('[data-lbl-box]')) {
+      this.fitLabelBody(labelEl);
+      this.syncLayoutBoxText(labelEl);
+    }
     this.saveDebounced();
     this.updateEmptyState(id);
   }
@@ -2934,7 +3005,7 @@ class Component extends DCLogic {
         });
       },
       layoutBoxTabs: this.layoutBoxOrder().map(k => ({
-        name: LABEL_BOX_NAMES[k],
+        name: this.layoutBoxLabel(k),
         style: this.state.layoutBox === k ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.setState({ layoutBox: k }, () => this.markActiveLayoutBox()),
       })),
@@ -2953,6 +3024,9 @@ class Component extends DCLogic {
         this.updateLayoutBox(k, { show: !this.getLabelLayout()[k].show });
       },
       onResetLayout: () => this.resetLayout(),
+      onAddLayoutTextBox: () => this.addLayoutTextBox(),
+      layoutBoxIsCustom: !!this.activeLayoutBox().custom,
+      onDeleteLayoutBox: () => this.deleteLayoutBox(this.state.layoutBox),
       layoutEdges: [
         { key: 'l', name: 'L' }, { key: 'r', name: 'R' },
         { key: 't', name: 'T' }, { key: 'b', name: 'B' },
