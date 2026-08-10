@@ -457,7 +457,7 @@ textarea.input { min-height: 90px; resize: vertical; }
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
         <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
           <span style="display:inline-flex;align-items:center;gap:3px;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:38px;text-align:right;">{{ eg.name }}</span>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:12px;text-align:right;">{{ eg.name }}</span>
             <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onMinus }}">&minus;</button>
             <span style="font-size:12px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">{{ eg.value }}</span>
             <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onPlus }}">+</button>
@@ -822,15 +822,6 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 </div>
 
 <script type="text/x-dc" data-dc-script="">
-// Horizontal placement of the 4x6 delivery block, in inches from the label's
-// left edge. LEFT is where the text starts and stays; RIGHT is the inset from
-// the far edge, and is what the province ("ON") is flush against — widening
-// the box by dropping RIGHT is what carries the province further right without
-// disturbing the left alignment. Together they fix the box the address has to
-// live inside — see fitLabelBody, which shrinks the type when a long address
-// would otherwise spill out of it.
-const LABEL46_BODY_LEFT_IN = 1.4;
-const LABEL46_BODY_RIGHT_IN = 0.4;
 // Bottom inset for the 4x6 delivery block. Tighter than the label's own
 // padding so the postal/country group can sit lower, which is what frees the
 // extra height the name/street lines above it get to use.
@@ -845,14 +836,17 @@ const LABEL46_BODY_BOOST = 1.15;
 // inside is fitted to the box by fitLabelBox, so resizing a box resizes its
 // text. Boxes are absolutely positioned, which is why the postal code no
 // longer has to ride along in the address block's flow.
-const LABEL46_BOX_ORDER = ['ret', 'main', 'postal', 'country'];
-const LABEL46_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country' };
-const LABEL46_DEFAULT_LAYOUT = {
+const LABEL_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country' };
+// Keyed by label size. A size listed here uses the box model and gets the
+// LAYOUT tab; 2x4 and 1x2.625 still use their own flow layout, so adding one
+// is what switches it over. Their box sets need not match this one — neither
+// small label renders a return address today.
+const LABEL_DEFAULT_LAYOUTS = { label46: {
   ret:     { l: 0.10, t: 0.08, r: 1.40, b: 0.75, h: 'left', v: 'top',    show: true },
   main:    { l: 1.40, t: 0.30, r: 5.60, b: 2.45, h: 'left', v: 'top',    show: true },
   postal:  { l: 1.40, t: 2.40, r: 5.60, b: 3.36, h: 'left', v: 'bottom', show: true },
   country: { l: 1.40, t: 3.30, r: 5.60, b: 3.85, h: 'left', v: 'bottom', show: true },
-};
+} };
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
 const LAYOUT_STEP_FINE = 0.0625;
 const LAYOUT_STEP_COARSE = 0.25;
@@ -1185,10 +1179,31 @@ class Component extends DCLogic {
   // the shipped defaults, so a document saved before LAYOUT existed — or one
   // whose boxes were only partly adjusted — still opens with sane geometry.
   getLabelLayout() {
+    const defaults = LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {};
     const saved = (this.state.labelLayouts || {})[this.state.defaultSize] || {};
     const out = {};
-    LABEL46_BOX_ORDER.forEach(k => { out[k] = { ...LABEL46_DEFAULT_LAYOUT[k], ...(saved[k] || {}) }; });
+    Object.keys(defaults).forEach(k => { out[k] = { ...defaults[k], ...(saved[k] || {}) }; });
     return out;
+  }
+
+  // The box the panel is pointed at. Sizes with no box layout — every
+  // non-label document — have no boxes at all, so this has to stay defined
+  // for renderVals, which runs for all of them.
+  activeLayoutBox() {
+    const L = this.getLabelLayout();
+    return L[this.state.layoutBox]
+      || L[this.layoutBoxOrder()[0]]
+      || { l: 0, t: 0, r: 0, b: 0, h: 'left', v: 'top', show: true };
+  }
+
+  // Which areas this label size exposes, in panel order.
+  layoutBoxOrder() {
+    return Object.keys(LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {});
+  }
+
+  // True for any size driven by the box model.
+  hasBoxLayout() {
+    return !!LABEL_DEFAULT_LAYOUTS[this.state.defaultSize];
   }
 
   // Write a patch to one box and re-render the label pages so the change is
@@ -1274,7 +1289,7 @@ class Component extends DCLogic {
       const r = box.getBoundingClientRect();
       const isActive = key === activeKey;
 
-      const c = chip(LABEL46_BOX_NAMES[key] || key, r.left, r.top - 15, isActive);
+      const c = chip(LABEL_BOX_NAMES[key] || key, r.left, r.top - 15, isActive);
       c.addEventListener('click', ev => {
         ev.preventDefault(); ev.stopPropagation();
         this.selectLayoutBox(key);
@@ -1371,7 +1386,7 @@ class Component extends DCLogic {
   // One absolutely-positioned box of the 4x6 layout. `inner` is the markup
   // that goes inside; the box itself carries the geometry and justification,
   // and its font-size is the single value fitLabelBox rescales.
-  buildLabel46Box(key, box, basePt, inner) {
+  buildLabelBox(key, box, basePt, inner) {
     // A box is positioned against the editable's padding box, whose origin is
     // the label's own top-left corner — so these are label coordinates
     // directly, and the page padding must NOT be subtracted.
@@ -1413,7 +1428,7 @@ class Component extends DCLogic {
 
     const returnAddr = (this.state.returnAddressRaw || '').trim();
     if (returnAddr && L.ret.show) {
-      html += this.buildLabel46Box('ret', L.ret, retPt,
+      html += this.buildLabelBox('ret', L.ret, retPt,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;">'
         + this.escapeHtml(returnAddr).replace(/\n/g, '<br>') + '</div>');
     }
@@ -1431,15 +1446,15 @@ class Component extends DCLogic {
         main += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
         main += '</div>';
       }
-      if (main) html += this.buildLabel46Box('main', L.main, basePt, main);
+      if (main) html += this.buildLabelBox('main', L.main, basePt, main);
     }
 
     if (addr.postal && L.postal.show) {
-      html += this.buildLabel46Box('postal', L.postal, postalPt,
+      html += this.buildLabelBox('postal', L.postal, postalPt,
         '<div style="font-size:1em;font-weight:900;line-height:1;overflow-wrap:break-word;">' + this.escapeHtml(addr.postal) + '</div>');
     }
     if (addr.country && L.country.show) {
-      html += this.buildLabel46Box('country', L.country, basePt,
+      html += this.buildLabelBox('country', L.country, basePt,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">' + this.escapeHtml(addr.country) + '</div>');
     }
     return html;
@@ -2196,6 +2211,11 @@ class Component extends DCLogic {
     this.typingTimers[id] = setTimeout(() => { this.typingBurst[id] = false; }, 700);
     clearTimeout(this.inputTimers[id]);
     this.inputTimers[id] = setTimeout(() => this.flowFrom(id), 500);
+    // Typing into a label has to re-fit it too, not just entering an address.
+    // fitLabelBox resets to the base size before measuring, so deleting text
+    // grows the type back rather than leaving it stuck small.
+    const labelEl = this.editableEls[id];
+    if (labelEl && labelEl.querySelector('[data-lbl-box]')) this.fitLabelBody(labelEl);
     this.saveDebounced();
     this.updateEmptyState(id);
   }
@@ -2874,7 +2894,7 @@ class Component extends DCLogic {
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
       // LAYOUT drives the 4x6 box model only; the other two label sizes still
       // use their own flow layout, so the tab would do nothing there.
-      isLabel46Doc: isLabelDoc && this.state.defaultSize === 'label46' && this.state.docCreated,
+      isLabel46Doc: isLabelDoc && this.hasBoxLayout() && this.state.docCreated,
       layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
       layoutModeOn: this.state.layoutMode,
@@ -2896,8 +2916,8 @@ class Component extends DCLogic {
           this.renderLayoutChrome();
         });
       },
-      layoutBoxTabs: LABEL46_BOX_ORDER.map(k => ({
-        name: LABEL46_BOX_NAMES[k],
+      layoutBoxTabs: this.layoutBoxOrder().map(k => ({
+        name: LABEL_BOX_NAMES[k],
         style: this.state.layoutBox === k ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.setState({ layoutBox: k }, () => this.markActiveLayoutBox()),
       })),
@@ -2909,19 +2929,19 @@ class Component extends DCLogic {
       layoutStepLabel: this.state.layoutCoarse ? 'Step 1/4"' : 'Step 1/16"',
       layoutStepStyle: this.state.layoutCoarse ? 'background:#e8eef5;' : '',
       onToggleLayoutStep: () => this.setState(s => ({ layoutCoarse: !s.layoutCoarse })),
-      layoutShowLabel: this.getLabelLayout()[this.state.layoutBox].show ? 'Hide' : 'Show',
-      layoutShowStyle: this.getLabelLayout()[this.state.layoutBox].show ? '' : 'background:#f3d9d9;',
+      layoutShowLabel: this.activeLayoutBox().show ? 'Hide' : 'Show',
+      layoutShowStyle: this.activeLayoutBox().show ? '' : 'background:#f3d9d9;',
       onToggleLayoutShow: () => {
         const k = this.state.layoutBox;
         this.updateLayoutBox(k, { show: !this.getLabelLayout()[k].show });
       },
       onResetLayout: () => this.resetLayout(),
       layoutEdges: [
-        { key: 'l', name: 'Left' }, { key: 'r', name: 'Right' },
-        { key: 't', name: 'Top' }, { key: 'b', name: 'Bottom' },
+        { key: 'l', name: 'L' }, { key: 'r', name: 'R' },
+        { key: 't', name: 'T' }, { key: 'b', name: 'B' },
       ].map(e => ({
         name: e.name,
-        value: this.getLabelLayout()[this.state.layoutBox][e.key].toFixed(2) + '"',
+        value: this.activeLayoutBox()[e.key].toFixed(2) + '"',
         onMinus: () => this.nudgeLayout(e.key, -1),
         onPlus: () => this.nudgeLayout(e.key, 1),
       })),
@@ -2930,12 +2950,12 @@ class Component extends DCLogic {
         { k: 'h', v: 'left', name: 'Left' }, { k: 'h', v: 'center', name: 'Ctr' }, { k: 'h', v: 'right', name: 'Right' },
       ].map(j => ({
         name: j.name,
-        style: this.getLabelLayout()[this.state.layoutBox][j.k] === j.v ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
+        style: this.activeLayoutBox()[j.k] === j.v ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.updateLayoutBox(this.state.layoutBox, { [j.k]: j.v }),
       })),
       layoutWarning: (() => {
         const dims = this.getDims();
-        const b = this.getLabelLayout()[this.state.layoutBox];
+        const b = this.activeLayoutBox();
         const tight = b.l < LAYOUT_EDGE_WARN_IN || b.t < LAYOUT_EDGE_WARN_IN
           || (dims.w - b.r) < LAYOUT_EDGE_WARN_IN || (dims.h - b.b) < LAYOUT_EDGE_WARN_IN;
         return tight ? 'Close to the edge — may be trimmed when printed' : '';
