@@ -869,8 +869,12 @@ const LABEL_DEFAULT_LAYOUTS = { label46: {
   postal:  { l: 0.192, t: 0.55, r: 2.433, b: 0.97, h: 'left', v: 'bottom', show: true },
 } };
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
-const LAYOUT_STEP_FINE = 0.0625;
-const LAYOUT_STEP_COARSE = 0.25;
+// The button cycles through these in order.
+const LAYOUT_STEPS = [
+  { in: 0.0625, label: '1/16"' },
+  { in: 0.25, label: '1/4"' },
+  { in: 1, label: '1"' },
+];
 // A box can never be nudged smaller than this, so it can't collapse to
 // nothing and become impossible to select again.
 const LAYOUT_MIN_BOX_IN = 0.25;
@@ -878,7 +882,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, layoutFullMenu: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {} };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1330,7 +1334,7 @@ class Component extends DCLogic {
   }
 
   nudgeLayout(edge, dir) {
-    const step = (this.state.layoutCoarse ? LAYOUT_STEP_COARSE : LAYOUT_STEP_FINE) * dir;
+    const step = (LAYOUT_STEPS[this.state.layoutStep] || LAYOUT_STEPS[0]).in * dir;
     const key = this.state.layoutBox;
     const box = this.getLabelLayout()[key];
     this.updateLayoutBox(key, { [edge]: +(box[edge] + step).toFixed(4) });
@@ -3151,9 +3155,9 @@ class Component extends DCLogic {
       layoutFullMenuStyle: this.state.layoutFullMenu ? 'background:#e8eef5;' : '',
       onToggleLayoutFullMenu: () => this.setState(s => ({ layoutFullMenu: !s.layoutFullMenu }),
         () => this.renderLayoutChrome()),
-      layoutStepLabel: this.state.layoutCoarse ? 'Step 1/4"' : 'Step 1/16"',
-      layoutStepStyle: this.state.layoutCoarse ? 'background:#e8eef5;' : '',
-      onToggleLayoutStep: () => this.setState(s => ({ layoutCoarse: !s.layoutCoarse })),
+      layoutStepLabel: 'Step ' + (LAYOUT_STEPS[this.state.layoutStep] || LAYOUT_STEPS[0]).label,
+      layoutStepStyle: this.state.layoutStep ? 'background:#e8eef5;' : '',
+      onToggleLayoutStep: () => this.setState(s => ({ layoutStep: (s.layoutStep + 1) % LAYOUT_STEPS.length })),
       layoutShowLabel: this.activeLayoutBox().show ? 'Hide' : 'Show',
       layoutShowStyle: this.activeLayoutBox().show ? '' : 'background:#f3d9d9;',
       onToggleLayoutShow: () => {
