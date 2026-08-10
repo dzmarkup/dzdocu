@@ -846,6 +846,18 @@ const LABEL_DEFAULT_LAYOUTS = { label46: {
   main:    { l: 1.40, t: 0.30, r: 5.60, b: 2.45, h: 'left', v: 'top',    show: true },
   postal:  { l: 1.40, t: 2.40, r: 5.60, b: 3.36, h: 'left', v: 'bottom', show: true },
   country: { l: 1.40, t: 3.30, r: 5.60, b: 3.85, h: 'left', v: 'bottom', show: true },
+}, label24: {
+  // Measured from the 2x4 label as it rendered before the box model: body at
+  // 0.98in-3.52in, postal ending 1.62in, country ending 1.87in.
+  ret:     { l: 0.08, t: 0.05, r: 0.95, b: 0.50, h: 'left', v: 'top',    show: false },
+  main:    { l: 0.98, t: 0.135, r: 3.52, b: 1.10, h: 'left', v: 'top',    show: true },
+  postal:  { l: 0.98, t: 1.02, r: 3.52, b: 1.62, h: 'left', v: 'bottom', show: true },
+  country: { l: 0.98, t: 1.56, r: 3.52, b: 1.87, h: 'left', v: 'bottom', show: true },
+}, label1x2: {
+  // 1x2.625 keeps city/province/country on one line, so it has no country box.
+  ret:     { l: 0.04, t: 0.03, r: 0.80, b: 0.28, h: 'left', v: 'top',    show: false },
+  main:    { l: 0.192, t: 0.118, r: 2.433, b: 0.615, h: 'left', v: 'top',    show: true },
+  postal:  { l: 0.192, t: 0.55, r: 2.433, b: 0.97, h: 'left', v: 'bottom', show: true },
 } };
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
 const LAYOUT_STEP_FINE = 0.0625;
@@ -1074,9 +1086,7 @@ class Component extends DCLogic {
     if (this.state.showReturnOnLabel && (size === 'label24' || size === 'label1x2')) {
       return this.buildReturnAddressLabelHtml();
     }
-    if (size === 'label24') return this.buildLabel24AddressHtml(addr);
-    if (size === 'label1x2') return this.buildLabel1x2AddressHtml(addr);
-    return this.buildLabel46AddressHtml(addr);
+    return this.buildLabelBoxesHtml(addr);
   }
 
   /* Which address belongs on which page is keyed by page id, not by
@@ -1413,48 +1423,91 @@ class Component extends DCLogic {
       + '</div>';
   }
 
-  // 4x6 label layout — four independent boxes, positioned and justified by the
-  // LAYOUT panel. Sizes inside each box are em-relative to the box, so fitting
-  // a box to its geometry is a single font-size change.
-  buildLabel46AddressHtml(addr) {
+  // Base type sizes per label size, kept at the values each size shipped with
+  // so switching a size to the box model does not change how it renders. The
+  // scale floor of 0.28 is what holds 1x2.625 at 9pt rather than the 5pt its
+  // own ratio would give.
+  labelBoxConfig() {
     const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 6, dims.h / 4)) * 0.7 * 0.85;
-    const basePt = 40 * scale * LABEL46_BODY_BOOST;
-    const postalPt = basePt * (82.2 / 40);
-    const retPt = Math.round(16 * scale);
-    const lineMB = '0.108em';
+    const size = this.state.defaultSize;
+    if (size === 'label46') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 6, dims.h / 4)) * 0.7 * 0.85;
+      return { base: 40 * scale * LABEL46_BODY_BOOST, postalRatio: 82.2 / 40,
+               retPt: Math.round(16 * scale), variant: 'stacked', postalLh: '1' };
+    }
+    if (size === 'label24') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
+      const base = 54.7 * scale;
+      // 2x4 and 1x2.625 never set a line-height on the postal code, so it
+      // inherited 1.6 — keeping that is what holds the digits where they were.
+      return { base, postalRatio: 98.6 / 54.7, retPt: base * 0.6, variant: 'stacked', postalLh: '1.6' };
+    }
+    if (size === 'label1x2') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
+      const base = 45.6 * scale;
+      return { base, postalRatio: 82.2 / 45.6, retPt: base * 0.6, variant: 'compact', postalLh: '1.6' };
+    }
+    return null;
+  }
+
+  // One builder for every size on the box model. Sizes inside each box are
+  // em-relative to the box, so fitting a box to its geometry is a single
+  // font-size change. 'compact' keeps 1x2.625's habit of putting name beside
+  // phone and city/province/country on one line — that size has no separate
+  // country box because its country has never had its own line.
+  buildLabelBoxesHtml(addr) {
+    const cfg = this.labelBoxConfig();
+    if (!cfg) return '';
     const L = this.getLabelLayout();
+    const lineMB = '0.108em';
+    const line = (inner, extra) => '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:'
+      + lineMB + ';' + (extra || '') + '">' + inner + '</div>';
     let html = '';
 
     const returnAddr = (this.state.returnAddressRaw || '').trim();
-    if (returnAddr && L.ret.show) {
-      html += this.buildLabelBox('ret', L.ret, retPt,
+    if (returnAddr && L.ret && L.ret.show) {
+      html += this.buildLabelBox('ret', L.ret, cfg.retPt,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;">'
         + this.escapeHtml(returnAddr).replace(/\n/g, '<br>') + '</div>');
     }
 
-    if (L.main.show) {
+    if (L.main && L.main.show) {
       let main = '';
-      if (addr.name) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
-      if (addr.phone) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-      if (addr.street) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
-      if (addr.city || addr.province) {
-        // The province rides the box's right edge, so widening the Address box
-        // is what carries it further right.
-        main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
-        main += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
-        main += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
-        main += '</div>';
+      const phone = addr.phone ? this.escapeHtml(this.formatPhone(addr.phone)) : '';
+      if (cfg.variant === 'compact') {
+        if (addr.name || addr.phone) {
+          main += line('<span>' + this.escapeHtml(addr.name) + '</span>'
+            + (phone ? '<span style="margin-left:auto;">' + phone + '</span>' : ''),
+            'display:flex;white-space:nowrap;');
+        }
+        if (addr.street) main += line(this.escapeHtml(addr.street));
+        if (addr.city || addr.province || addr.country) {
+          main += line('<span style="flex:1;text-align:left;">' + this.escapeHtml(addr.city) + '</span>'
+            + '<span style="flex:1;text-align:center;">' + this.escapeHtml(addr.province) + '</span>'
+            + '<span style="flex:1;text-align:right;">' + this.escapeHtml(addr.country) + '</span>',
+            'display:flex;white-space:nowrap;margin-bottom:0;');
+        }
+      } else {
+        if (addr.name) main += line(this.escapeHtml(addr.name), 'overflow-wrap:break-word;');
+        if (addr.phone) main += line(phone, 'overflow-wrap:break-word;');
+        if (addr.street) main += line(this.escapeHtml(addr.street), 'overflow-wrap:break-word;');
+        if (addr.city || addr.province) {
+          // The province rides the box's right edge, so widening the Address
+          // box is what carries it further right.
+          main += line('<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>'
+            + '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>',
+            'display:flex;gap:8px;white-space:normal;');
+        }
       }
-      if (main) html += this.buildLabelBox('main', L.main, basePt, main);
+      if (main) html += this.buildLabelBox('main', L.main, cfg.base, main);
     }
 
-    if (addr.postal && L.postal.show) {
-      html += this.buildLabelBox('postal', L.postal, postalPt,
-        '<div style="font-size:1em;font-weight:900;line-height:1;overflow-wrap:break-word;">' + this.escapeHtml(addr.postal) + '</div>');
+    if (addr.postal && L.postal && L.postal.show) {
+      html += this.buildLabelBox('postal', L.postal, cfg.base * cfg.postalRatio,
+        '<div style="font-size:1em;font-weight:900;line-height:' + cfg.postalLh + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.postal) + '</div>');
     }
-    if (addr.country && L.country.show) {
-      html += this.buildLabelBox('country', L.country, basePt,
+    if (addr.country && L.country && L.country.show) {
+      html += this.buildLabelBox('country', L.country, cfg.base,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">' + this.escapeHtml(addr.country) + '</div>');
     }
     return html;
@@ -1488,61 +1541,7 @@ class Component extends DCLogic {
     el.querySelectorAll('[data-lbl-box]').forEach(b => this.fitLabelBox(b));
   }
 
-  // 2x4 label layout — starts as a copy of the 4x6 treatment, scaled down;
-  // tell me how you'd like this one to differ and I'll adjust it on its own.
-  buildLabel24AddressHtml(addr) {
-    const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
-    const lineSize = Math.round(54.7 * scale), postalSize = Math.round(98.6 * scale);
-    const lineMB = (0.072 * scale).toFixed(3) + 'in', bottomMT = (0.144 * 0.6 * scale).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;margin-left:0.5in;">';
-    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
-    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
-    if (addr.city || addr.province) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
-      html += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
-      html += '</div>';
-    }
-    if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.postal) + '</div>';
-    if (addr.country) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.country) + '</div>';
-    html += '</div>';
-    return html;
-  }
 
-  // 1x2.625 label layout — starts as a copy of the 4x6 treatment, scaled down;
-  // tell me how you'd like this one to differ and I'll adjust it on its own.
-  buildLabel1x2AddressHtml(addr) {
-    const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
-    const lineSize = Math.round(45.6 * scale), postalSize = Math.round(82.2 * scale);
-    const lineMB = (0.06 * scale).toFixed(3) + 'in';
-    const postalMT = (0.02 * scale).toFixed(3) + 'in';
-    const countryMT = (0.02 * scale).toFixed(3) + 'in';
-    const shiftDownIn = (dims.h * 0.12).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;margin-top:' + shiftDownIn + ';">';
-    if (addr.name) {
-      if (addr.phone) {
-        html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;white-space:nowrap;"><span>' + this.escapeHtml(addr.name) + '</span><span style="margin-left:auto;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</span></div>';
-      } else {
-        html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.name) + '</div>';
-      }
-    } else if (addr.phone) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';text-align:right;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    }
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.street) + '</div>';
-    if (addr.city || addr.province || addr.country) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:0;display:flex;white-space:nowrap;">';
-      html += '<span style="flex:1;text-align:left;">' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="flex:1;text-align:center;">' + this.escapeHtml(addr.province) + '</span>';
-      html += '<span style="flex:1;text-align:right;">' + this.escapeHtml(addr.country) + '</span>';
-      html += '</div>';
-    }
-    if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;text-align:left;margin-top:' + postalMT + ';margin-bottom:3px;">' + this.escapeHtml(addr.postal) + '</div>';
-    html += '</div>';
-    return html;
-  }
   finishLabelSizePick(size) {
     if (this.state.pendingLabelAddresses || Object.keys(this.state.pageAddresses || {}).length) {
       this.setState({ defaultSize: size, defaultOrientation: 'landscape', docCreated: true }, () => {
@@ -1586,14 +1585,27 @@ class Component extends DCLogic {
     if (this.zoomWrapEl) { this.zoomWrapEl.style.transform = 'none'; this.zoomWrapEl.style.margin = ''; }
   }
 
+  // A 1x2.625 label is 252px on screen and an arrow is 20px, so its own
+  // controls would bury it. While LAYOUT is open, small labels are magnified
+  // enough to work on. The chrome is drawn in a fixed overlay at its own size,
+  // so the label grows and the arrows do not.
+  layoutZoomFactor() {
+    if (!this.state.layoutMode || !this.hasBoxLayout()) return 1;
+    const naturalPx = this.getDims().w * 96;
+    if (!naturalPx) return 1;
+    const roomy = Math.max(1, (window.innerWidth - 220) / naturalPx);
+    return Math.min(3, Math.max(1, 560 / naturalPx), roomy);
+  }
+
   applyFitScale() {
     if (this.state.zoomActive || this.state.selecting) return;
-    this.fitScale = this.computeFitScale();
+    this.fitScale = this.computeFitScale() * this.layoutZoomFactor();
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transformOrigin = 'top center';
-      this.zoomWrapEl.style.transform = this.fitScale < 1 ? 'scale(' + this.fitScale + ')' : 'none';
+      this.zoomWrapEl.style.transform = this.fitScale !== 1 ? 'scale(' + this.fitScale + ')' : 'none';
     }
     this.positionEdgeTabs();
+    if (this.state.layoutMode) this.renderLayoutChrome();
   }
 
   positionEdgeTabs() {
@@ -1605,8 +1617,12 @@ class Component extends DCLogic {
     const rightPos = Math.max(0, window.innerWidth - rect.right - gap);
     const tabLeftPos = leftPos * 0.95;
     const tabRightPos = rightPos * 0.95;
-    [this.openTabEl, this.saveTabEl, this.printTabEl].forEach(el => { if (el) el.style.left = tabLeftPos + 'px'; });
-    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = tabRightPos + 'px'; });
+    // Magnifying a small label in LAYOUT mode widens the desk these are
+    // measured against, which walks the tabs inward on top of the label. Park
+    // them at the viewport edges for the duration instead.
+    const pinned = this.state.layoutMode && this.hasBoxLayout();
+    [this.openTabEl, this.saveTabEl, this.printTabEl].forEach(el => { if (el) el.style.left = (pinned ? 0 : tabLeftPos) + 'px'; });
+    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = (pinned ? 0 : tabRightPos) + 'px'; });
 
   }
 
@@ -2913,6 +2929,7 @@ class Component extends DCLogic {
           });
           document.body.classList.toggle('layout-on', next);
           this.markActiveLayoutBox();
+          this.applyFitScale();   // magnify a small label on the way in, restore on the way out
           this.renderLayoutChrome();
         });
       },
