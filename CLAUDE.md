@@ -151,3 +151,20 @@ it; `handleInput` does not call it.
 - **There is no way to clear a saved document from the UI.** The resume prompt
   that offered "Start New (deletes saved doc)" was removed from the markup but
   its handler remains. Restoring it is a real missing feature, not cleanup.
+- **A reload does not restore the open document.** The save still happens, but
+  nothing reads it back at boot — that was the resume prompt's job. Reopening
+  means dropping the `.docu` in.
+
+## Opening a saved .docu
+
+Two routes, and they behave differently, which is worth knowing before
+believing a bug report about either:
+
+- **From inside an open document**, the "Open .docu" side tab works.
+- **On the setup screen** the same tab is unreachable — that screen's overlay
+  is `z-index:50` over the tab's `18`. The route the setup screen offers is
+  the DROP-ZONE, so that is the one to test on a fresh visit.
+
+`applySavedData` sets `docCreated` itself. It must: restoring *is* creating a
+document, and without it the setup screen stays up, the editables never mount,
+and the restored `pageHtml` has nowhere to go — silently, with no error.
