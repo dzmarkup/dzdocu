@@ -1404,6 +1404,7 @@ class Component extends DCLogic {
     window[fn]('scroll', t.reposition, true);
     window[fn]('resize', t.reposition);
     document[fn]('click', t.pick, true);
+    if (this.zoomWrapEl) this.zoomWrapEl[fn]('transitionend', t.reposition);
   }
 
   selectLayoutBox(key) {
@@ -1665,8 +1666,13 @@ class Component extends DCLogic {
     if (!this.state.layoutMode || !this.hasBoxLayout()) return 1;
     const naturalPx = this.getDims().w * 96;
     if (!naturalPx) return 1;
+    // This only ever magnifies. A page already being shrunk to fit the
+    // viewport — every tabloid, and a letter page on a small screen — is left
+    // to computeFitScale, so the two never pull in opposite directions.
+    if (this.computeFitScale() < 1) return 1;
+    const target = Math.max(1, 560 / naturalPx);
     const roomy = Math.max(1, (window.innerWidth - 220) / naturalPx);
-    return Math.min(3, Math.max(1, 560 / naturalPx), roomy);
+    return Math.min(3, target, roomy);
   }
 
   applyFitScale() {
@@ -1677,7 +1683,14 @@ class Component extends DCLogic {
       this.zoomWrapEl.style.transform = this.fitScale !== 1 ? 'scale(' + this.fitScale + ')' : 'none';
     }
     this.positionEdgeTabs();
-    if (this.state.layoutMode) this.renderLayoutChrome();
+    if (this.state.layoutMode) {
+      // .doc-stage transitions transform over 0.4s, so the rects the chrome is
+      // placed from are still the old ones right now. Draw immediately so
+      // nothing flickers, then again once the label has finished moving.
+      this.renderLayoutChrome();
+      clearTimeout(this._chromeSettleTimer);
+      this._chromeSettleTimer = setTimeout(() => this.renderLayoutChrome(), 450);
+    }
   }
 
   positionEdgeTabs() {
@@ -2260,6 +2273,18 @@ class Component extends DCLogic {
     });
   }
 
+  // The last child the reflow is allowed to push onto the next page. Boxes are
+  // pinned to their page by their own geometry, so they must never be carried
+  // along by overflowing text — that would silently move somebody's box to a
+  // page they never put it on.
+  lastFlowableChild(el) {
+    let n = el.lastChild;
+    while (n && n.nodeType === 1 && n.hasAttribute && n.hasAttribute('data-lbl-box')) {
+      n = n.previousSibling;
+    }
+    return n;
+  }
+
   async _flowLoop(startId) {
     let curId = startId, iter = 0, newPagesCreated = 0;
     while (iter < 20000) {
@@ -2279,11 +2304,13 @@ class Component extends DCLogic {
       const toEl = this.editableEls[nextId];
       if (!fromEl || !toEl) return;
       let movedAny = false;
-      while (fromEl.scrollHeight > fromEl.clientHeight + 1 && fromEl.lastChild) {
-        toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+      let node = this.lastFlowableChild(fromEl);
+      while (fromEl.scrollHeight > fromEl.clientHeight + 1 && node) {
+        toEl.insertBefore(node, toEl.firstChild);
         movedAny = true;
         iter++;
         if (iter % 25 === 0) await new Promise(r => setTimeout(r, 0));
+        node = this.lastFlowableChild(fromEl);
       }
       if (!movedAny) return;
       curId = nextId;
@@ -2994,7 +3021,14 @@ class Component extends DCLogic {
         : 'background:#ffffff;color:var(--color-text,#1d1f20);box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);',
       onToggleLayoutMode: () => {
         const next = !this.state.layoutMode;
-        this.setState({ layoutMode: next }, () => {
+        // Always open on the address box. Reopening on whatever was selected
+        // last leaves the arrows somewhere unexpected, or around a hidden box
+        // where they have nothing to sit on.
+        const firstBox = this.layoutBoxOrder()[0];
+        const opening = next
+          ? { layoutMode: true, layoutBox: (this.getLabelLayout().main ? 'main' : firstBox) }
+          : { layoutMode: false };
+        this.setState(opening, () => {
           this.bindLayoutTracking(next);
           // Editing is suspended while boxes are being moved: a caret inside a
           // box would fight the panel, and typed text would be thrown away by
