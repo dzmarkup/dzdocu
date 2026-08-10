@@ -1717,7 +1717,7 @@ class Component extends DCLogic {
   finishLabelSizePick(size) {
     if (this.state.pendingLabelAddresses || Object.keys(this.state.pageAddresses || {}).length) {
       this.setState({ defaultSize: size, defaultOrientation: 'landscape', docCreated: true }, () => {
-        this.saveDebounced(); this.updateColsLayout(); this.applyFitScale();
+        this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops();
         setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60);
       });
     } else {
@@ -1727,8 +1727,8 @@ class Component extends DCLogic {
   onSetupPickLabel46() { this.finishLabelSizePick('label46'); }
   onSetupPickLabel24() { this.finishLabelSizePick('label24'); }
   onSetupPickLabel1x2() { this.finishLabelSizePick('label1x2'); }
-  onSetupPickPortrait() { this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
-  onSetupPickLandscape() { this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
+  onSetupPickPortrait() { this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
+  onSetupPickLandscape() { this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
   }
 
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
@@ -2712,6 +2712,13 @@ class Component extends DCLogic {
     return this.state.pageIds[this.state.pageIds.length - 1];
   }
 
+  // Files held while the setup screen asked for a page size.
+  importPendingDrops() {
+    const files = this.pendingDropFiles || [];
+    this.pendingDropFiles = null;
+    if (files.length) setTimeout(() => files.forEach(f => this.handleFile(f)), 60);
+  }
+
   isDocuFile(file) {
     return /\.docu$/i.test(file.name || '');
   }
@@ -2732,9 +2739,19 @@ class Component extends DCLogic {
   }
 
   handleFile(file) {
+    // A .docu carries its own page size, so it opens straight away.
+    if (this.isDocuFile(file)) { this.onDropDocu(file); return; }
+    // Anything else dropped before a page size has been picked waits for one.
+    // Importing first flowed the content at whatever size happened to be
+    // current and left the setup screen up over the top of it, so the pages
+    // were already made — and made wrongly — before the user chose anything.
+    if (!this.state.docCreated) {
+      this.pendingDropFiles = (this.pendingDropFiles || []).concat(file);
+      this.setState({ setupStep: 'size' });
+      return;
+    }
     const pageId = this.targetPageId();
-    if (this.isDocuFile(file)) {
-      this.onDropDocu(file);
+    if (false) {
     } else if (file.type === 'application/pdf') {
       this.onDropPDF(pageId, file);
     } else if (this.isDocxFile(file)) {
