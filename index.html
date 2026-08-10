@@ -441,32 +441,39 @@ textarea.input { min-height: 90px; resize: vertical; }
 <div class="no-print" ref="{{ layoutChromeRef }}" style="position:fixed;inset:0;z-index:21;pointer-events:none;"></div>
 <div class="no-print layout-panel" style="position:fixed;left:0;right:0;bottom:42px;z-index:20;display:flex;justify-content:center;pointer-events:none;">
   <div style="pointer-events:auto;background:#ffffff;border:2px solid #000;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);padding:8px 12px;font-family:'Arial Narrow', Arial, sans-serif;max-width:96vw;">
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;">
-      <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Area</span>
-      <sc-for list="{{ layoutBoxTabs }}" as="bx" hint-placeholder-count="4">
-        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ bx.style }}" sc-camel-on-click="{{ bx.onPick }}">{{ bx.name }}</button>
-      </sc-for>
-      <span style="width:1px;height:22px;background:#ccc;margin:0 4px;"></span>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="Nudge distance">{{ layoutStepLabel }}</button>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutShowStyle }}" sc-camel-on-click="{{ onToggleLayoutShow }}" title="Show or hide this area">{{ layoutShowLabel }}</button>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;" sc-camel-on-click="{{ onResetLayout }}" title="Back to the standard layout">Reset</button>
-      <button class="btn btn-primary" style="height:26px;font-size:12px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:7px;">
-      <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
-        <span style="display:inline-flex;align-items:center;gap:3px;">
-          <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:38px;text-align:right;">{{ eg.name }}</span>
-          <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onMinus }}">&minus;</button>
-          <span style="font-size:12px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">{{ eg.value }}</span>
-          <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onPlus }}">+</button>
-        </span>
-      </sc-for>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:7px;">
+    <!-- The extra rows are folded away by default: selecting an area and
+         nudging an edge are both done on the label now, so these are the
+         fallbacks rather than the main controls. -->
+    <sc-if value="{{ layoutFullMenuOn }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Area</span>
+        <sc-for list="{{ layoutBoxTabs }}" as="bx" hint-placeholder-count="4">
+          <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ bx.style }}" sc-camel-on-click="{{ bx.onPick }}">{{ bx.name }}</button>
+        </sc-for>
+        <span style="width:1px;height:22px;background:#ccc;margin:0 4px;"></span>
+        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutShowStyle }}" sc-camel-on-click="{{ onToggleLayoutShow }}" title="Show or hide this area">{{ layoutShowLabel }}</button>
+        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;" sc-camel-on-click="{{ onResetLayout }}" title="Back to the standard layout">Reset</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
+        <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
+          <span style="display:inline-flex;align-items:center;gap:3px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:38px;text-align:right;">{{ eg.name }}</span>
+            <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onMinus }}">&minus;</button>
+            <span style="font-size:12px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">{{ eg.value }}</span>
+            <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onPlus }}">+</button>
+          </span>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:11px;font-weight:700;text-transform:uppercase;">Align</span>
       <sc-for list="{{ layoutJustify }}" as="jt" hint-placeholder-count="6">
         <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ jt.style }}" sc-camel-on-click="{{ jt.onPick }}">{{ jt.name }}</button>
       </sc-for>
+      <span style="width:1px;height:20px;background:#ccc;margin:0 2px;"></span>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="How far each arrow press moves an edge">{{ layoutStepLabel }}</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutFullMenuStyle }}" sc-camel-on-click="{{ onToggleLayoutFullMenu }}" title="Show the area, edge and reset controls">{{ layoutFullMenuLabel }}</button>
+      <button class="btn btn-primary" style="height:24px;font-size:11px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
       <span style="font-size:11px;color:#a33;font-weight:700;">{{ layoutWarning }}</span>
     </div>
   </div>
@@ -856,7 +863,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, layoutFullMenu: false, labelLayouts: {} };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -2894,6 +2901,11 @@ class Component extends DCLogic {
         style: this.state.layoutBox === k ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.setState({ layoutBox: k }, () => this.markActiveLayoutBox()),
       })),
+      layoutFullMenuOn: this.state.layoutFullMenu,
+      layoutFullMenuLabel: (this.state.layoutFullMenu ? '\u2611' : '\u2610') + ' Full menu',
+      layoutFullMenuStyle: this.state.layoutFullMenu ? 'background:#e8eef5;' : '',
+      onToggleLayoutFullMenu: () => this.setState(s => ({ layoutFullMenu: !s.layoutFullMenu }),
+        () => this.renderLayoutChrome()),
       layoutStepLabel: this.state.layoutCoarse ? 'Step 1/4"' : 'Step 1/16"',
       layoutStepStyle: this.state.layoutCoarse ? 'background:#e8eef5;' : '',
       onToggleLayoutStep: () => this.setState(s => ({ layoutCoarse: !s.layoutCoarse })),
