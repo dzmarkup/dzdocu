@@ -435,7 +435,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 </div>
 
 <sc-if value="{{ layoutModeOn }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" style="position:fixed;left:0;right:0;bottom:42px;z-index:20;display:flex;justify-content:center;pointer-events:none;">
+<!-- Box name chips and edge arrows. Deliberately a sibling of the sheet, not a
+     child of the editable: buildSaveData serialises the editable's innerHTML,
+     so chrome placed inside a box would be written into the user's .docu. -->
+<div class="no-print" ref="{{ layoutChromeRef }}" style="position:fixed;inset:0;z-index:21;pointer-events:none;"></div>
+<div class="no-print layout-panel" style="position:fixed;left:0;right:0;bottom:42px;z-index:20;display:flex;justify-content:center;pointer-events:none;">
   <div style="pointer-events:auto;background:#ffffff;border:2px solid #000;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);padding:8px 12px;font-family:'Arial Narrow', Arial, sans-serif;max-width:96vw;">
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Area</span>
@@ -1194,7 +1198,7 @@ class Component extends DCLogic {
     const size = this.state.defaultSize;
     this.setState(s => ({
       labelLayouts: { ...s.labelLayouts, [size]: { ...(s.labelLayouts || {})[size], [key]: next } },
-    }), () => { this.reRenderLabelPages(); this.saveDebounced(); });
+    }), () => { this.reRenderLabelPages(); this.renderLayoutChrome(); this.saveDebounced(); });
   }
 
   // Re-run the address markup for every page that holds an address.
@@ -1211,6 +1215,113 @@ class Component extends DCLogic {
     this.updateLayoutBox(key, { [edge]: +(box[edge] + step).toFixed(4) });
   }
 
+  // Draw the on-label controls: a name chip on every box so it is obvious what
+  // each area is, and a pair of arrows on each edge of the selected box. An
+  // arrow always points the way that edge will move, so there is nothing to
+  // map back to the panel below.
+  renderLayoutChrome() {
+    const host = this.layoutChromeEl;
+    if (!host) return;
+    host.textContent = '';
+    if (!this.state.layoutMode) return;
+
+    // Chrome goes on whichever page is showing; every page shares one layout.
+    let el = null, bestVisible = -1;
+    this.state.pageIds.forEach(id => {
+      const ed = this.editableEls[id];
+      if (!ed) return;
+      const r = ed.getBoundingClientRect();
+      const visible = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+      if (visible > bestVisible) { bestVisible = visible; el = ed; }
+    });
+    if (!el) return;
+
+    const chip = (text, x, y, active) => {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.style.cssText = 'position:fixed;left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px;'
+        + 'pointer-events:auto;cursor:pointer;font-family:\'Arial Narrow\', Arial, sans-serif;'
+        + 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;'
+        + 'padding:1px 5px;border-radius:3px;line-height:1.5;'
+        + (active ? 'background:#2f6fb0;color:#fff;border:1px solid #2f6fb0;'
+                  : 'background:rgba(255,255,255,0.92);color:#2f6fb0;border:1px solid #7aa7d6;');
+      return b;
+    };
+
+    const arrow = (glyph, x, y, onClick, title) => {
+      const b = document.createElement('button');
+      b.textContent = glyph;
+      b.title = title;
+      b.style.cssText = 'position:fixed;left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px;'
+        + 'width:20px;height:20px;padding:0;pointer-events:auto;cursor:pointer;'
+        + 'display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;'
+        + 'background:#2f6fb0;color:#fff;border:2px solid #fff;border-radius:3px;'
+        + 'box-shadow:0 1px 3px rgba(0,0,0,0.5);';
+      b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); onClick(); });
+      return b;
+    };
+
+    const activeKey = this.state.layoutBox;
+    el.querySelectorAll('[data-lbl-box]').forEach(box => {
+      const key = box.getAttribute('data-lbl-box');
+      const r = box.getBoundingClientRect();
+      const isActive = key === activeKey;
+
+      const c = chip(LABEL46_BOX_NAMES[key] || key, r.left, r.top - 15, isActive);
+      c.addEventListener('click', ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        this.selectLayoutBox(key);
+      });
+      host.appendChild(c);
+
+      if (!isActive) return;
+      const midX = r.left + r.width / 2, midY = r.top + r.height / 2;
+      // The glyph is the direction of travel: on the right edge, ▶ pushes that
+      // edge outward, ◀ pulls it in.
+      // Each pair straddles the line it moves, so a control is unmistakably
+      // attached to its own edge even where boxes sit flush against each other.
+      [
+        ['◀', r.left - 23, midY - 10, 'l', -1, 'Left edge out'],
+        ['▶', r.left + 3, midY - 10, 'l', 1, 'Left edge in'],
+        ['◀', r.right - 23, midY - 10, 'r', -1, 'Right edge in'],
+        ['▶', r.right + 3, midY - 10, 'r', 1, 'Right edge out'],
+        ['▲', midX - 10, r.top - 23, 't', -1, 'Top edge up'],
+        ['▼', midX - 10, r.top + 3, 't', 1, 'Top edge down'],
+        ['▲', midX - 10, r.bottom - 23, 'b', -1, 'Bottom edge up'],
+        ['▼', midX - 10, r.bottom + 3, 'b', 1, 'Bottom edge down'],
+      ].forEach(([g, x, y, edge, dir, title]) => {
+        host.appendChild(arrow(g, x, y, () => this.nudgeLayout(edge, dir), title));
+      });
+    });
+  }
+
+  // While the panel is open: clicking a box selects it, and the chrome follows
+  // the sheet when the view scrolls or resizes. All of it comes back off again
+  // on Done, so nothing is listening once layout mode is closed.
+  bindLayoutTracking(on) {
+    if (!this._layoutTrack) {
+      this._layoutTrack = {
+        reposition: () => this.renderLayoutChrome(),
+        pick: (e) => {
+          const box = e.target && e.target.closest && e.target.closest('[data-lbl-box]');
+          if (box) this.selectLayoutBox(box.getAttribute('data-lbl-box'));
+        },
+      };
+    }
+    const t = this._layoutTrack;
+    const fn = on ? 'addEventListener' : 'removeEventListener';
+    window[fn]('scroll', t.reposition, true);
+    window[fn]('resize', t.reposition);
+    document[fn]('click', t.pick, true);
+  }
+
+  selectLayoutBox(key) {
+    this.setState({ layoutBox: key }, () => {
+      this.markActiveLayoutBox();
+      this.renderLayoutChrome();
+    });
+  }
+
   // Outline the box the panel is currently pointed at.
   markActiveLayoutBox() {
     const key = this.state.layoutBox;
@@ -1218,6 +1329,7 @@ class Component extends DCLogic {
       if (!el) return;
       el.querySelectorAll('[data-lbl-box]').forEach(b => {
         b.classList.toggle('lbl-box-active', this.state.layoutMode && b.getAttribute('data-lbl-box') === key);
+        b.style.cursor = this.state.layoutMode ? 'pointer' : '';
       });
     });
   }
@@ -1227,7 +1339,7 @@ class Component extends DCLogic {
     this.setState(s => {
       const all = { ...s.labelLayouts }; delete all[size];
       return { labelLayouts: all };
-    }, () => { this.reRenderLabelPages(); this.saveDebounced(); });
+    }, () => { this.reRenderLabelPages(); this.renderLayoutChrome(); this.saveDebounced(); });
   }
 
   // Shared with renderVals so the body box can be positioned in label
@@ -2756,6 +2868,7 @@ class Component extends DCLogic {
       // LAYOUT drives the 4x6 box model only; the other two label sizes still
       // use their own flow layout, so the tab would do nothing there.
       isLabel46Doc: isLabelDoc && this.state.defaultSize === 'label46' && this.state.docCreated,
+      layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
       layoutModeOn: this.state.layoutMode,
       layoutBtnStyle: this.state.layoutMode
@@ -2764,6 +2877,7 @@ class Component extends DCLogic {
       onToggleLayoutMode: () => {
         const next = !this.state.layoutMode;
         this.setState({ layoutMode: next }, () => {
+          this.bindLayoutTracking(next);
           // Editing is suspended while boxes are being moved: a caret inside a
           // box would fight the panel, and typed text would be thrown away by
           // the next re-render anyway.
@@ -2772,6 +2886,7 @@ class Component extends DCLogic {
           });
           document.body.classList.toggle('layout-on', next);
           this.markActiveLayoutBox();
+          this.renderLayoutChrome();
         });
       },
       layoutBoxTabs: LABEL46_BOX_ORDER.map(k => ({
