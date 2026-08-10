@@ -869,8 +869,12 @@ const LABEL_DEFAULT_LAYOUTS = { label46: {
   postal:  { l: 0.192, t: 0.55, r: 2.433, b: 0.97, h: 'left', v: 'bottom', show: true },
 } };
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
-const LAYOUT_STEP_FINE = 0.0625;
-const LAYOUT_STEP_COARSE = 0.25;
+// The button cycles through these in order.
+const LAYOUT_STEPS = [
+  { in: 0.0625, label: '1/16"' },
+  { in: 0.25, label: '1/4"' },
+  { in: 1, label: '1"' },
+];
 // A box can never be nudged smaller than this, so it can't collapse to
 // nothing and become impossible to select again.
 const LAYOUT_MIN_BOX_IN = 0.25;
@@ -878,7 +882,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, layoutFullMenu: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {} };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1330,7 +1334,7 @@ class Component extends DCLogic {
   }
 
   nudgeLayout(edge, dir) {
-    const step = (this.state.layoutCoarse ? LAYOUT_STEP_COARSE : LAYOUT_STEP_FINE) * dir;
+    const step = (LAYOUT_STEPS[this.state.layoutStep] || LAYOUT_STEPS[0]).in * dir;
     const key = this.state.layoutBox;
     const box = this.getLabelLayout()[key];
     this.updateLayoutBox(key, { [edge]: +(box[edge] + step).toFixed(4) });
@@ -1713,7 +1717,7 @@ class Component extends DCLogic {
   finishLabelSizePick(size) {
     if (this.state.pendingLabelAddresses || Object.keys(this.state.pageAddresses || {}).length) {
       this.setState({ defaultSize: size, defaultOrientation: 'landscape', docCreated: true }, () => {
-        this.saveDebounced(); this.updateColsLayout(); this.applyFitScale();
+        this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops();
         setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60);
       });
     } else {
@@ -1723,8 +1727,8 @@ class Component extends DCLogic {
   onSetupPickLabel46() { this.finishLabelSizePick('label46'); }
   onSetupPickLabel24() { this.finishLabelSizePick('label24'); }
   onSetupPickLabel1x2() { this.finishLabelSizePick('label1x2'); }
-  onSetupPickPortrait() { this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
-  onSetupPickLandscape() { this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
+  onSetupPickPortrait() { this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
+  onSetupPickLandscape() { this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
   }
 
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
@@ -1745,6 +1749,14 @@ class Component extends DCLogic {
     const isMobile = window.innerWidth <= 700;
     if (isMobile && !this.isLabelSize()) {
       return Math.min(availW / pxW, availH / (pxH * 0.75));
+    }
+    // A landscape tabloid is the one page wide enough that fitting its width
+    // still leaves it taller than the window. The others deliberately show at
+    // a readable size and scroll — this one is shown whole.
+    if (this.state.defaultSize === 'tabloid' && this.state.defaultOrientation === 'landscape') {
+      // The desk pads the sheet by 48px top and bottom inside the scaled
+      // wrapper, which availH does not know about.
+      return Math.min(availW / pxW, (availH - 50) / pxH, 1);
     }
     return Math.min(availW / pxW, availH / (pxH * (isLetterPortrait ? 0.5 : 0.8)), 1);
   }
@@ -2708,6 +2720,13 @@ class Component extends DCLogic {
     return this.state.pageIds[this.state.pageIds.length - 1];
   }
 
+  // Files held while the setup screen asked for a page size.
+  importPendingDrops() {
+    const files = this.pendingDropFiles || [];
+    this.pendingDropFiles = null;
+    if (files.length) setTimeout(() => files.forEach(f => this.handleFile(f)), 60);
+  }
+
   isDocuFile(file) {
     return /\.docu$/i.test(file.name || '');
   }
@@ -2728,9 +2747,19 @@ class Component extends DCLogic {
   }
 
   handleFile(file) {
+    // A .docu carries its own page size, so it opens straight away.
+    if (this.isDocuFile(file)) { this.onDropDocu(file); return; }
+    // Anything else dropped before a page size has been picked waits for one.
+    // Importing first flowed the content at whatever size happened to be
+    // current and left the setup screen up over the top of it, so the pages
+    // were already made — and made wrongly — before the user chose anything.
+    if (!this.state.docCreated) {
+      this.pendingDropFiles = (this.pendingDropFiles || []).concat(file);
+      this.setState({ setupStep: 'size' });
+      return;
+    }
     const pageId = this.targetPageId();
-    if (this.isDocuFile(file)) {
-      this.onDropDocu(file);
+    if (false) {
     } else if (file.type === 'application/pdf') {
       this.onDropPDF(pageId, file);
     } else if (this.isDocxFile(file)) {
@@ -3151,9 +3180,9 @@ class Component extends DCLogic {
       layoutFullMenuStyle: this.state.layoutFullMenu ? 'background:#e8eef5;' : '',
       onToggleLayoutFullMenu: () => this.setState(s => ({ layoutFullMenu: !s.layoutFullMenu }),
         () => this.renderLayoutChrome()),
-      layoutStepLabel: this.state.layoutCoarse ? 'Step 1/4"' : 'Step 1/16"',
-      layoutStepStyle: this.state.layoutCoarse ? 'background:#e8eef5;' : '',
-      onToggleLayoutStep: () => this.setState(s => ({ layoutCoarse: !s.layoutCoarse })),
+      layoutStepLabel: 'Step ' + (LAYOUT_STEPS[this.state.layoutStep] || LAYOUT_STEPS[0]).label,
+      layoutStepStyle: this.state.layoutStep ? 'background:#e8eef5;' : '',
+      onToggleLayoutStep: () => this.setState(s => ({ layoutStep: (s.layoutStep + 1) % LAYOUT_STEPS.length })),
       layoutShowLabel: this.activeLayoutBox().show ? 'Hide' : 'Show',
       layoutShowStyle: this.activeLayoutBox().show ? '' : 'background:#f3d9d9;',
       onToggleLayoutShow: () => {
