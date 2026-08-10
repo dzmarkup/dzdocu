@@ -1637,6 +1637,12 @@ class Component extends DCLogic {
       // back to the shipped defaults for anything missing.
       labelLayouts: data.labelLayouts || {},
       customFonts: data.customFonts || [],
+      // Restoring a document *is* creating one. Without this the setup screen
+      // stays up and the editables never mount, so the restored pageHtml has
+      // nowhere to go — which is what made "Open .docu" load nothing. The
+      // resume prompt used to set this itself, and was removed from the markup.
+      docCreated: true,
+      layoutMode: false,
     }, () => {
       (data.customFonts || []).forEach(n => this.injectGoogleFont(n));
       setTimeout(() => {
@@ -1648,6 +1654,7 @@ class Component extends DCLogic {
         });
         this.setState({ pageEmptyMap });
         this.saveDebounced();
+        this.updateColsLayout();
         this.applyFitScale();
       }, 30);
     });
@@ -1668,7 +1675,14 @@ class Component extends DCLogic {
   }
 
   onOpenEzdocClick() {
-    if (this.ezdocInputEl) this.ezdocInputEl.click();
+    // The ref callback only ever assigns (`if (el)`), so after a re-render
+    // replaces the input this still points at the detached node — and clicking
+    // a detached file input silently does nothing, which is what made
+    // "Open .docu" appear dead. Fall back to whatever is currently mounted.
+    const el = (this.ezdocInputEl && this.ezdocInputEl.isConnected)
+      ? this.ezdocInputEl
+      : document.querySelector('input[accept*=".docu"]');
+    if (el) el.click();
   }
 
   onOpenEzdoc(e) {
@@ -2342,9 +2356,30 @@ class Component extends DCLogic {
     return this.state.pageIds[this.state.pageIds.length - 1];
   }
 
+  isDocuFile(file) {
+    return /\.docu$/i.test(file.name || '');
+  }
+
+  // The drop zone advertises DOCU, but nothing here ever handled one, so a
+  // dropped .docu was silently ignored. It has to be tested before the text
+  // branches, which would otherwise claim it.
+  onDropDocu(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        this.applySavedData(JSON.parse(ev.target.result));
+      } catch (err) {
+        alert('Could not read that .docu file.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
   handleFile(file) {
     const pageId = this.targetPageId();
-    if (file.type === 'application/pdf') {
+    if (this.isDocuFile(file)) {
+      this.onDropDocu(file);
+    } else if (file.type === 'application/pdf') {
       this.onDropPDF(pageId, file);
     } else if (this.isDocxFile(file)) {
       this.onDropDocx(pageId, file);
