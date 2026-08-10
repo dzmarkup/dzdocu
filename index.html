@@ -475,7 +475,7 @@ textarea.input { min-height: 90px; resize: vertical; }
       </sc-for>
       <span style="width:1px;height:20px;background:#ccc;margin:0 2px;"></span>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="How far each arrow press moves an edge">{{ layoutStepLabel }}</button>
-      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a text box to every label of this size">+ Text</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a box to every label of this size">+ Box</button>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutFullMenuStyle }}" sc-camel-on-click="{{ onToggleLayoutFullMenu }}" title="Show the area, edge and reset controls">{{ layoutFullMenuLabel }}</button>
       <button class="btn btn-primary" style="height:24px;font-size:11px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
       <span style="font-size:11px;color:#a33;font-weight:700;">{{ layoutWarning }}</span>
@@ -1228,7 +1228,7 @@ class Component extends DCLogic {
     const L = this.getLabelLayout();
     const n = Object.keys(L).filter(k => L[k].custom).indexOf(key) + 1;
     const txt = ((L[key] && L[key].text) || '').replace(/\s+/g, ' ').trim().slice(0, 10);
-    return txt ? n + ' ' + txt : 'Text ' + n;
+    return txt ? n + ' ' + txt : 'Box ' + n;
   }
 
   addLayoutTextBox() {
@@ -1595,8 +1595,12 @@ class Component extends DCLogic {
     box.style.fontSize = pt.toFixed(2) + 'pt';
     const floorPt = basePt * 0.35;
     for (let i = 0; i < 60; i++) {
-      const tooWide = Math.max(wrap.scrollWidth, wrap.getBoundingClientRect().width) > box.clientWidth + 1;
-      const tooTall = Math.max(wrap.scrollHeight, wrap.getBoundingClientRect().height) > box.clientHeight + 1;
+      // Layout coordinates only. getBoundingClientRect includes the LAYOUT
+      // magnification transform while clientWidth/clientHeight do not, so
+      // mixing them makes a magnified label look permanently overfull and
+      // shrinks its type to the floor.
+      const tooWide = Math.max(wrap.scrollWidth, wrap.offsetWidth) > box.clientWidth + 1;
+      const tooTall = Math.max(wrap.scrollHeight, wrap.offsetHeight) > box.clientHeight + 1;
       if (!tooWide && !tooTall) break;
       pt *= 0.97;
       if (pt < floorPt) { pt = floorPt; box.style.fontSize = pt.toFixed(2) + 'pt'; break; }
