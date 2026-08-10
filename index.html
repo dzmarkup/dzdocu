@@ -504,7 +504,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 <button class="no-print side-tab" ref="{{ fontTabRef }}" sc-camel-on-click="{{ onOpenFontPicker }}" title="Font, size, bold, italic, underline, characters" style="position:fixed;right:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
   <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:20px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1;writing-mode:vertical-rl;letter-spacing:0.02em;">Aa</span>
 </button>
-<sc-if value="{{ isLabel46Doc }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ showLayoutTab }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ layoutTabRef }}" sc-camel-on-click="{{ onToggleLayoutMode }}" title="Move and resize the label's four areas" style="position:fixed;right:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ layoutBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
@@ -812,7 +812,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <sc-if value="{{ p.headerOff }}" hint-placeholder-val="{{ true }}">
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
-      <div class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingX }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;"></div>
+      <div class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;"></div>
     </section>
   </sc-for>
 </x-import>
@@ -840,7 +840,12 @@ const LABEL46_BODY_BOOST = 1.15;
 // inside is fitted to the box by fitLabelBox, so resizing a box resizes its
 // text. Boxes are absolutely positioned, which is why the postal code no
 // longer has to ride along in the address block's flow.
-const LABEL_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country' };
+const LABEL_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country', margin: 'Margins' };
+// A document's first box is its text area. Unlike a label's boxes it is not
+// drawn — it *is* the editable's padding, so the text inside it keeps flowing
+// across pages exactly as before. Every page size uses 1in on all four sides,
+// so it is derived from the page rather than tabulated per size.
+const DOC_MARGIN_IN = 1;
 // Keyed by label size. A size listed here uses the box model and gets the
 // LAYOUT tab; 2x4 and 1x2.625 still use their own flow layout, so adding one
 // is what switches it over. Their box sets need not match this one — neither
@@ -1192,8 +1197,27 @@ class Component extends DCLogic {
   // The active box layout for the current label size: saved edits on top of
   // the shipped defaults, so a document saved before LAYOUT existed — or one
   // whose boxes were only partly adjusted — still opens with sane geometry.
+  // The text area of a document, in the same shape as a label's boxes.
+  docDefaultLayout() {
+    const dims = this.getDims();
+    return { margin: {
+      l: DOC_MARGIN_IN, t: DOC_MARGIN_IN,
+      r: +(dims.w - DOC_MARGIN_IN).toFixed(3), b: +(dims.h - DOC_MARGIN_IN).toFixed(3),
+      h: 'left', v: 'top', show: true, kind: 'margin',
+    } };
+  }
+
+  layoutDefaultsForSize() {
+    return LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || this.docDefaultLayout();
+  }
+
+  // The page's text area in inches, after any adjustment.
+  docMarginBox() {
+    return this.getLabelLayout().margin || this.docDefaultLayout().margin;
+  }
+
   getLabelLayout() {
-    const defaults = LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {};
+    const defaults = this.layoutDefaultsForSize();
     const saved = (this.state.labelLayouts || {})[this.state.defaultSize] || {};
     const out = {};
     Object.keys(defaults).forEach(k => { out[k] = { ...defaults[k], ...(saved[k] || {}) }; });
@@ -1217,7 +1241,7 @@ class Component extends DCLogic {
   // first, then anything added, in the order it was added.
   layoutBoxOrder() {
     const L = this.getLabelLayout();
-    const builtIn = Object.keys(LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {});
+    const builtIn = Object.keys(this.layoutDefaultsForSize());
     return builtIn.concat(Object.keys(L).filter(k => L[k].custom));
   }
 
@@ -1241,7 +1265,7 @@ class Component extends DCLogic {
       t: +(dims.h * 0.42).toFixed(3), b: +(dims.h * 0.58).toFixed(3),
       h: 'left', v: 'top', show: true, custom: true, text: '',
     });
-    this.setState({ layoutBox: key }, () => { this.markActiveLayoutBox(); this.renderLayoutChrome(); });
+    this.setState({ layoutBox: key }, () => { this.syncDocBoxes(); this.markActiveLayoutBox(); this.renderLayoutChrome(); });
   }
 
   deleteLayoutBox(key) {
@@ -1252,7 +1276,7 @@ class Component extends DCLogic {
       const forSize = { ...((s.labelLayouts || {})[size] || {}) };
       delete forSize[key];
       return { labelLayouts: { ...s.labelLayouts, [size]: forSize }, layoutBox: 'main' };
-    }, () => { this.reRenderLabelPages(); this.markActiveLayoutBox(); this.renderLayoutChrome(); this.saveDebounced(); });
+    }, () => { this.reRenderLabelPages(); this.syncDocBoxes(); this.markActiveLayoutBox(); this.renderLayoutChrome(); this.saveDebounced(); });
   }
 
   // Text typed into an added box lives in the layout, not in the page HTML, so
@@ -1272,7 +1296,7 @@ class Component extends DCLogic {
 
   // True for any size driven by the box model.
   hasBoxLayout() {
-    return !!LABEL_DEFAULT_LAYOUTS[this.state.defaultSize];
+    return this.state.docCreated;
   }
 
   // Write a patch to one box and re-render the label pages so the change is
@@ -1289,7 +1313,13 @@ class Component extends DCLogic {
     const size = this.state.defaultSize;
     this.setState(s => ({
       labelLayouts: { ...s.labelLayouts, [size]: { ...(s.labelLayouts || {})[size], [key]: next } },
-    }), () => { this.reRenderLabelPages(); this.renderLayoutChrome(); this.saveDebounced(); });
+    }), () => {
+      this.reRenderLabelPages();
+      this.syncDocBoxes();
+      if (key === 'margin') setTimeout(() => { this.reflowAllPages(); this.renderLayoutChrome(); }, 30);
+      this.renderLayoutChrome();
+      this.saveDebounced();
+    });
   }
 
   // Re-run the address markup for every page that holds an address.
@@ -1353,10 +1383,34 @@ class Component extends DCLogic {
     };
 
     const activeKey = this.state.layoutBox;
-    el.querySelectorAll('[data-lbl-box]').forEach(box => {
-      const key = box.getAttribute('data-lbl-box');
-      const r = box.getBoundingClientRect();
+    // The margin box has no element of its own — it is the editable's content
+    // area — so its rect is computed and its outline drawn here rather than
+    // by the CSS that outlines the real boxes.
+    const targets = [...el.querySelectorAll('[data-lbl-box]')].map(box => ({
+      key: box.getAttribute('data-lbl-box'), rect: box.getBoundingClientRect(), drawOutline: false,
+    }));
+    if (this.getLabelLayout().margin) {
+      const er = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      const z = er.width / (el.offsetWidth || 1);   // the LAYOUT magnification
+      targets.unshift({ key: 'margin', drawOutline: true, rect: {
+        left: er.left + parseFloat(cs.paddingLeft) * z,
+        top: er.top + parseFloat(cs.paddingTop) * z,
+        right: er.right - parseFloat(cs.paddingRight) * z,
+        bottom: er.bottom - parseFloat(cs.paddingBottom) * z,
+        get width() { return this.right - this.left; },
+        get height() { return this.bottom - this.top; },
+      } });
+    }
+
+    targets.forEach(({ key, rect: r, drawOutline }) => {
       const isActive = key === activeKey;
+      if (drawOutline) {
+        const o = document.createElement('div');
+        o.style.cssText = 'position:fixed;pointer-events:none;left:' + Math.round(r.left) + 'px;top:' + Math.round(r.top)
+          + 'px;width:' + Math.round(r.width) + 'px;height:' + Math.round(r.height) + 'px;'
+          + (isActive ? 'outline:2px solid #2f6fb0;' : 'outline:1px dashed #7aa7d6;') + 'outline-offset:2px;';
+        host.appendChild(o);
+      }
 
       const c = chip(this.layoutBoxLabel(key), r.left, r.top - 15, isActive);
       c.addEventListener('click', ev => {
@@ -1384,6 +1438,47 @@ class Component extends DCLogic {
         host.appendChild(arrow(g, x, y, () => this.nudgeLayout(edge, dir), title));
       });
     });
+  }
+
+  // A document's pages cannot be rebuilt from data the way a label's can — the
+  // text in them is the user's. So added boxes are inserted, updated and
+  // removed in place, leaving every other node alone. Geometry is refreshed on
+  // an existing box but its content is not, or typing into one would lose the
+  // caret on every keystroke.
+  syncDocBoxes() {
+    if (['label46', 'label24', 'label1x2'].includes(this.state.defaultSize)) return;
+    const L = this.getLabelLayout();
+    const wanted = Object.keys(L).filter(k => L[k].custom && L[k].show);
+    this.state.pageIds.forEach(id => {
+      const el = this.editableEls[id];
+      if (!el) return;
+      el.querySelectorAll('[data-lbl-box][data-custom]').forEach(node => {
+        if (!wanted.includes(node.getAttribute('data-lbl-box'))) node.remove();
+      });
+      const basePt = parseFloat(getComputedStyle(el).fontSize) * 0.75 || 10.5;
+      wanted.forEach(k => {
+        const existing = el.querySelector('[data-lbl-box="' + k + '"]');
+        const html = this.buildLabelBox(k, L[k], basePt,
+          '<div style="font-size:1em;font-weight:400;line-height:1.4;overflow-wrap:break-word;">'
+          + this.escapeHtml(L[k].text || '').replace(/\n/g, '<br>') + '</div>', true);
+        if (!existing) {
+          el.insertAdjacentHTML('beforeend', html);
+        } else {
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+          existing.setAttribute('style', tmp.firstChild.getAttribute('style'));
+          existing.setAttribute('data-base-pt', tmp.firstChild.getAttribute('data-base-pt'));
+        }
+      });
+      this.fitLabelBody(el);
+    });
+  }
+
+  // Changing the margins changes how much text fits, so the pages have to be
+  // reflowed — otherwise the last page keeps text that no longer fits, or
+  // holds space that has just been freed.
+  reflowAllPages() {
+    this.state.pageIds.forEach(id => this.flowFrom(id));
   }
 
   // While the panel is open: clicking a box selects it, and the chrome follows
@@ -2783,6 +2878,7 @@ class Component extends DCLogic {
     const isLabelDoc = ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize);
     const labelPadIn = Math.max(0.08, Math.min(0.3, Math.min(dims.w, dims.h) * 0.08)) + 'in';
     const labelPadXIn = this.labelPadXInches() + 'in';
+    const docMargin = this.docMarginBox();
     const activeStyle = 'background:var(--color-accent,#5980a6);color:#fff;';
     const inactiveStyle = 'background:transparent;color:var(--color-text,#1d1f20);';
     let posCounter = 0;
@@ -2856,9 +2952,14 @@ class Component extends DCLogic {
         onTabDragEnd: () => this.onTabDragEnd(),
         pageTitleValue: this.state.pageHeaderTitles[id] ?? '',
         tabTitleShort: (this.state.pageHeaderTitles[id] || '').replace(/\n/g, ' ').slice(0, 10),
-        editablePaddingTop: isLabel ? labelPadIn : (headerOn ? '1.9in' : (isCover ? '1.6in' : '1in')),
-        editablePaddingX: isLabel ? labelPadXIn : '1in',
-        editablePaddingBottom: isLabel ? (this.labelPadBottomInches() + 'in') : '1in',
+        // A document's padding is its margin box. A header or a cover still
+        // claims the top of the page, so those set a floor the box cannot
+        // cross — otherwise the text would slide underneath them.
+        editablePaddingTop: isLabel ? labelPadIn
+          : (headerOn ? Math.max(docMargin.t, 1.9) : (isCover ? Math.max(docMargin.t, 1.6) : docMargin.t)) + 'in',
+        editablePaddingX: isLabel ? labelPadXIn : docMargin.l + 'in',
+        editablePaddingRight: isLabel ? labelPadXIn : (dims.w - docMargin.r).toFixed(3) + 'in',
+        editablePaddingBottom: isLabel ? (this.labelPadBottomInches() + 'in') : (dims.h - docMargin.b).toFixed(3) + 'in',
         editableDisplay: isLabel ? 'flex' : 'block',
         editableJustify: isLabel ? 'center' : 'flex-start',
         titleRef: (el) => { if (el) { this.titleEls[id] = el; this.autoGrowTitle(id); } },
@@ -3010,9 +3111,7 @@ class Component extends DCLogic {
       fontTabRef: (el) => { if (el) { this.fontTabEl = el; this.positionEdgeTabs(); } },
       headerTabRef: (el) => { if (el) { this.headerTabEl = el; this.positionEdgeTabs(); } },
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
-      // LAYOUT drives the 4x6 box model only; the other two label sizes still
-      // use their own flow layout, so the tab would do nothing there.
-      isLabel46Doc: isLabelDoc && this.hasBoxLayout() && this.state.docCreated,
+      showLayoutTab: this.hasBoxLayout(),
       layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
       layoutModeOn: this.state.layoutMode,
