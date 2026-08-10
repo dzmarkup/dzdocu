@@ -441,32 +441,43 @@ textarea.input { min-height: 90px; resize: vertical; }
 <div class="no-print" ref="{{ layoutChromeRef }}" style="position:fixed;inset:0;z-index:21;pointer-events:none;"></div>
 <div class="no-print layout-panel" style="position:fixed;left:0;right:0;bottom:42px;z-index:20;display:flex;justify-content:center;pointer-events:none;">
   <div style="pointer-events:auto;background:#ffffff;border:2px solid #000;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);padding:8px 12px;font-family:'Arial Narrow', Arial, sans-serif;max-width:96vw;">
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;">
-      <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Area</span>
-      <sc-for list="{{ layoutBoxTabs }}" as="bx" hint-placeholder-count="4">
-        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ bx.style }}" sc-camel-on-click="{{ bx.onPick }}">{{ bx.name }}</button>
-      </sc-for>
-      <span style="width:1px;height:22px;background:#ccc;margin:0 4px;"></span>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="Nudge distance">{{ layoutStepLabel }}</button>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutShowStyle }}" sc-camel-on-click="{{ onToggleLayoutShow }}" title="Show or hide this area">{{ layoutShowLabel }}</button>
-      <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;" sc-camel-on-click="{{ onResetLayout }}" title="Back to the standard layout">Reset</button>
-      <button class="btn btn-primary" style="height:26px;font-size:12px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:7px;">
-      <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
-        <span style="display:inline-flex;align-items:center;gap:3px;">
-          <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:38px;text-align:right;">{{ eg.name }}</span>
-          <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onMinus }}">&minus;</button>
-          <span style="font-size:12px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">{{ eg.value }}</span>
-          <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onPlus }}">+</button>
-        </span>
-      </sc-for>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:7px;">
+    <!-- The extra rows are folded away by default: selecting an area and
+         nudging an edge are both done on the label now, so these are the
+         fallbacks rather than the main controls. -->
+    <sc-if value="{{ layoutFullMenuOn }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Area</span>
+        <sc-for list="{{ layoutBoxTabs }}" as="bx" hint-placeholder-count="4">
+          <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ bx.style }}" sc-camel-on-click="{{ bx.onPick }}">{{ bx.name }}</button>
+        </sc-for>
+        <span style="width:1px;height:22px;background:#ccc;margin:0 4px;"></span>
+        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;{{ layoutShowStyle }}" sc-camel-on-click="{{ onToggleLayoutShow }}" title="Show or hide this area">{{ layoutShowLabel }}</button>
+        <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;" sc-camel-on-click="{{ onResetLayout }}" title="Back to the standard layout">Reset</button>
+        <sc-if value="{{ layoutBoxIsCustom }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-secondary" style="height:26px;font-size:12px;padding:0 10px;background:#f3d9d9;" sc-camel-on-click="{{ onDeleteLayoutBox }}" title="Remove this box">Delete</button>
+        </sc-if>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:7px;">
+        <sc-for list="{{ layoutEdges }}" as="eg" hint-placeholder-count="4">
+          <span style="display:inline-flex;align-items:center;gap:3px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;width:12px;text-align:right;">{{ eg.name }}</span>
+            <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onMinus }}">&minus;</button>
+            <span style="font-size:12px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">{{ eg.value }}</span>
+            <button class="btn btn-secondary" style="width:26px;height:26px;font-size:14px;padding:0;" sc-camel-on-click="{{ eg.onPlus }}">+</button>
+          </span>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:11px;font-weight:700;text-transform:uppercase;">Align</span>
       <sc-for list="{{ layoutJustify }}" as="jt" hint-placeholder-count="6">
         <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ jt.style }}" sc-camel-on-click="{{ jt.onPick }}">{{ jt.name }}</button>
       </sc-for>
+      <span style="width:1px;height:20px;background:#ccc;margin:0 2px;"></span>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="How far each arrow press moves an edge">{{ layoutStepLabel }}</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a text box to every label of this size">+ Text</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutFullMenuStyle }}" sc-camel-on-click="{{ onToggleLayoutFullMenu }}" title="Show the area, edge and reset controls">{{ layoutFullMenuLabel }}</button>
+      <button class="btn btn-primary" style="height:24px;font-size:11px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
       <span style="font-size:11px;color:#a33;font-weight:700;">{{ layoutWarning }}</span>
     </div>
   </div>
@@ -815,15 +826,6 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 </div>
 
 <script type="text/x-dc" data-dc-script="">
-// Horizontal placement of the 4x6 delivery block, in inches from the label's
-// left edge. LEFT is where the text starts and stays; RIGHT is the inset from
-// the far edge, and is what the province ("ON") is flush against — widening
-// the box by dropping RIGHT is what carries the province further right without
-// disturbing the left alignment. Together they fix the box the address has to
-// live inside — see fitLabelBody, which shrinks the type when a long address
-// would otherwise spill out of it.
-const LABEL46_BODY_LEFT_IN = 1.4;
-const LABEL46_BODY_RIGHT_IN = 0.4;
 // Bottom inset for the 4x6 delivery block. Tighter than the label's own
 // padding so the postal/country group can sit lower, which is what frees the
 // extra height the name/street lines above it get to use.
@@ -838,14 +840,29 @@ const LABEL46_BODY_BOOST = 1.15;
 // inside is fitted to the box by fitLabelBox, so resizing a box resizes its
 // text. Boxes are absolutely positioned, which is why the postal code no
 // longer has to ride along in the address block's flow.
-const LABEL46_BOX_ORDER = ['ret', 'main', 'postal', 'country'];
-const LABEL46_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country' };
-const LABEL46_DEFAULT_LAYOUT = {
+const LABEL_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', country: 'Country' };
+// Keyed by label size. A size listed here uses the box model and gets the
+// LAYOUT tab; 2x4 and 1x2.625 still use their own flow layout, so adding one
+// is what switches it over. Their box sets need not match this one — neither
+// small label renders a return address today.
+const LABEL_DEFAULT_LAYOUTS = { label46: {
   ret:     { l: 0.10, t: 0.08, r: 1.40, b: 0.75, h: 'left', v: 'top',    show: true },
   main:    { l: 1.40, t: 0.30, r: 5.60, b: 2.45, h: 'left', v: 'top',    show: true },
   postal:  { l: 1.40, t: 2.40, r: 5.60, b: 3.36, h: 'left', v: 'bottom', show: true },
   country: { l: 1.40, t: 3.30, r: 5.60, b: 3.85, h: 'left', v: 'bottom', show: true },
-};
+}, label24: {
+  // Measured from the 2x4 label as it rendered before the box model: body at
+  // 0.98in-3.52in, postal ending 1.62in, country ending 1.87in.
+  ret:     { l: 0.08, t: 0.05, r: 0.95, b: 0.50, h: 'left', v: 'top',    show: false },
+  main:    { l: 0.98, t: 0.135, r: 3.52, b: 1.10, h: 'left', v: 'top',    show: true },
+  postal:  { l: 0.98, t: 1.02, r: 3.52, b: 1.62, h: 'left', v: 'bottom', show: true },
+  country: { l: 0.98, t: 1.56, r: 3.52, b: 1.87, h: 'left', v: 'bottom', show: true },
+}, label1x2: {
+  // 1x2.625 keeps city/province/country on one line, so it has no country box.
+  ret:     { l: 0.04, t: 0.03, r: 0.80, b: 0.28, h: 'left', v: 'top',    show: false },
+  main:    { l: 0.192, t: 0.118, r: 2.433, b: 0.615, h: 'left', v: 'top',    show: true },
+  postal:  { l: 0.192, t: 0.55, r: 2.433, b: 0.97, h: 'left', v: 'bottom', show: true },
+} };
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
 const LAYOUT_STEP_FINE = 0.0625;
 const LAYOUT_STEP_COARSE = 0.25;
@@ -856,7 +873,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutCoarse: false, layoutFullMenu: false, labelLayouts: {} };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1073,9 +1090,7 @@ class Component extends DCLogic {
     if (this.state.showReturnOnLabel && (size === 'label24' || size === 'label1x2')) {
       return this.buildReturnAddressLabelHtml();
     }
-    if (size === 'label24') return this.buildLabel24AddressHtml(addr);
-    if (size === 'label1x2') return this.buildLabel1x2AddressHtml(addr);
-    return this.buildLabel46AddressHtml(addr);
+    return this.buildLabelBoxesHtml(addr);
   }
 
   /* Which address belongs on which page is keyed by page id, not by
@@ -1178,10 +1193,86 @@ class Component extends DCLogic {
   // the shipped defaults, so a document saved before LAYOUT existed — or one
   // whose boxes were only partly adjusted — still opens with sane geometry.
   getLabelLayout() {
+    const defaults = LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {};
     const saved = (this.state.labelLayouts || {})[this.state.defaultSize] || {};
     const out = {};
-    LABEL46_BOX_ORDER.forEach(k => { out[k] = { ...LABEL46_DEFAULT_LAYOUT[k], ...(saved[k] || {}) }; });
+    Object.keys(defaults).forEach(k => { out[k] = { ...defaults[k], ...(saved[k] || {}) }; });
+    // Boxes the user added exist only in the saved layout, so they have to be
+    // carried through rather than filtered out against the defaults.
+    Object.keys(saved).forEach(k => { if (!out[k]) out[k] = { ...saved[k] }; });
     return out;
+  }
+
+  // The box the panel is pointed at. Sizes with no box layout — every
+  // non-label document — have no boxes at all, so this has to stay defined
+  // for renderVals, which runs for all of them.
+  activeLayoutBox() {
+    const L = this.getLabelLayout();
+    return L[this.state.layoutBox]
+      || L[this.layoutBoxOrder()[0]]
+      || { l: 0, t: 0, r: 0, b: 0, h: 'left', v: 'top', show: true };
+  }
+
+  // Which areas this label size exposes, in panel order: the built-in ones
+  // first, then anything added, in the order it was added.
+  layoutBoxOrder() {
+    const L = this.getLabelLayout();
+    const builtIn = Object.keys(LABEL_DEFAULT_LAYOUTS[this.state.defaultSize] || {});
+    return builtIn.concat(Object.keys(L).filter(k => L[k].custom));
+  }
+
+  // Panel and chip label for a box. Added boxes are numbered like the page
+  // tabs, and show the start of their own text once they have some.
+  layoutBoxLabel(key) {
+    if (LABEL_BOX_NAMES[key]) return LABEL_BOX_NAMES[key];
+    const L = this.getLabelLayout();
+    const n = Object.keys(L).filter(k => L[k].custom).indexOf(key) + 1;
+    const txt = ((L[key] && L[key].text) || '').replace(/\s+/g, ' ').trim().slice(0, 10);
+    return txt ? n + ' ' + txt : 'Text ' + n;
+  }
+
+  addLayoutTextBox() {
+    const dims = this.getDims();
+    const L = this.getLabelLayout();
+    let i = 1; while (L['t' + i]) i++;
+    const key = 't' + i;
+    this.updateLayoutBox(key, {
+      l: +(dims.w * 0.28).toFixed(3), r: +(dims.w * 0.72).toFixed(3),
+      t: +(dims.h * 0.42).toFixed(3), b: +(dims.h * 0.58).toFixed(3),
+      h: 'left', v: 'top', show: true, custom: true, text: '',
+    });
+    this.setState({ layoutBox: key }, () => { this.markActiveLayoutBox(); this.renderLayoutChrome(); });
+  }
+
+  deleteLayoutBox(key) {
+    const L = this.getLabelLayout();
+    if (!L[key] || !L[key].custom) return;
+    const size = this.state.defaultSize;
+    this.setState(s => {
+      const forSize = { ...((s.labelLayouts || {})[size] || {}) };
+      delete forSize[key];
+      return { labelLayouts: { ...s.labelLayouts, [size]: forSize }, layoutBox: 'main' };
+    }, () => { this.reRenderLabelPages(); this.markActiveLayoutBox(); this.renderLayoutChrome(); this.saveDebounced(); });
+  }
+
+  // Text typed into an added box lives in the layout, not in the page HTML, so
+  // it survives the next address re-render. Written back without re-rendering
+  // so the caret stays where the user put it.
+  syncLayoutBoxText(el) {
+    const size = this.state.defaultSize;
+    const saved = { ...((this.state.labelLayouts || {})[size] || {}) };
+    let changed = false;
+    el.querySelectorAll('[data-lbl-box][data-custom]').forEach(box => {
+      const key = box.getAttribute('data-lbl-box');
+      const text = (box.innerText || '').replace(/\u00a0/g, ' ');
+      if (saved[key] && saved[key].text !== text) { saved[key] = { ...saved[key], text }; changed = true; }
+    });
+    if (changed) this.setState(s => ({ labelLayouts: { ...s.labelLayouts, [size]: saved } }));
+  }
+
+  // True for any size driven by the box model.
+  hasBoxLayout() {
+    return !!LABEL_DEFAULT_LAYOUTS[this.state.defaultSize];
   }
 
   // Write a patch to one box and re-render the label pages so the change is
@@ -1267,7 +1358,7 @@ class Component extends DCLogic {
       const r = box.getBoundingClientRect();
       const isActive = key === activeKey;
 
-      const c = chip(LABEL46_BOX_NAMES[key] || key, r.left, r.top - 15, isActive);
+      const c = chip(this.layoutBoxLabel(key), r.left, r.top - 15, isActive);
       c.addEventListener('click', ev => {
         ev.preventDefault(); ev.stopPropagation();
         this.selectLayoutBox(key);
@@ -1364,7 +1455,7 @@ class Component extends DCLogic {
   // One absolutely-positioned box of the 4x6 layout. `inner` is the markup
   // that goes inside; the box itself carries the geometry and justification,
   // and its font-size is the single value fitLabelBox rescales.
-  buildLabel46Box(key, box, basePt, inner) {
+  buildLabelBox(key, box, basePt, inner, isCustom) {
     // A box is positioned against the editable's padding box, whose origin is
     // the label's own top-left corner — so these are label coordinates
     // directly, and the page padding must NOT be subtracted.
@@ -1386,55 +1477,107 @@ class Component extends DCLogic {
       'font-size:' + basePt.toFixed(2) + 'pt',
     ].join(';');
     const textAlign = box.h === 'center' ? 'center' : box.h === 'right' ? 'right' : 'left';
-    return '<div data-lbl-box="' + key + '" data-base-pt="' + basePt.toFixed(2) + '" style="' + style + ';">'
+    return '<div data-lbl-box="' + key + '"' + (isCustom ? ' data-custom="1"' : '') + ' data-base-pt="' + basePt.toFixed(2) + '" style="' + style + ';">'
       + '<div style="width:100%;text-align:' + textAlign + ';">' + inner + '</div>'
       + '</div>';
   }
 
-  // 4x6 label layout — four independent boxes, positioned and justified by the
-  // LAYOUT panel. Sizes inside each box are em-relative to the box, so fitting
-  // a box to its geometry is a single font-size change.
-  buildLabel46AddressHtml(addr) {
+  // Base type sizes per label size, kept at the values each size shipped with
+  // so switching a size to the box model does not change how it renders. The
+  // scale floor of 0.28 is what holds 1x2.625 at 9pt rather than the 5pt its
+  // own ratio would give.
+  labelBoxConfig() {
     const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 6, dims.h / 4)) * 0.7 * 0.85;
-    const basePt = 40 * scale * LABEL46_BODY_BOOST;
-    const postalPt = basePt * (82.2 / 40);
-    const retPt = Math.round(16 * scale);
-    const lineMB = '0.108em';
+    const size = this.state.defaultSize;
+    if (size === 'label46') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 6, dims.h / 4)) * 0.7 * 0.85;
+      return { base: 40 * scale * LABEL46_BODY_BOOST, postalRatio: 82.2 / 40,
+               retPt: Math.round(16 * scale), variant: 'stacked', postalLh: '1' };
+    }
+    if (size === 'label24') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
+      const base = 54.7 * scale;
+      // 2x4 and 1x2.625 never set a line-height on the postal code, so it
+      // inherited 1.6 — keeping that is what holds the digits where they were.
+      return { base, postalRatio: 98.6 / 54.7, retPt: base * 0.6, variant: 'stacked', postalLh: '1.6' };
+    }
+    if (size === 'label1x2') {
+      const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
+      const base = 45.6 * scale;
+      return { base, postalRatio: 82.2 / 45.6, retPt: base * 0.6, variant: 'compact', postalLh: '1.6' };
+    }
+    return null;
+  }
+
+  // One builder for every size on the box model. Sizes inside each box are
+  // em-relative to the box, so fitting a box to its geometry is a single
+  // font-size change. 'compact' keeps 1x2.625's habit of putting name beside
+  // phone and city/province/country on one line — that size has no separate
+  // country box because its country has never had its own line.
+  buildLabelBoxesHtml(addr) {
+    const cfg = this.labelBoxConfig();
+    if (!cfg) return '';
     const L = this.getLabelLayout();
+    const lineMB = '0.108em';
+    const line = (inner, extra) => '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:'
+      + lineMB + ';' + (extra || '') + '">' + inner + '</div>';
     let html = '';
 
     const returnAddr = (this.state.returnAddressRaw || '').trim();
-    if (returnAddr && L.ret.show) {
-      html += this.buildLabel46Box('ret', L.ret, retPt,
+    if (returnAddr && L.ret && L.ret.show) {
+      html += this.buildLabelBox('ret', L.ret, cfg.retPt,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;">'
         + this.escapeHtml(returnAddr).replace(/\n/g, '<br>') + '</div>');
     }
 
-    if (L.main.show) {
+    if (L.main && L.main.show) {
       let main = '';
-      if (addr.name) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
-      if (addr.phone) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-      if (addr.street) main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
-      if (addr.city || addr.province) {
-        // The province rides the box's right edge, so widening the Address box
-        // is what carries it further right.
-        main += '<div style="font-size:1em;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
-        main += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
-        main += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
-        main += '</div>';
+      const phone = addr.phone ? this.escapeHtml(this.formatPhone(addr.phone)) : '';
+      if (cfg.variant === 'compact') {
+        if (addr.name || addr.phone) {
+          main += line('<span>' + this.escapeHtml(addr.name) + '</span>'
+            + (phone ? '<span style="margin-left:auto;">' + phone + '</span>' : ''),
+            'display:flex;white-space:nowrap;');
+        }
+        if (addr.street) main += line(this.escapeHtml(addr.street));
+        if (addr.city || addr.province || addr.country) {
+          main += line('<span style="flex:1;text-align:left;">' + this.escapeHtml(addr.city) + '</span>'
+            + '<span style="flex:1;text-align:center;">' + this.escapeHtml(addr.province) + '</span>'
+            + '<span style="flex:1;text-align:right;">' + this.escapeHtml(addr.country) + '</span>',
+            'display:flex;white-space:nowrap;margin-bottom:0;');
+        }
+      } else {
+        if (addr.name) main += line(this.escapeHtml(addr.name), 'overflow-wrap:break-word;');
+        if (addr.phone) main += line(phone, 'overflow-wrap:break-word;');
+        if (addr.street) main += line(this.escapeHtml(addr.street), 'overflow-wrap:break-word;');
+        if (addr.city || addr.province) {
+          // The province rides the box's right edge, so widening the Address
+          // box is what carries it further right.
+          main += line('<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>'
+            + '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>',
+            'display:flex;gap:8px;white-space:normal;');
+        }
       }
-      if (main) html += this.buildLabel46Box('main', L.main, basePt, main);
+      if (main) html += this.buildLabelBox('main', L.main, cfg.base, main);
     }
 
-    if (addr.postal && L.postal.show) {
-      html += this.buildLabel46Box('postal', L.postal, postalPt,
-        '<div style="font-size:1em;font-weight:900;line-height:1;overflow-wrap:break-word;">' + this.escapeHtml(addr.postal) + '</div>');
+    if (addr.postal && L.postal && L.postal.show) {
+      html += this.buildLabelBox('postal', L.postal, cfg.base * cfg.postalRatio,
+        '<div style="font-size:1em;font-weight:900;line-height:' + cfg.postalLh + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.postal) + '</div>');
     }
-    if (addr.country && L.country.show) {
-      html += this.buildLabel46Box('country', L.country, basePt,
+    if (addr.country && L.country && L.country.show) {
+      html += this.buildLabelBox('country', L.country, cfg.base,
         '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">' + this.escapeHtml(addr.country) + '</div>');
     }
+    // Boxes the user added. Their text comes from the layout rather than the
+    // address, so re-rendering an address leaves them alone.
+    Object.keys(L).forEach(key => {
+      const box = L[key];
+      if (!box.custom || !box.show) return;
+      html += this.buildLabelBox(key, box, cfg.base,
+        '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">'
+        + this.escapeHtml(box.text || '').replace(/\n/g, '<br>') + '</div>', true);
+    });
     return html;
   }
 
@@ -1466,61 +1609,7 @@ class Component extends DCLogic {
     el.querySelectorAll('[data-lbl-box]').forEach(b => this.fitLabelBox(b));
   }
 
-  // 2x4 label layout — starts as a copy of the 4x6 treatment, scaled down;
-  // tell me how you'd like this one to differ and I'll adjust it on its own.
-  buildLabel24AddressHtml(addr) {
-    const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
-    const lineSize = Math.round(54.7 * scale), postalSize = Math.round(98.6 * scale);
-    const lineMB = (0.072 * scale).toFixed(3) + 'in', bottomMT = (0.144 * 0.6 * scale).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;margin-left:0.5in;">';
-    if (addr.name) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.name) + '</div>';
-    if (addr.phone) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';overflow-wrap:break-word;">' + this.escapeHtml(addr.street) + '</div>';
-    if (addr.city || addr.province) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;gap:8px;white-space:normal;">';
-      html += '<span style="overflow-wrap:break-word;">' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="margin-left:auto;flex-shrink:0;">' + this.escapeHtml(addr.province) + '</span>';
-      html += '</div>';
-    }
-    if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.postal) + '</div>';
-    if (addr.country) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;text-align:left;margin-top:' + bottomMT + ';">' + this.escapeHtml(addr.country) + '</div>';
-    html += '</div>';
-    return html;
-  }
 
-  // 1x2.625 label layout — starts as a copy of the 4x6 treatment, scaled down;
-  // tell me how you'd like this one to differ and I'll adjust it on its own.
-  buildLabel1x2AddressHtml(addr) {
-    const dims = this.getDims();
-    const scale = Math.max(0.28, Math.min(1, dims.w / 4, dims.h / 6)) * 0.7;
-    const lineSize = Math.round(45.6 * scale), postalSize = Math.round(82.2 * scale);
-    const lineMB = (0.06 * scale).toFixed(3) + 'in';
-    const postalMT = (0.02 * scale).toFixed(3) + 'in';
-    const countryMT = (0.02 * scale).toFixed(3) + 'in';
-    const shiftDownIn = (dims.h * 0.12).toFixed(3) + 'in';
-    let html = '<div style="text-transform:uppercase;margin-top:' + shiftDownIn + ';">';
-    if (addr.name) {
-      if (addr.phone) {
-        html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';display:flex;white-space:nowrap;"><span>' + this.escapeHtml(addr.name) + '</span><span style="margin-left:auto;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</span></div>';
-      } else {
-        html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.name) + '</div>';
-      }
-    } else if (addr.phone) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';text-align:right;">' + this.escapeHtml(this.formatPhone(addr.phone)) + '</div>';
-    }
-    if (addr.street) html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:' + lineMB + ';">' + this.escapeHtml(addr.street) + '</div>';
-    if (addr.city || addr.province || addr.country) {
-      html += '<div style="font-size:' + lineSize + 'pt;font-weight:400;line-height:1.25;margin-bottom:0;display:flex;white-space:nowrap;">';
-      html += '<span style="flex:1;text-align:left;">' + this.escapeHtml(addr.city) + '</span>';
-      html += '<span style="flex:1;text-align:center;">' + this.escapeHtml(addr.province) + '</span>';
-      html += '<span style="flex:1;text-align:right;">' + this.escapeHtml(addr.country) + '</span>';
-      html += '</div>';
-    }
-    if (addr.postal) html += '<div style="font-size:' + postalSize + 'pt;font-weight:900;text-align:left;margin-top:' + postalMT + ';margin-bottom:3px;">' + this.escapeHtml(addr.postal) + '</div>';
-    html += '</div>';
-    return html;
-  }
   finishLabelSizePick(size) {
     if (this.state.pendingLabelAddresses || Object.keys(this.state.pageAddresses || {}).length) {
       this.setState({ defaultSize: size, defaultOrientation: 'landscape', docCreated: true }, () => {
@@ -1564,14 +1653,27 @@ class Component extends DCLogic {
     if (this.zoomWrapEl) { this.zoomWrapEl.style.transform = 'none'; this.zoomWrapEl.style.margin = ''; }
   }
 
+  // A 1x2.625 label is 252px on screen and an arrow is 20px, so its own
+  // controls would bury it. While LAYOUT is open, small labels are magnified
+  // enough to work on. The chrome is drawn in a fixed overlay at its own size,
+  // so the label grows and the arrows do not.
+  layoutZoomFactor() {
+    if (!this.state.layoutMode || !this.hasBoxLayout()) return 1;
+    const naturalPx = this.getDims().w * 96;
+    if (!naturalPx) return 1;
+    const roomy = Math.max(1, (window.innerWidth - 220) / naturalPx);
+    return Math.min(3, Math.max(1, 560 / naturalPx), roomy);
+  }
+
   applyFitScale() {
     if (this.state.zoomActive || this.state.selecting) return;
-    this.fitScale = this.computeFitScale();
+    this.fitScale = this.computeFitScale() * this.layoutZoomFactor();
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transformOrigin = 'top center';
-      this.zoomWrapEl.style.transform = this.fitScale < 1 ? 'scale(' + this.fitScale + ')' : 'none';
+      this.zoomWrapEl.style.transform = this.fitScale !== 1 ? 'scale(' + this.fitScale + ')' : 'none';
     }
     this.positionEdgeTabs();
+    if (this.state.layoutMode) this.renderLayoutChrome();
   }
 
   positionEdgeTabs() {
@@ -1583,8 +1685,12 @@ class Component extends DCLogic {
     const rightPos = Math.max(0, window.innerWidth - rect.right - gap);
     const tabLeftPos = leftPos * 0.95;
     const tabRightPos = rightPos * 0.95;
-    [this.openTabEl, this.saveTabEl, this.printTabEl].forEach(el => { if (el) el.style.left = tabLeftPos + 'px'; });
-    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = tabRightPos + 'px'; });
+    // Magnifying a small label in LAYOUT mode widens the desk these are
+    // measured against, which walks the tabs inward on top of the label. Park
+    // them at the viewport edges for the duration instead.
+    const pinned = this.state.layoutMode && this.hasBoxLayout();
+    [this.openTabEl, this.saveTabEl, this.printTabEl].forEach(el => { if (el) el.style.left = (pinned ? 0 : tabLeftPos) + 'px'; });
+    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = (pinned ? 0 : tabRightPos) + 'px'; });
 
   }
 
@@ -2189,6 +2295,14 @@ class Component extends DCLogic {
     this.typingTimers[id] = setTimeout(() => { this.typingBurst[id] = false; }, 700);
     clearTimeout(this.inputTimers[id]);
     this.inputTimers[id] = setTimeout(() => this.flowFrom(id), 500);
+    // Typing into a label has to re-fit it too, not just entering an address.
+    // fitLabelBox resets to the base size before measuring, so deleting text
+    // grows the type back rather than leaving it stuck small.
+    const labelEl = this.editableEls[id];
+    if (labelEl && labelEl.querySelector('[data-lbl-box]')) {
+      this.fitLabelBody(labelEl);
+      this.syncLayoutBoxText(labelEl);
+    }
     this.saveDebounced();
     this.updateEmptyState(id);
   }
@@ -2867,7 +2981,7 @@ class Component extends DCLogic {
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
       // LAYOUT drives the 4x6 box model only; the other two label sizes still
       // use their own flow layout, so the tab would do nothing there.
-      isLabel46Doc: isLabelDoc && this.state.defaultSize === 'label46' && this.state.docCreated,
+      isLabel46Doc: isLabelDoc && this.hasBoxLayout() && this.state.docCreated,
       layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
       layoutModeOn: this.state.layoutMode,
@@ -2886,30 +3000,39 @@ class Component extends DCLogic {
           });
           document.body.classList.toggle('layout-on', next);
           this.markActiveLayoutBox();
+          this.applyFitScale();   // magnify a small label on the way in, restore on the way out
           this.renderLayoutChrome();
         });
       },
-      layoutBoxTabs: LABEL46_BOX_ORDER.map(k => ({
-        name: LABEL46_BOX_NAMES[k],
+      layoutBoxTabs: this.layoutBoxOrder().map(k => ({
+        name: this.layoutBoxLabel(k),
         style: this.state.layoutBox === k ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.setState({ layoutBox: k }, () => this.markActiveLayoutBox()),
       })),
+      layoutFullMenuOn: this.state.layoutFullMenu,
+      layoutFullMenuLabel: (this.state.layoutFullMenu ? '\u2611' : '\u2610') + ' Full menu',
+      layoutFullMenuStyle: this.state.layoutFullMenu ? 'background:#e8eef5;' : '',
+      onToggleLayoutFullMenu: () => this.setState(s => ({ layoutFullMenu: !s.layoutFullMenu }),
+        () => this.renderLayoutChrome()),
       layoutStepLabel: this.state.layoutCoarse ? 'Step 1/4"' : 'Step 1/16"',
       layoutStepStyle: this.state.layoutCoarse ? 'background:#e8eef5;' : '',
       onToggleLayoutStep: () => this.setState(s => ({ layoutCoarse: !s.layoutCoarse })),
-      layoutShowLabel: this.getLabelLayout()[this.state.layoutBox].show ? 'Hide' : 'Show',
-      layoutShowStyle: this.getLabelLayout()[this.state.layoutBox].show ? '' : 'background:#f3d9d9;',
+      layoutShowLabel: this.activeLayoutBox().show ? 'Hide' : 'Show',
+      layoutShowStyle: this.activeLayoutBox().show ? '' : 'background:#f3d9d9;',
       onToggleLayoutShow: () => {
         const k = this.state.layoutBox;
         this.updateLayoutBox(k, { show: !this.getLabelLayout()[k].show });
       },
       onResetLayout: () => this.resetLayout(),
+      onAddLayoutTextBox: () => this.addLayoutTextBox(),
+      layoutBoxIsCustom: !!this.activeLayoutBox().custom,
+      onDeleteLayoutBox: () => this.deleteLayoutBox(this.state.layoutBox),
       layoutEdges: [
-        { key: 'l', name: 'Left' }, { key: 'r', name: 'Right' },
-        { key: 't', name: 'Top' }, { key: 'b', name: 'Bottom' },
+        { key: 'l', name: 'L' }, { key: 'r', name: 'R' },
+        { key: 't', name: 'T' }, { key: 'b', name: 'B' },
       ].map(e => ({
         name: e.name,
-        value: this.getLabelLayout()[this.state.layoutBox][e.key].toFixed(2) + '"',
+        value: this.activeLayoutBox()[e.key].toFixed(2) + '"',
         onMinus: () => this.nudgeLayout(e.key, -1),
         onPlus: () => this.nudgeLayout(e.key, 1),
       })),
@@ -2918,12 +3041,12 @@ class Component extends DCLogic {
         { k: 'h', v: 'left', name: 'Left' }, { k: 'h', v: 'center', name: 'Ctr' }, { k: 'h', v: 'right', name: 'Right' },
       ].map(j => ({
         name: j.name,
-        style: this.getLabelLayout()[this.state.layoutBox][j.k] === j.v ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
+        style: this.activeLayoutBox()[j.k] === j.v ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
         onPick: () => this.updateLayoutBox(this.state.layoutBox, { [j.k]: j.v }),
       })),
       layoutWarning: (() => {
         const dims = this.getDims();
-        const b = this.getLabelLayout()[this.state.layoutBox];
+        const b = this.activeLayoutBox();
         const tight = b.l < LAYOUT_EDGE_WARN_IN || b.t < LAYOUT_EDGE_WARN_IN
           || (dims.w - b.r) < LAYOUT_EDGE_WARN_IN || (dims.h - b.b) < LAYOUT_EDGE_WARN_IN;
         return tight ? 'Close to the edge — may be trimmed when printed' : '';
