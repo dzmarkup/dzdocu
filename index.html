@@ -1666,8 +1666,13 @@ class Component extends DCLogic {
     if (!this.state.layoutMode || !this.hasBoxLayout()) return 1;
     const naturalPx = this.getDims().w * 96;
     if (!naturalPx) return 1;
+    // This only ever magnifies. A page already being shrunk to fit the
+    // viewport — every tabloid, and a letter page on a small screen — is left
+    // to computeFitScale, so the two never pull in opposite directions.
+    if (this.computeFitScale() < 1) return 1;
+    const target = Math.max(1, 560 / naturalPx);
     const roomy = Math.max(1, (window.innerWidth - 220) / naturalPx);
-    return Math.min(3, Math.max(1, 560 / naturalPx), roomy);
+    return Math.min(3, target, roomy);
   }
 
   applyFitScale() {
@@ -2268,6 +2273,18 @@ class Component extends DCLogic {
     });
   }
 
+  // The last child the reflow is allowed to push onto the next page. Boxes are
+  // pinned to their page by their own geometry, so they must never be carried
+  // along by overflowing text — that would silently move somebody's box to a
+  // page they never put it on.
+  lastFlowableChild(el) {
+    let n = el.lastChild;
+    while (n && n.nodeType === 1 && n.hasAttribute && n.hasAttribute('data-lbl-box')) {
+      n = n.previousSibling;
+    }
+    return n;
+  }
+
   async _flowLoop(startId) {
     let curId = startId, iter = 0, newPagesCreated = 0;
     while (iter < 20000) {
@@ -2287,11 +2304,13 @@ class Component extends DCLogic {
       const toEl = this.editableEls[nextId];
       if (!fromEl || !toEl) return;
       let movedAny = false;
-      while (fromEl.scrollHeight > fromEl.clientHeight + 1 && fromEl.lastChild) {
-        toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+      let node = this.lastFlowableChild(fromEl);
+      while (fromEl.scrollHeight > fromEl.clientHeight + 1 && node) {
+        toEl.insertBefore(node, toEl.firstChild);
         movedAny = true;
         iter++;
         if (iter % 25 === 0) await new Promise(r => setTimeout(r, 0));
+        node = this.lastFlowableChild(fromEl);
       }
       if (!movedAny) return;
       curId = nextId;
