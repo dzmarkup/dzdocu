@@ -77,28 +77,56 @@ by position — "+ Page" can insert a repeated or blank label mid-run, and a
 positional list makes the return-address toggle rewrite later pages with the
 wrong address. The map is persisted with the document.
 
+## LAYOUT mode (4x6 only)
+
+The four areas of a 4x6 label — `ret`, `main`, `postal`, `country` — are
+independent absolutely-positioned boxes built by `buildLabel46Box`. Geometry
+lives in `state.labelLayouts[size]` in **inches from the label's top-left**,
+merged over `LABEL46_DEFAULT_LAYOUT` by `getLabelLayout()`, and persisted with
+the document. Anything a saved file lacks falls back to the defaults, so
+documents written before LAYOUT still open.
+
+Things worth knowing before touching it:
+
+- **A box's coordinates are label coordinates.** Absolute positioning resolves
+  against the editable's padding box, whose origin is the label corner — do
+  *not* subtract the page padding, or every box lands up and to the left.
+- **`fitLabelBox` measures the content wrapper, not the box.** A flex box
+  aligned middle/bottom over-reports its own `scrollHeight` (a box 92px tall
+  holding 75px of content reports 96), which silently shrinks type that
+  already fits.
+- The panel and the box outlines are screen-only, and editing is switched off
+  while the panel is open so a caret can't fight the controls.
+- Only 4x6 uses the box model; 2x4 and 1x2.625 still use their own flow
+  layout, which is why the tab is gated to `isLabel46Doc`.
+
+`LABEL46_DEFAULT_LAYOUT` is measured from the layout the label shipped with,
+so an untouched label renders identically to before LAYOUT existed. If you
+change it, re-check against those numbers rather than by eye.
+
 ## The 4x6 label address block
 
-Sizing and placement are four constants above the class — retune there, do not
-unpick the markup:
+Type scale is a constant above the class — retune there, do not unpick the
+markup. `LABEL46_BODY_LEFT_IN` / `_RIGHT_IN` / `_BOTTOM_IN` are now only the
+seed values behind the default box geometry:
 
-- `LABEL46_BODY_LEFT_IN` / `LABEL46_BODY_RIGHT_IN` — the box the delivery
-  address lives in, in inches from the label's left edge. The province (`ON`)
-  is flush against the right edge, so **widening the box is what moves the
-  province right without disturbing the left alignment.**
-- `LABEL46_BODY_BOTTOM_IN` — bottom inset, deliberately tighter than the
-  label's own padding. Postal + country are pinned to the floor of the box with
-  `margin-top:auto`; everything above them gets the height that frees up.
+- `LABEL46_BODY_LEFT_IN` / `LABEL46_BODY_RIGHT_IN` — where the Address box
+  starts and ends. The province (`ON`) rides the box's right edge, so
+  **widening that box is what moves the province right without disturbing the
+  left alignment** — which is what the LAYOUT panel's Right nudge now does.
+- `LABEL46_BODY_BOTTOM_IN` — the page's bottom inset, tighter than the generic
+  label padding so the Country box can sit low.
 - `LABEL46_BODY_BOOST` — type scale against the sizes the label shipped with.
+  This one is still live for every box: it sets the base size each is fitted
+  from.
 
-Every size inside the block is in `em` against the wrapper, so `fitLabelBody`
-rescales the whole thing by setting one font-size. It runs after the markup is
-in the DOM (it needs real measurements) and steps down 3% at a time until the
-content stops overflowing, with a floor at 45% of base.
+Sizes inside a box are `em` against the box, so `fitLabelBox` rescales it by
+setting one font-size. It steps down 3% at a time until the content stops
+overflowing, with a floor at 35% of base.
 
-**`fitLabelBody` only runs from `setPageAddresses`** — when an address is
-entered or re-rendered. Typing directly into a label does not re-fit it;
-`handleInput` does not call it.
+**Fitting only runs from `setPageAddresses`** — when an address is entered,
+re-rendered, or a box is nudged. Typing directly into a label does not re-fit
+it; `handleInput` does not call it.
 
 ## Known and unfinished
 
@@ -123,3 +151,20 @@ entered or re-rendered. Typing directly into a label does not re-fit it;
 - **There is no way to clear a saved document from the UI.** The resume prompt
   that offered "Start New (deletes saved doc)" was removed from the markup but
   its handler remains. Restoring it is a real missing feature, not cleanup.
+- **A reload does not restore the open document.** The save still happens, but
+  nothing reads it back at boot — that was the resume prompt's job. Reopening
+  means dropping the `.docu` in.
+
+## Opening a saved .docu
+
+Two routes, and they behave differently, which is worth knowing before
+believing a bug report about either:
+
+- **From inside an open document**, the "Open .docu" side tab works.
+- **On the setup screen** the same tab is unreachable — that screen's overlay
+  is `z-index:50` over the tab's `18`. The route the setup screen offers is
+  the DROP-ZONE, so that is the one to test on a fresh visit.
+
+`applySavedData` sets `docCreated` itself. It must: restoring *is* creating a
+document, and without it the setup screen stays up, the editables never mount,
+and the restored `pageHtml` has nowhere to go — silently, with no error.
