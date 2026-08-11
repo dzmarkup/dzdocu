@@ -1067,7 +1067,10 @@ class Component extends DCLogic {
     this._onResize = () => {
       this.applyFitScale(); this.updatePairFocus();
       const narrow = window.innerWidth <= 700;
-      if (narrow !== this.state.narrowScreen) this.setState({ narrowScreen: narrow });
+      if (narrow !== this.state.narrowScreen) {
+        if (!narrow) this.setPreviewLocked(false);
+        this.setState({ narrowScreen: narrow });
+      }
       this.syncMagnifierPosition();
     };
     window.addEventListener('resize', this._onResize);
@@ -1833,6 +1836,20 @@ class Component extends DCLogic {
     this.state.pageIds.forEach(id => this.flowFrom(id));
   }
 
+  // Freezes the print-preview page in place — no pinch-zoom, no scroll/pan —
+  // so a tap lands exactly where the finger is instead of the page having
+  // already drifted under it. Mirrors the desktop Full Screen lock
+  // (forceUnlockScroll) but also blocks pinch-zoom, which body overflow
+  // alone doesn't stop on a phone.
+  setPreviewLocked(on) {
+    document.body.style.overflow = on ? 'hidden' : '';
+    document.body.style.touchAction = on ? 'none' : '';
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.setAttribute('content', on
+      ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
+      : 'width=device-width, initial-scale=1');
+  }
+
   // Tapping the locked print-preview page on a phone jumps straight into
   // Reflow at roughly the tapped line, instead of making the user hunt for
   // the Text toggle. "Approx" is the point — this walks up to the tapped
@@ -1841,6 +1858,7 @@ class Component extends DCLogic {
   tapToReflow(e, id) {
     if (!this.state.docCreated || this.isLabelSize() || !this.state.narrowScreen) return;
     if (this.state.reflowOn !== false) return;
+    this.setPreviewLocked(false);
     const el = this.editableEls[id];
     if (!el) return;
     let node = e.target;
@@ -2332,6 +2350,7 @@ class Component extends DCLogic {
 
   forceUnlockScroll() {
     document.body.style.overflow = '';
+    this.setPreviewLocked(false);
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transform = 'none';
       this.zoomWrapEl.style.transformOrigin = 'top center';
@@ -3807,10 +3826,10 @@ class Component extends DCLogic {
         }
       },
       onReflowInput: () => { clearTimeout(this._reflowTimer); this._reflowTimer = setTimeout(() => this.commitReflowStream(), 800); },
-      onExitReflow: () => { this.commitReflowStream(); this.setState({ reflowOn: false }); },
+      onExitReflow: () => { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); },
       onToggleReflow: () => {
-        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setState({ reflowOn: false }); }
-        else { if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
+        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); }
+        else { this.setPreviewLocked(false); if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
       },
       magnifierRef: (el) => {
         this.magnifierEl = el;
