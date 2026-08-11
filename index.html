@@ -842,7 +842,12 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
   </div>
 </sc-if>
 
-<div class="doc-stage-wrap" style="display:flex;justify-content:center;margin-top:-10px;padding-top:60px;">
+<!-- The document stage is removed from the page entirely while setup is
+     open. It used to stay in the DOM and rely on the overlay's z-index to
+     cover it, which older browsers layer differently — the blank sheet showed
+     through as a page-sized white rectangle. Nothing can bleed through
+     something that is not rendered. -->
+<div class="doc-stage-wrap" style="display:{{ stageDisplay }};justify-content:center;margin-top:-10px;padding-top:60px;">
 <div class="doc-stage" ref="{{ zoomWrapRef }}" style="position:relative;transform-origin:top center;transition:transform 0.4s ease;">
 <sc-if value="{{ showReturnToggle }}" hint-placeholder-val="{{ false }}">
   <button class="btn btn-secondary" sc-camel-on-click="{{ toggleReturnOnLabel }}" style="position:absolute;top:-34px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 10px;white-space:nowrap;z-index:5;{{ returnToggleStyle }}">{{ returnToggleLabel }}</button>
@@ -3139,6 +3144,7 @@ class Component extends DCLogic {
       pageWidthIn: dims.w + 'in',
       pageHeightIn: dims.h + 'in',
       setupOpen: !this.state.docCreated,
+      stageDisplay: this.state.docCreated ? 'flex' : 'none',
       setupStepIsResume: this.state.setupStep === 'resume',
       resumeSummary: this.pendingSavedData ? (this.pendingSavedData.pageIds.length + ' page' + (this.pendingSavedData.pageIds.length === 1 ? '' : 's') + (this.pendingSavedData.docTitle ? ', titled "' + this.pendingSavedData.docTitle + '"' : '')) : '',
       onResumeContinue: () => this.onResumeContinue(),
