@@ -530,12 +530,6 @@ textarea.input { min-height: 90px; resize: vertical; }
   </div>
 </div>
 </sc-if>
-<!-- The way back to reflow from print preview. The bottom rail is crowded on a
-     phone and its own toggle can be clipped off the end, which leaves no route
-     back into the editor; this one is pinned and cannot be scrolled away. -->
-<sc-if value="{{ reflowReturnVisible }}" hint-placeholder-val="{{ false }}">
-<button class="no-print btn btn-primary" sc-camel-on-click="{{ onToggleReflow }}" title="Back to the reflow editor" style="position:fixed;right:10px;bottom:52px;z-index:22;height:38px;padding:0 14px;font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#2f6fb0;color:#fff;border:1px solid #2f6fb0;">Edit Text</button>
-</sc-if>
 
 <!-- Reflow editing. On a phone the page view is too small to aim a caret at, so
      documents get a full-width stream of the same content at a readable size,
@@ -543,7 +537,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      document model: the stream is built from the pages on entry and poured back
      into page one on exit, where the existing flow engine repaginates it. -->
 <sc-if value="{{ reflowVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" style="position:fixed;left:0;right:0;top:34px;bottom:42px;z-index:21;background:#ffffff;display:flex;flex-direction:column;">
+<div class="no-print" style="position:fixed;left:0;right:0;top:34px;bottom:{{ reflowBottomInset }};z-index:21;background:#ffffff;display:flex;flex-direction:column;">
   <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#111418;border-bottom:2px solid #2f6fb0;">
     <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
   </div>
@@ -3750,7 +3744,13 @@ class Component extends DCLogic {
       // (print preview) and back.
       reflowOffered: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen,
       reflowVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn !== false,
-      reflowReturnVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn === false,
+      // The reflow overlay sits at a higher z-index than the bottom toolbar
+      // so it can cover the desk behind it, which means an inset that's too
+      // small lets the overlay paint over the top of a taller toolbar
+      // instead of leaving room for it. Measured live rather than guessed,
+      // since the toolbar's real height depends on the toggle button's
+      // content and the phone's own safe-area inset.
+      reflowBottomInset: (this.toolbarEl2 ? Math.ceil(this.toolbarEl2.getBoundingClientRect().height) : 90) + 'px',
       // +Cover / +Page / the page-number tabs crowded the one control that
       // matters on a phone — the reflow/print-preview toggle. Mobile
       // documents lose them; labels and desktop keep them as before.
