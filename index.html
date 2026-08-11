@@ -2319,7 +2319,6 @@ class Component extends DCLogic {
     if (!leftId) return;
     if (!rightId) { popSolo(leftId); return; }
     const leftEl = this.sectionEls[leftId], rightEl = this.sectionEls[rightId];
-    console.log('PAIRDBG idx=' + idx + ' pairStart=' + pairStart + ' leftId=' + leftId + ' rightId=' + rightId + ' haveLeft=' + !!leftEl + ' haveRight=' + !!rightEl + ' keys=' + Object.keys(this.sectionEls).join(','));
     if (!leftEl || !rightEl) return;
     const dims = this.getDims();
     const shift = ((dims.w + 0.3) / 2).toFixed(3) + 'in';
@@ -2345,6 +2344,12 @@ class Component extends DCLogic {
     window.removeEventListener('error', this._onWindowError);
     document.removeEventListener('selectionchange', this._onSelectionChange);
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
+    document.removeEventListener('selectionchange', this._onMagnifierSync);
+    document.removeEventListener('input', this._onMagnifierSync, true);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._onVV);
+      window.visualViewport.removeEventListener('scroll', this._onVV);
+    }
     if (super.componentWillUnmount) super.componentWillUnmount();
   }
 
@@ -3811,7 +3816,7 @@ class Component extends DCLogic {
       // (print preview) and back.
       reflowOffered: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen,
       reflowVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn !== false,
-      reflowReturnVisible: false,
+      reflowReturnVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn === false,
       reflowBtnLabel: this.state.reflowOn === false ? 'Text' : 'Page',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
