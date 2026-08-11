@@ -547,7 +547,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#111418;border-bottom:2px solid #2f6fb0;">
     <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
   </div>
-  <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:27px;line-height:1.5;color:#1d1f20;outline:none;"></div>
+  <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:54px;line-height:1.5;color:#1d1f20;outline:none;"></div>
 </div>
 </sc-if>
 
@@ -926,7 +926,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <sc-if value="{{ p.headerOff }}" hint-placeholder-val="{{ true }}">
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
-      <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;"></div>
+      <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
     </section>
   </sc-for>
 </x-import>
@@ -1831,6 +1831,58 @@ class Component extends DCLogic {
 
   reflowAllPages() {
     this.state.pageIds.forEach(id => this.flowFrom(id));
+  }
+
+  // Tapping the locked print-preview page on a phone jumps straight into
+  // Reflow at roughly the tapped line, instead of making the user hunt for
+  // the Text toggle. "Approx" is the point — this walks up to the tapped
+  // page's top-level flowing child (the same unit buildReflowStream clones),
+  // not an exact character offset.
+  tapToReflow(e, id) {
+    if (!this.state.docCreated || this.isLabelSize() || !this.state.narrowScreen) return;
+    if (this.state.reflowOn !== false) return;
+    const el = this.editableEls[id];
+    if (!el) return;
+    let node = e.target;
+    while (node && node.parentNode !== el) node = node.parentNode;
+    if (!node) return;
+    const localIdx = this.flowingChildren(el).indexOf(node);
+    if (localIdx < 0) return;
+    this._reflowJumpTarget = { pageId: id, localIdx };
+    if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built;
+    this.setState({ reflowOn: true });
+  }
+
+  // Finds the clone buildReflowStream made of the tapped node — same
+  // counting the builder used (a rule per page after the first, a chip per
+  // positioned box, then that page's flowing children) — and selects it so
+  // the tap reads as landing on that text, not just near it.
+  jumpReflowStreamTo(target) {
+    const stream = this.reflowStreamEl;
+    if (!stream || !target) return;
+    const ids = this.state.pageIds;
+    let streamIdx = 0;
+    for (const pid of ids) {
+      const el = this.editableEls[pid];
+      if (!el) continue;
+      if (pid !== ids[0]) streamIdx++;
+      streamIdx += el.querySelectorAll('[data-lbl-box][data-custom]').length;
+      const count = this.flowingChildren(el).length;
+      if (pid === target.pageId) {
+        streamIdx += Math.min(target.localIdx, Math.max(count - 1, 0));
+        break;
+      }
+      streamIdx += count;
+    }
+    const node = stream.children[streamIdx];
+    if (!node) return;
+    node.scrollIntoView({ block: 'center' });
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    stream.focus();
   }
 
   // While the panel is open: clicking a box selects it, and the chrome follows
@@ -3407,10 +3459,12 @@ class Component extends DCLogic {
         canRemove: this.state.pageIds.length > 1,
         ref: (el) => { if (el) this.editableEls[id] = el; },
         editable: !this.state.narrowScreen,
+        previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
         onInput: () => this.handleInput(id),
         onFocus: () => { this.focusedPageId = id; this.updatePairFocus(); this.forceUpdate(); },
+        onClick: (e) => this.tapToReflow(e, id),
         onKeyDown: (e) => { if (e.key === 'Tab') { e.preventDefault(); this.indentLine(id, e.shiftKey ? -1 : 1); } },
         onDragOver: (e) => this.onDragOver(e),
         onDrop: (e) => this.onDrop(e, id),
@@ -3744,7 +3798,13 @@ class Component extends DCLogic {
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
       reflowStreamRef: (el) => {
         this.reflowStreamEl = el;
-        if (el && !el.dataset.built) { el.dataset.built = '1'; setTimeout(() => this.buildReflowStream(), 30); }
+        if (el && !el.dataset.built) {
+          el.dataset.built = '1';
+          setTimeout(() => {
+            this.buildReflowStream();
+            if (this._reflowJumpTarget) { this.jumpReflowStreamTo(this._reflowJumpTarget); this._reflowJumpTarget = null; }
+          }, 30);
+        }
       },
       onReflowInput: () => { clearTimeout(this._reflowTimer); this._reflowTimer = setTimeout(() => this.commitReflowStream(), 800); },
       onExitReflow: () => { this.commitReflowStream(); this.setState({ reflowOn: false }); },
