@@ -561,21 +561,25 @@ textarea.input { min-height: 90px; resize: vertical; }
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px);">
-    <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
-    <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:52px;height:28px;font-size:12px;flex:0 0 auto;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
+    <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
     </sc-if>
-    <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ addPage }}"><span class="full-label">+ Page</span><span class="short-label">+P</span></button>
-    <sc-for list="{{ tabPages }}" as="p" hint-placeholder-count="1">
-      <div style="position:relative;display:inline-block;{{ p.tabWrapStyle }}{{ p.dragStyle }}" draggable="{{ p.canDrag }}" sc-camel-on-drag-start="{{ p.onTabDragStart }}" sc-camel-on-drag-enter="{{ p.onTabDragOver }}" sc-camel-on-drag-over="{{ p.onTabDragOver }}" sc-camel-on-drop="{{ p.onTabDrop }}" sc-camel-on-drag-end="{{ p.onTabDragEnd }}" sc-camel-on-mouse-enter="{{ p.onTabHover }}" sc-camel-on-mouse-leave="{{ p.onTabUnhover }}">
-        <button class="{{ p.tabClass }} page-tab-btn" sc-camel-on-click="{{ p.onScrollTo }}" style="width:38px;height:28px;box-sizing:border-box;white-space:nowrap;padding-left:0;padding-right:0;font-family:'Arial Narrow', Arial, sans-serif;{{ uniformBtnStyle }}{{ p.tabCursor }}{{ p.coverTabStyle }}{{ p.tabActiveStyle }}">
-          <span style="font-weight:700;text-transform:none;opacity:{{ p.tabNumOpacity }};transition:opacity 0.15s ease;">{{ p.num }}</span>
-          <sc-if value="{{ p.hasTitle }}" hint-placeholder-val="{{ false }}">
-            <span style="font-weight:400;font-size:0.6em;opacity:{{ p.tabNumOpacity }};"> {{ p.tabTitleShort }}</span>
-          </sc-if>
-        </button>
-      </div>
-    </sc-for>
+    <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:auto;height:56px;padding:4px 20px;font-size:28px;font-weight:700;white-space:nowrap;flex:0 0 auto;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
+    </sc-if>
+    <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ addPage }}"><span class="full-label">+ Page</span><span class="short-label">+P</span></button>
+      <sc-for list="{{ tabPages }}" as="p" hint-placeholder-count="1">
+        <div style="position:relative;display:inline-block;{{ p.tabWrapStyle }}{{ p.dragStyle }}" draggable="{{ p.canDrag }}" sc-camel-on-drag-start="{{ p.onTabDragStart }}" sc-camel-on-drag-enter="{{ p.onTabDragOver }}" sc-camel-on-drag-over="{{ p.onTabDragOver }}" sc-camel-on-drop="{{ p.onTabDrop }}" sc-camel-on-drag-end="{{ p.onTabDragEnd }}" sc-camel-on-mouse-enter="{{ p.onTabHover }}" sc-camel-on-mouse-leave="{{ p.onTabUnhover }}">
+          <button class="{{ p.tabClass }} page-tab-btn" sc-camel-on-click="{{ p.onScrollTo }}" style="width:38px;height:28px;box-sizing:border-box;white-space:nowrap;padding-left:0;padding-right:0;font-family:'Arial Narrow', Arial, sans-serif;{{ uniformBtnStyle }}{{ p.tabCursor }}{{ p.coverTabStyle }}{{ p.tabActiveStyle }}">
+            <span style="font-weight:700;text-transform:none;opacity:{{ p.tabNumOpacity }};transition:opacity 0.15s ease;">{{ p.num }}</span>
+            <sc-if value="{{ p.hasTitle }}" hint-placeholder-val="{{ false }}">
+              <span style="font-weight:400;font-size:0.6em;opacity:{{ p.tabNumOpacity }};"> {{ p.tabTitleShort }}</span>
+            </sc-if>
+          </button>
+        </div>
+      </sc-for>
+    </sc-if>
 </div>
 </sc-if>
 
@@ -1880,7 +1884,7 @@ class Component extends DCLogic {
     if (localIdx < 0) return;
     this._reflowJumpTarget = { pageId: id, localIdx };
     if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built;
-    this.setState({ reflowOn: true });
+    this.setState({ reflowOn: true }, () => this.applyFitScale());
   }
 
   // Finds the clone buildReflowStream made of the tapped node — same
@@ -2200,7 +2204,7 @@ class Component extends DCLogic {
       // locked — no pan, no pinch-zoom — so there is no way to nudge the
       // view if a real device's toolbar height or viewport quirks leave the
       // fit a little tight.
-      return Math.min(availW / pxW, availH / pxH) * 0.88;
+      return Math.min(availW / pxW, availH / pxH) * 0.78;
     }
     // A landscape tabloid is the one page wide enough that fitting its width
     // still leaves it taller than the window. The others deliberately show at
@@ -2239,7 +2243,16 @@ class Component extends DCLogic {
     this.fitScale = this.computeFitScale() * this.layoutZoomFactor();
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transformOrigin = 'top center';
-      this.zoomWrapEl.style.transform = this.fitScale !== 1 ? 'scale(' + this.fitScale + ')' : 'none';
+      // The locked mobile print preview sat too far left. translateX is the
+      // rightmost (innermost) function here, so it moves 0.75in of the
+      // page's own coordinate space — it scales down together with the
+      // page, staying 0.75in of paper space at any fit size, not a fixed
+      // screen offset.
+      const isMobilePreview = window.innerWidth <= 700 && !this.isLabelSize() && this.state.reflowOn === false;
+      const parts = [];
+      if (this.fitScale !== 1) parts.push('scale(' + this.fitScale + ')');
+      if (isMobilePreview) parts.push('translateX(72px)');
+      this.zoomWrapEl.style.transform = parts.length ? parts.join(' ') : 'none';
     }
     this.positionEdgeTabs();
     if (this.state.layoutMode) {
@@ -3738,7 +3751,11 @@ class Component extends DCLogic {
       reflowOffered: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen,
       reflowVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn !== false,
       reflowReturnVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn === false,
-      reflowBtnLabel: this.state.reflowOn === false ? 'Text' : 'Page',
+      // +Cover / +Page / the page-number tabs crowded the one control that
+      // matters on a phone — the reflow/print-preview toggle. Mobile
+      // documents lose them; labels and desktop keep them as before.
+      mobileDocChrome: !(this.state.narrowScreen && !isLabelDoc),
+      reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
       reflowStreamRef: (el) => {
@@ -3752,10 +3769,10 @@ class Component extends DCLogic {
         }
       },
       onReflowInput: () => { clearTimeout(this._reflowTimer); this._reflowTimer = setTimeout(() => this.commitReflowStream(), 800); },
-      onExitReflow: () => { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); },
+      onExitReflow: () => { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }, () => this.applyFitScale()); },
       onToggleReflow: () => {
-        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); }
-        else { this.setPreviewLocked(false); if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
+        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }, () => this.applyFitScale()); }
+        else { this.setPreviewLocked(false); if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }, () => this.applyFitScale()); }
       },
       magnifierRef: (el) => {
         this.magnifierEl = el;
