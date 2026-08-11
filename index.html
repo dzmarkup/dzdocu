@@ -72,6 +72,7 @@
   --color-text: #1d1f20;
   --color-accent: #5980a6;
   --color-accent-2: #728fab;
+  --color-divider: rgba(29, 31, 32, 0.16);
   --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
 
   /* Setup screens — the dark glass look shared by every step after the first
@@ -80,16 +81,25 @@
      rather than needing per-step colors chased down individually.
      Dark-top-to-lighter-bottom gradient, tinted increasingly toward the
      accent as it goes down: */
+  --setup-bg-1: #080e1b;
   --setup-bg-1: color-mix(in srgb, var(--color-accent) 6%, #030712);
+  --setup-bg-2: #17293b;
   --setup-bg-2: color-mix(in srgb, var(--color-accent) 22%, #04101d);
+  --setup-bg-3: #27435e;
   --setup-bg-3: color-mix(in srgb, var(--color-accent) 40%, #051a2e);
+  --setup-bg-4: #365a7d;
   --setup-bg-4: color-mix(in srgb, var(--color-accent) 58%, #062544);
   /* The glass panel itself — a dark, translucent fill with a bright,
      near-white edge of the accent hue, echoing the DROP-ZONE button. */
+  --setup-panel-bg: #182738;
   --setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%);
+  --setup-panel-border: #a4b9ce;
   --setup-panel-border: color-mix(in srgb, var(--color-accent) 55%, white 45%);
+  --setup-glow: #5996c1;
   --setup-glow: color-mix(in srgb, var(--color-accent) 70%, #5ac8ff 30%);
+  --setup-text: #e6ecf2;
   --setup-text: color-mix(in srgb, var(--color-accent) 15%, white 85%);
+  --setup-text-dim: #a5c3dc;
   --setup-text-dim: color-mix(in srgb, var(--color-accent) 20%, #b8d4ea 80%);
 
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
@@ -141,8 +151,11 @@
 
   /* Elevation — derived from the ground: soft ink-tinted shadows on a
      light theme, a hairline edge + ambient darkness on a dark one. */
+  --shadow-sm: 0 1px 2px rgba(43, 43, 45, 0.14);
   --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
+  --shadow-md: 0 3px 10px rgba(43, 43, 45, 0.16);
   --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+  --shadow-lg: 0 12px 32px rgba(43, 43, 45, 0.22);
   --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
 }
 
@@ -165,6 +178,7 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
 .blueprint.halftone, .blueprint.plate, .blueprint.duotone { overflow: visible; }
 .blueprint > .corner {
   position: absolute; width: 11px; height: 11px;
+  color: rgba(29, 31, 32, 0.55);
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
 .blueprint > .corner::before, .blueprint > .corner::after {
@@ -206,12 +220,13 @@ img { display: block; max-width: 100%; }
 figure { margin: 0; }
 figcaption {
   font-size: 11px; margin-top: var(--space-1);
+  color: rgba(29, 31, 32, 0.55);
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
-.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.text-muted { color: rgba(29, 31, 32, 0.55); color: color-mix(in srgb, var(--color-text) 55%, transparent); }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+::selection { background: rgba(89, 128, 166, 0.3); background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 
 /* — rules — */
 .hr {
@@ -236,11 +251,11 @@ figcaption {
 .btn-primary:hover { background: var(--color-accent-600); }
 .btn-primary:active { background: var(--color-accent-700); }
 .btn-secondary { border-color: var(--color-divider); }
-.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-secondary:hover { background: rgba(29, 31, 32, 0.07); background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active { background: rgba(29, 31, 32, 0.14); background: color-mix(in srgb, var(--color-text) 14%, transparent); }
 .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
-.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-ghost:hover { background: rgba(89, 128, 166, 0.1); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: rgba(89, 128, 166, 0.18); background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 /* The classy treatment shared by every primary button on the setup screens —
    8.5x11 / 11x17 / LABEL wore it first; Portrait/Landscape, the label sizes
    and SKIP/Enter now match it rather than repeating the same inline style. */
@@ -251,6 +266,7 @@ figcaption {
 /* — forms — */
 .field > label {
   display: block; font-size: 12px; margin-bottom: 5px;
+  color: rgba(29, 31, 32, 0.7);
   color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
 .input {
@@ -259,7 +275,7 @@ figcaption {
   background: var(--color-surface);
   border: 1px solid var(--color-divider); border-radius: var(--radius-md);
 }
-.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.input:hover { border-color: rgba(29, 31, 32, 0.45); border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 .input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
 textarea.input { min-height: 90px; resize: vertical; }
 .radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
@@ -302,6 +318,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 .card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
 .card-meta {
   display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: rgba(29, 31, 32, 0.5);
   color: color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 .elev-sm { box-shadow: var(--shadow-sm); }
@@ -336,19 +353,22 @@ textarea.input { min-height: 90px; resize: vertical; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th {
   text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(29, 31, 32, 0.6);
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
   padding: var(--space-2); border-bottom: 1px solid var(--color-divider);
 }
 .table td {
   padding: var(--space-2);
+  border-bottom: 1px solid rgba(29, 31, 32, 0.08);
   border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
-.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.table tbody tr:hover { background: rgba(29, 31, 32, 0.04); background: color-mix(in srgb, var(--color-text) 4%, transparent); }
 
 /* — dialog — */
 .dialog-backdrop {
   position: fixed; inset: 0; display: grid; place-items: center;
   padding: var(--space-4);
+  background: rgba(43, 43, 45, 0.5);
   background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
 }
 .dialog {
@@ -398,6 +418,8 @@ textarea.input { min-height: 90px; resize: vertical; }
     .cols2 .page{transition:transform 0.3s ease, opacity 0.3s ease;}
     @media print { .cols2 .page{transition:none !important;transform:none !important;opacity:1 !important;} }
     @keyframes sun-shimmer { 0%,100%{opacity:0.75;filter:brightness(1);} 50%{opacity:1;filter:brightness(1.25);} }
+    @media (max-width: 760px) { .mtx-col:nth-child(2n), .mtx-streak:nth-child(2n) { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .mtx-col, .mtx-streak { animation: none !important; } }
     @keyframes mtx-fall { from{transform:translateY(0%);} to{transform:translateY(200%);} }
     @keyframes mtx-streak-fall { from{transform:translateY(-100%);} to{transform:translateY(100%);} }
     .mtx-col{position:absolute;top:-100%;height:100%;display:flex;flex-direction:column;justify-content:flex-start;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.08em;color:rgba(120,200,255,0.85);text-align:center;}
@@ -536,13 +558,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 </button>
 
 <button class="no-print side-tab" ref="{{ openTabRef }}" sc-camel-on-click="{{ onOpenEzdocClick }}" title="Open .docu" style="position:fixed;left:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Open .docu</span>
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Open</span>
 </button>
 <button class="no-print side-tab" ref="{{ saveTabRef }}" sc-camel-on-click="{{ onSaveEzdoc }}" title="Save .docu" style="position:fixed;left:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save .docu</span>
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save</span>
 </button>
 <button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print / PDF</span>
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
 </button>
 
 <sc-if value="{{ setupOpen }}" hint-placeholder-val="{{ false }}">
@@ -635,13 +657,24 @@ textarea.input { min-height: 90px; resize: vertical; }
 
       <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
         <div style="position:absolute;left:50%;top:14px;width:340px;height:130px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
+        <img src="assets/dzdocu-logo.png" alt="DZDOCU" style="position:relative;z-index:1;display:block;width:236px;height:auto;margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(90,190,255,0.45));" />
         <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
-        <div style="background:transparent;border-radius:var(--radius-sm,4px);padding:20px 16px;display:grid;grid-template-columns:repeat(2, minmax(100px, 120px));gap:12px;justify-content:center;">
-          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:120px;">8.5×11</button>
-          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickTabloid }}" style="width:120px;">11×17</button>
-          <div></div>
-          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel }}" style="width:120px;grid-column:1 / span 2;justify-self:center;">LABEL</button>
+        <div style="padding:16px 0 4px;display:grid;grid-template-columns:repeat(2,91px);gap:12px 8px;justify-content:center;">
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:100%;">8.5×11</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickTabloid }}" style="width:100%;">11×17</button>
+          <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel }}" style="width:100%;grid-column:1 / span 2;">LABEL</button>
         </div>
+        <!-- The three buttons above always start a clean document. Anything
+             still held in browser memory is offered separately, in red, one
+             per storage bucket (letter / tabloid / label). -->
+        <sc-if value="{{ hasSavedDocs }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:14px;">
+            <div style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;line-height:1.4;color:#f0b4b4;text-shadow:0 0 8px rgba(210,90,90,0.65);">In browser memory</div>
+            <sc-for list="{{ savedDocs }}" as="doc" hint-placeholder-count="1">
+              <button class="btn btn-classy" sc-camel-on-click="{{ doc.open }}" style="width:190px;height:auto;min-height:38px;padding:7px 10px;white-space:nowrap;background:#a65959;color:#ffffff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span>{{ doc.title }}</span><sc-if value="{{ doc.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:400;letter-spacing:0.02em;opacity:0.85;">{{ doc.sub }}</span></sc-if></button>
+            </sc-for>
+          </div>
+        </sc-if>
       </sc-if>
       <!-- Every step below shares one glass panel: a translucent, dark-tinted
            rectangle with a bright accent-toned edge, echoing the DROP-ZONE
@@ -649,7 +682,7 @@ textarea.input { min-height: 90px; resize: vertical; }
            buttons inside keep the classy black-border-and-shadow treatment
            8.5x11/11x17/LABEL already wear, via .btn-classy. -->
       <sc-if value="{{ setupStepIsLabelAddress }}" hint-placeholder-val="{{ false }}">
-        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:24px 32px;">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:24px 32px;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackToSizeStep }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
         <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:flex-start;align-items:flex-start;">
           <div style="text-align:left;">
@@ -671,7 +704,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
         </div>
       </sc-if>
       <sc-if value="{{ setupStepIsLabelSize }}" hint-placeholder-val="{{ false }}">
-        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:20px 16px;">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:20px 16px;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackToSizeStep }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
             <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLabel46 }}" style="width:120px;">4×6"</button>
@@ -681,7 +714,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
         </div>
       </sc-if>
       <sc-if value="{{ setupStepIsOrientation }}" hint-placeholder-val="{{ false }}">
-        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px color-mix(in srgb, var(--setup-glow) 40%, transparent);padding:20px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:20px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromOrientation }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickPortrait }}" style="width:120px;order:{{ portraitOrder }};">Portrait</button>
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLandscape }}" style="width:120px;order:{{ landscapeOrder }};">Landscape</button>
@@ -1030,8 +1063,33 @@ class Component extends DCLogic {
     this.setState(patch);
   }
 
-  onSetupPickLetter() { this.checkSavedForType(this.getStorageKey('letter'), 'orientation', 'letter'); }
-  onSetupPickTabloid() { this.checkSavedForType(this.getStorageKey('tabloid'), 'orientation', 'tabloid'); }
+  // The three main size buttons always start clean. A held document is never
+  // reopened through them — it is offered by its own red button instead.
+  onSetupPickLetter() { this.pendingSavedData = null; this.setState({ defaultSize: 'letter', setupStep: 'orientation' }); }
+  onSetupPickTabloid() { this.pendingSavedData = null; this.setState({ defaultSize: 'tabloid', setupStep: 'orientation' }); }
+
+  // One entry per storage bucket that currently holds a document.
+  listSavedDocs() {
+    const labels = { letter: '8.5×11', tabloid: '11×17', label46: 'LBL 4×6', label24: 'LBL 2×4', label1x2: 'LBL 1×2.6' };
+    const orient = { portrait: 'PORT', landscape: 'LAND' };
+    const out = [];
+    ['paste-to-page-doc-v1-letter', 'paste-to-page-doc-v1-tabloid', 'paste-to-page-doc-v1-label'].forEach(key => {
+      let raw = null;
+      try { raw = localStorage.getItem(key); } catch (e) { return; }
+      if (!raw) return;
+      let data = null;
+      try { data = JSON.parse(raw); } catch (e) { return; }
+      if (!data || !Array.isArray(data.pageIds) || !data.pageIds.length) return;
+      const size = data.defaultSize || 'letter';
+      out.push({
+        key,
+        title: (labels[size] || size) + ' · ' + (orient[data.defaultOrientation || data.orientation] || 'PORT'),
+        sub: data.docTitle || '',
+        open: () => { this.pendingSavedData = null; this.pendingDropFiles = null; this.applySavedData(data); },
+      });
+    });
+    return out;
+  }
   onSetupPickLabel() {
     const patch = { setupStep: 'labelAddress', labelAddressRaw: '' };
     this.setState(patch);
@@ -3074,6 +3132,7 @@ class Component extends DCLogic {
         tabPages.splice(to >= 0 ? to : tabPages.length, 0, moved);
       }
     }
+    const savedDocs = this.state.docCreated ? [] : this.listSavedDocs();
     return {
       pages,
       tabPages,
@@ -3085,6 +3144,8 @@ class Component extends DCLogic {
       onResumeContinue: () => this.onResumeContinue(),
       onResumeStartNew: () => this.onResumeStartNew(),
       setupStepIsSize: this.state.setupStep === 'size',
+      savedDocs: savedDocs,
+      hasSavedDocs: savedDocs.length > 0,
       // The gradient div behind every step now paints the background, so the
       // overlay itself stays transparent regardless of which step is showing.
       setupOverlayBg: 'transparent',
