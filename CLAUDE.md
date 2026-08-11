@@ -144,10 +144,14 @@ it; `handleInput` does not call it.
 - **pdf.js (313 KB) + mammoth (626 KB) load on every visit** but are only used
   when a PDF or DOCX is dropped. Together they dwarf everything else in
   `assets/`. Lazy-loading them is the largest single win available.
-- **~97 lines of dead code**: the marquee-zoom subsystem (59) whose button was
-  removed from the markup, so `selecting` can never become true; the resume
-  prompt (21); and `applyExecCommand` / `determineSizeOrientation` (17), never
-  called.
+- **The ~97 lines of dead code previously noted here (marquee-zoom, the dead
+  resume-prompt render props, `applyExecCommand` / `determineSizeOrientation`)
+  were removed.** One loose end from that pass: `zoomActive`, `revertZoom()`,
+  and the Escape/Ctrl+Z checks that reference them were left in place since
+  they aren't exclusively part of the removed marquee-select button — but
+  `applyZoom()` (deleted, it was the marquee-select drop handler) was the only
+  code that ever set `zoomActive` to `true`, so that whole "Full Screen" zoom
+  toggle is now unreachable too. Worth a follow-up pass if it's not wanted.
 - **There is no way to clear a saved document from the UI.** The resume prompt
   that offered "Start New (deletes saved doc)" was removed from the markup but
   its handler remains. Restoring it is a real missing feature, not cleanup.
