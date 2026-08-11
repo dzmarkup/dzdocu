@@ -535,8 +535,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      only reads from the page. Documents only for now. -->
 <sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;">
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
-  <button class="btn btn-icon" sc-camel-on-click="{{ onMagnifierOff }}" title="Turn the magnifier off" style="flex:0 0 auto;width:28px;height:28px;padding:0;background:#22282f;color:#cfe0f5;border:1px solid #3a444f;">×</button>
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
 </div>
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -816,9 +815,6 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
           <option value="48">48</option>
         </sc-raw-select>
         <button class="btn btn-secondary" style="flex:1;" sc-camel-on-click="{{ onOpenCharPicker }}" title="Insert a special character">Characters…</button>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
-        <button class="btn btn-secondary" style="flex:1;{{ magnifierToggleStyle }}" sc-camel-on-click="{{ onToggleMagnifier }}" title="A large read-only view of the line you are typing, above the bottom bar">{{ magnifierToggleLabel }}</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" value="{{ fontSearchValue }}" sc-camel-on-change="{{ onFontSearchChange }}" placeholder="Search fonts…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
@@ -2023,7 +2019,7 @@ class Component extends DCLogic {
     const isLetterPortrait = this.state.defaultSize === 'letter' && this.state.defaultOrientation === 'portrait';
     const isMobile = window.innerWidth <= 700;
     if (isMobile && !this.isLabelSize()) {
-      return Math.min(availW / pxW, availH / (pxH * 0.75));
+      return Math.min((availW / pxW) * 0.86, availH / (pxH * 0.75));
     }
     // A landscape tabloid is the one page wide enough that fitting its width
     // still leaves it taller than the window. The others deliberately show at
@@ -3224,8 +3220,7 @@ class Component extends DCLogic {
     if (!el) return;
     const t = this.magnifierTextNow();
     if (!t) {
-      el.textContent = 'Start typing\u2026';
-      el.style.opacity = '0.35';
+      el.textContent = '';
       return;
     }
     el.style.opacity = '1';
@@ -3630,10 +3625,10 @@ class Component extends DCLogic {
         if (el) { this.syncMagnifierPosition(); setTimeout(() => this.paintMagnifier(), 20); }
       },
       magnifierTextRef: (el) => { this.magnifierTextEl = el; if (el) setTimeout(() => this.paintMagnifier(), 20); },
-      magnifierVisible: this.state.docCreated && !isLabelDoc && this.state.magnifierOn !== false,
+      magnifierVisible: this.state.docCreated && !isLabelDoc,
       magnifierBottom: '42px',
       magnifierHeight: this.state.narrowScreen ? '15vh' : '64px',
-      magnifierFontSize: this.state.narrowScreen ? '40px' : '28px',
+      magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
       magnifierToggleLabel: this.state.magnifierOn === false ? 'Magnifier: Off' : 'Magnifier: On',
       magnifierToggleStyle: this.state.magnifierOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       onToggleMagnifier: () => this.setState(s => ({ magnifierOn: s.magnifierOn === false }), () => this.saveDebounced()),
