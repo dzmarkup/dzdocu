@@ -1056,6 +1056,17 @@ class Component extends DCLogic {
 
   componentDidMount() {
     if (super.componentDidMount) super.componentDidMount();
+    // The toolbar's real height depends on the toggle button's rendered
+    // size and the phone's safe-area inset, neither of which necessarily
+    // lands before the render that reads them, and neither reliably fires
+    // a state change of its own once it does settle (a font finishing an
+    // async load, the browser resolving the safe-area after first paint).
+    // Watching the toolbars directly means the fit scale/shift and the
+    // reflow overlay's bottom inset stay correct without depending on some
+    // unrelated state change happening to trigger a re-render afterward.
+    if (window.ResizeObserver) {
+      this._toolbarResizeObserver = new ResizeObserver(() => { this.applyFitScale(); this.forceUpdate(); });
+    }
     this._onResize = () => {
       this.applyFitScale(); this.updatePairFocus();
       const narrow = window.innerWidth <= 700;
@@ -2374,6 +2385,7 @@ class Component extends DCLogic {
       window.visualViewport.removeEventListener('scroll', this._onVV);
     }
     if (this._previewScrollGuard) window.removeEventListener('scroll', this._previewScrollGuard);
+    if (this._toolbarResizeObserver) this._toolbarResizeObserver.disconnect();
     if (super.componentWillUnmount) super.componentWillUnmount();
   }
 
@@ -3735,8 +3747,8 @@ class Component extends DCLogic {
         }, () => { this.handleInput(id); this.saveDebounced(); });
       },
 
-      toolbarRef1: (el) => { if (el) { this.toolbarEl1 = el; this.applyFitScale(); } },
-      toolbarRef2: (el) => { if (el) { this.toolbarEl2 = el; this.applyFitScale(); } },
+      toolbarRef1: (el) => { if (el) { this.toolbarEl1 = el; this.applyFitScale(); if (this._toolbarResizeObserver) this._toolbarResizeObserver.observe(el); } },
+      toolbarRef2: (el) => { if (el) { this.toolbarEl2 = el; this.applyFitScale(); if (this._toolbarResizeObserver) this._toolbarResizeObserver.observe(el); } },
       // Reflow is offered on narrow screens for documents only; labels are
       // positional and have no stream form.
       // On a phone reflow is the only editing surface: the page view is too
