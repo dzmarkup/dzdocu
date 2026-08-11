@@ -1836,6 +1836,12 @@ class Component extends DCLogic {
   // (forceUnlockScroll) but also blocks pinch-zoom, which body overflow
   // alone doesn't stop on a phone.
   setPreviewLocked(on) {
+    // .doc-stage-wrap's unscaled layout box is far wider than a phone
+    // viewport — the CSS transform that shrinks the page visually doesn't
+    // shrink its layout size, so the document can carry horizontal scroll.
+    // Locking mid-scroll would freeze the page wherever that happened to be,
+    // cutting off whatever side had drifted out of view.
+    if (on) window.scrollTo(0, 0);
     document.body.style.overflow = on ? 'hidden' : '';
     document.body.style.touchAction = on ? 'none' : '';
     const meta = document.querySelector('meta[name="viewport"]');
@@ -2177,8 +2183,12 @@ class Component extends DCLogic {
     if (isMobile && !this.isLabelSize()) {
       // On a phone the page view is the print preview, not the editing surface —
       // reflow is. So it shows the whole sheet, centred, rather than a
-      // width-filling crop that has to be scrolled to be understood.
-      return Math.min(availW / pxW, availH / pxH) * 0.94;
+      // width-filling crop that has to be scrolled to be understood. The
+      // extra shrink (rather than 1.0) is a safety margin: the preview is
+      // locked — no pan, no pinch-zoom — so there is no way to nudge the
+      // view if a real device's toolbar height or viewport quirks leave the
+      // fit a little tight.
+      return Math.min(availW / pxW, availH / pxH) * 0.88;
     }
     // A landscape tabloid is the one page wide enough that fitting its width
     // still leaves it taller than the window. The others deliberately show at
