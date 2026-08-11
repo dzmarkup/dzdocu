@@ -547,7 +547,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#111418;border-bottom:2px solid #2f6fb0;">
     <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
   </div>
-  <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:27px;line-height:1.5;color:#1d1f20;outline:none;"></div>
+  <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:54px;line-height:1.5;color:#1d1f20;outline:none;"></div>
 </div>
 </sc-if>
 
@@ -926,16 +926,10 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <sc-if value="{{ p.headerOff }}" hint-placeholder-val="{{ true }}">
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
-      <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;"></div>
+      <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
     </section>
   </sc-for>
 </x-import>
-<sc-if value="{{ selecting }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" style="position:absolute;inset:0;z-index:15;cursor:crosshair;background:rgba(29,31,32,0.03);" sc-camel-on-mouse-down="{{ onOverlayMouseDown }}" sc-camel-on-mouse-move="{{ onOverlayMouseMove }}" sc-camel-on-mouse-up="{{ onOverlayMouseUp }}"></div>
-</sc-if>
-<sc-if value="{{ hasSelRect }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" style="{{ selRectStyle }}"></div>
-</sc-if>
 </div>
 </div>
 
@@ -1002,7 +996,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, selecting: false, selStart: null, selCurrent: null, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {} };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1039,7 +1033,7 @@ class Component extends DCLogic {
     this._onKeydown = (e) => {
       const isZ = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
       const isRedoKey = isZ && e.shiftKey;
-      if (e.key === 'Escape' && (this.state.zoomActive || this.state.selecting || document.body.style.overflow === 'hidden')) {
+      if (e.key === 'Escape' && (this.state.zoomActive || document.body.style.overflow === 'hidden')) {
         this.forceUnlockScroll();
         return;
       }
@@ -1067,7 +1061,10 @@ class Component extends DCLogic {
     this._onResize = () => {
       this.applyFitScale(); this.updatePairFocus();
       const narrow = window.innerWidth <= 700;
-      if (narrow !== this.state.narrowScreen) this.setState({ narrowScreen: narrow });
+      if (narrow !== this.state.narrowScreen) {
+        if (!narrow) this.setPreviewLocked(false);
+        this.setState({ narrowScreen: narrow });
+      }
       this.syncMagnifierPosition();
     };
     window.addEventListener('resize', this._onResize);
@@ -1833,6 +1830,73 @@ class Component extends DCLogic {
     this.state.pageIds.forEach(id => this.flowFrom(id));
   }
 
+  // Freezes the print-preview page in place — no pinch-zoom, no scroll/pan —
+  // so a tap lands exactly where the finger is instead of the page having
+  // already drifted under it. Mirrors the desktop Full Screen lock
+  // (forceUnlockScroll) but also blocks pinch-zoom, which body overflow
+  // alone doesn't stop on a phone.
+  setPreviewLocked(on) {
+    document.body.style.overflow = on ? 'hidden' : '';
+    document.body.style.touchAction = on ? 'none' : '';
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.setAttribute('content', on
+      ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
+      : 'width=device-width, initial-scale=1');
+  }
+
+  // Tapping the locked print-preview page on a phone jumps straight into
+  // Reflow at roughly the tapped line, instead of making the user hunt for
+  // the Text toggle. "Approx" is the point — this walks up to the tapped
+  // page's top-level flowing child (the same unit buildReflowStream clones),
+  // not an exact character offset.
+  tapToReflow(e, id) {
+    if (!this.state.docCreated || this.isLabelSize() || !this.state.narrowScreen) return;
+    if (this.state.reflowOn !== false) return;
+    this.setPreviewLocked(false);
+    const el = this.editableEls[id];
+    if (!el) return;
+    let node = e.target;
+    while (node && node.parentNode !== el) node = node.parentNode;
+    if (!node) return;
+    const localIdx = this.flowingChildren(el).indexOf(node);
+    if (localIdx < 0) return;
+    this._reflowJumpTarget = { pageId: id, localIdx };
+    if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built;
+    this.setState({ reflowOn: true });
+  }
+
+  // Finds the clone buildReflowStream made of the tapped node — same
+  // counting the builder used (a rule per page after the first, a chip per
+  // positioned box, then that page's flowing children) — and selects it so
+  // the tap reads as landing on that text, not just near it.
+  jumpReflowStreamTo(target) {
+    const stream = this.reflowStreamEl;
+    if (!stream || !target) return;
+    const ids = this.state.pageIds;
+    let streamIdx = 0;
+    for (const pid of ids) {
+      const el = this.editableEls[pid];
+      if (!el) continue;
+      if (pid !== ids[0]) streamIdx++;
+      streamIdx += el.querySelectorAll('[data-lbl-box][data-custom]').length;
+      const count = this.flowingChildren(el).length;
+      if (pid === target.pageId) {
+        streamIdx += Math.min(target.localIdx, Math.max(count - 1, 0));
+        break;
+      }
+      streamIdx += count;
+    }
+    const node = stream.children[streamIdx];
+    if (!node) return;
+    node.scrollIntoView({ block: 'center' });
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    stream.focus();
+  }
+
   // While the panel is open: clicking a box selects it, and the chrome follows
   // the sheet when the view scrolls or resizes. All of it comes back off again
   // on Done, so nothing is listening once layout mode is closed.
@@ -2149,7 +2213,7 @@ class Component extends DCLogic {
   }
 
   applyFitScale() {
-    if (this.state.zoomActive || this.state.selecting) return;
+    if (this.state.zoomActive) return;
     this.fitScale = this.computeFitScale() * this.layoutZoomFactor();
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transformOrigin = 'top center';
@@ -2249,7 +2313,6 @@ class Component extends DCLogic {
     if (!leftId) return;
     if (!rightId) { popSolo(leftId); return; }
     const leftEl = this.sectionEls[leftId], rightEl = this.sectionEls[rightId];
-    console.log('PAIRDBG idx=' + idx + ' pairStart=' + pairStart + ' leftId=' + leftId + ' rightId=' + rightId + ' haveLeft=' + !!leftEl + ' haveRight=' + !!rightEl + ' keys=' + Object.keys(this.sectionEls).join(','));
     if (!leftEl || !rightEl) return;
     const dims = this.getDims();
     const shift = ((dims.w + 0.3) / 2).toFixed(3) + 'in';
@@ -2275,23 +2338,23 @@ class Component extends DCLogic {
     window.removeEventListener('error', this._onWindowError);
     document.removeEventListener('selectionchange', this._onSelectionChange);
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
+    document.removeEventListener('selectionchange', this._onMagnifierSync);
+    document.removeEventListener('input', this._onMagnifierSync, true);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._onVV);
+      window.visualViewport.removeEventListener('scroll', this._onVV);
+    }
     if (super.componentWillUnmount) super.componentWillUnmount();
   }
 
   forceUnlockScroll() {
     document.body.style.overflow = '';
+    this.setPreviewLocked(false);
     if (this.zoomWrapEl) {
       this.zoomWrapEl.style.transform = 'none';
       this.zoomWrapEl.style.transformOrigin = 'top center';
     }
-    this.setState({ zoomActive: false, selecting: false, selStart: null, selCurrent: null }, () => this.applyFitScale());
-  }
-
-  onResumeContinue() {
-    const data = this.pendingSavedData;
-    if (!data) { this.setState({ setupStep: 'size' }); return; }
-    this.applySavedData(data);
-    this.setState({ docCreated: true });
+    this.setState({ zoomActive: false }, () => this.applyFitScale());
   }
 
   onResumeStartNew() {
@@ -2430,63 +2493,9 @@ class Component extends DCLogic {
     this._saveTimer = setTimeout(() => this.saveNow(), 600);
   }
 
-  startSelecting() {
-    document.body.style.overflow = 'hidden';
-    this.setState({ selecting: true, selStart: null, selCurrent: null });
-  }
-
-  onZoomButtonClick() {
-    if (this.state.zoomActive) {
-      this.revertZoom();
-    } else {
-      this.startSelecting();
-    }
-  }
-
-  onOverlayMouseDown(e) {
-    const rect = this.zoomWrapEl.getBoundingClientRect();
-    const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    this._dragging = true;
-    this.setState({ selStart: pt, selCurrent: pt });
-  }
-
-  onOverlayMouseMove(e) {
-    if (!this._dragging) return;
-    const rect = this.zoomWrapEl.getBoundingClientRect();
-    this.setState({ selCurrent: { x: e.clientX - rect.left, y: e.clientY - rect.top } });
-  }
-
-  onOverlayMouseUp() {
-    this._dragging = false;
-    const { selStart, selCurrent } = this.state;
-    if (!selStart || !selCurrent) { this.setState({ selecting: false, selStart: null, selCurrent: null }); return; }
-    const left = Math.min(selStart.x, selCurrent.x), top = Math.min(selStart.y, selCurrent.y);
-    const w = Math.abs(selCurrent.x - selStart.x), h = Math.abs(selCurrent.y - selStart.y);
-    if (w < 10 || h < 10) { this.setState({ selecting: false, selStart: null, selCurrent: null }); return; }
-    this.applyZoom(left, top, w, h);
-  }
-
-  applyZoom(left, top, w, h) {
-    const wrap = this.zoomWrapEl;
-    if (!wrap) return;
-    const wrapRect = wrap.getBoundingClientRect();
-    const marginX = 20, toolbarOffset = 140, marginBottom = 20;
-    const availW = window.innerWidth - marginX * 2;
-    const availH = window.innerHeight - toolbarOffset - marginBottom;
-    const scale = Math.min(availW / w, availH / h, 8);
-    const targetX = marginX + (availW - w * scale) / 2;
-    const targetY = toolbarOffset + (availH - h * scale) / 2;
-    const tx = targetX - wrapRect.left - left * scale;
-    const ty = targetY - wrapRect.top - top * scale;
-    document.body.style.overflow = 'hidden';
-    wrap.style.transformOrigin = '0 0';
-    wrap.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + scale + ')';
-    this.setState({ zoomActive: true, selecting: false, selStart: null, selCurrent: null });
-  }
-
   revertZoom() {
     document.body.style.overflow = '';
-    this.setState({ zoomActive: false, selecting: false, selStart: null, selCurrent: null }, () => this.applyFitScale());
+    this.setState({ zoomActive: false }, () => this.applyFitScale());
   }
 
   onTabDragStart(id, canDrag, e) {
@@ -2600,15 +2609,6 @@ class Component extends DCLogic {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(this.savedRange);
-    this.checkpoint(id);
-    document.execCommand(cmd);
-    this.saveDebounced();
-    this.updateEmptyState(id);
-  }
-
-  applyExecCommand(cmd) {
-    const id = this.focusedPageId;
-    if (!id || !this.editableEls[id]) return;
     this.checkpoint(id);
     document.execCommand(cmd);
     this.saveDebounced();
@@ -2903,14 +2903,6 @@ class Component extends DCLogic {
     const lastNode = frag.lastChild;
     range.insertNode(frag);
     if (lastNode) { range.setStartAfter(lastNode); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
-  }
-
-  determineSizeOrientation(wIn, hIn) {
-    const longIn = Math.max(wIn, hIn), shortIn = Math.min(wIn, hIn);
-    const letterInteriorLong = 9, letterInteriorShort = 6.5;
-    const size = (longIn > letterInteriorLong || shortIn > letterInteriorShort) ? 'tabloid' : this.state.defaultSize;
-    const orientation = wIn > hIn ? 'landscape' : 'portrait';
-    return { size, orientation };
   }
 
   hasTransparency(img) {
@@ -3407,10 +3399,12 @@ class Component extends DCLogic {
         canRemove: this.state.pageIds.length > 1,
         ref: (el) => { if (el) this.editableEls[id] = el; },
         editable: !this.state.narrowScreen,
+        previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
         onInput: () => this.handleInput(id),
         onFocus: () => { this.focusedPageId = id; this.updatePairFocus(); this.forceUpdate(); },
+        onClick: (e) => this.tapToReflow(e, id),
         onKeyDown: (e) => { if (e.key === 'Tab') { e.preventDefault(); this.indentLine(id, e.shiftKey ? -1 : 1); } },
         onDragOver: (e) => this.onDragOver(e),
         onDrop: (e) => this.onDrop(e, id),
@@ -3485,9 +3479,6 @@ class Component extends DCLogic {
       setupOpen: !this.state.docCreated,
       stageDisplay: this.state.docCreated ? 'flex' : 'none',
       docCreated: this.state.docCreated,
-      setupStepIsResume: this.state.setupStep === 'resume',
-      resumeSummary: this.pendingSavedData ? (this.pendingSavedData.pageIds.length + ' page' + (this.pendingSavedData.pageIds.length === 1 ? '' : 's') + (this.pendingSavedData.docTitle ? ', titled "' + this.pendingSavedData.docTitle + '"' : '')) : '',
-      onResumeContinue: () => this.onResumeContinue(),
       onResumeStartNew: () => this.onResumeStartNew(),
       setupStepIsSize: this.state.setupStep === 'size',
       savedDocs: savedDocs,
@@ -3716,21 +3707,6 @@ class Component extends DCLogic {
 
       toolbarRef1: (el) => { if (el) { this.toolbarEl1 = el; this.applyFitScale(); } },
       toolbarRef2: (el) => { if (el) { this.toolbarEl2 = el; this.applyFitScale(); } },
-      zoomBtnStyle: this.state.zoomActive || this.state.selecting ? 'background:var(--color-accent,#5980a6);color:#fff;' : '',
-      zoomBtnLabel: this.state.zoomActive ? 'Full Screen' : 'Zoom',
-      onZoomButtonClick: () => this.onZoomButtonClick(),
-      selecting: this.state.selecting,
-      onOverlayMouseDown: (e) => this.onOverlayMouseDown(e),
-      onOverlayMouseMove: (e) => this.onOverlayMouseMove(e),
-      onOverlayMouseUp: () => this.onOverlayMouseUp(),
-      hasSelRect: !!(this.state.selStart && this.state.selCurrent),
-      selRectStyle: (() => {
-        const { selStart, selCurrent } = this.state;
-        if (!selStart || !selCurrent) return '';
-        const left = Math.min(selStart.x, selCurrent.x), top = Math.min(selStart.y, selCurrent.y);
-        const w = Math.abs(selCurrent.x - selStart.x), h = Math.abs(selCurrent.y - selStart.y);
-        return 'position:absolute;left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:2px dashed var(--color-accent,#5980a6);background:rgba(89,128,166,0.08);pointer-events:none;z-index:16;';
-      })(),
       // Reflow is offered on narrow screens for documents only; labels are
       // positional and have no stream form.
       // On a phone reflow is the only editing surface: the page view is too
@@ -3738,19 +3714,25 @@ class Component extends DCLogic {
       // (print preview) and back.
       reflowOffered: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen,
       reflowVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn !== false,
-      reflowReturnVisible: false,
+      reflowReturnVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn === false,
       reflowBtnLabel: this.state.reflowOn === false ? 'Text' : 'Page',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
       reflowStreamRef: (el) => {
         this.reflowStreamEl = el;
-        if (el && !el.dataset.built) { el.dataset.built = '1'; setTimeout(() => this.buildReflowStream(), 30); }
+        if (el && !el.dataset.built) {
+          el.dataset.built = '1';
+          setTimeout(() => {
+            this.buildReflowStream();
+            if (this._reflowJumpTarget) { this.jumpReflowStreamTo(this._reflowJumpTarget); this._reflowJumpTarget = null; }
+          }, 30);
+        }
       },
       onReflowInput: () => { clearTimeout(this._reflowTimer); this._reflowTimer = setTimeout(() => this.commitReflowStream(), 800); },
-      onExitReflow: () => { this.commitReflowStream(); this.setState({ reflowOn: false }); },
+      onExitReflow: () => { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); },
       onToggleReflow: () => {
-        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setState({ reflowOn: false }); }
-        else { if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
+        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }); }
+        else { this.setPreviewLocked(false); if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
       },
       magnifierRef: (el) => {
         this.magnifierEl = el;
