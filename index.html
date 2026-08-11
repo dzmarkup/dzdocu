@@ -521,12 +521,22 @@ textarea.input { min-height: 90px; resize: vertical; }
       </sc-for>
       <span style="width:1px;height:20px;background:#ccc;margin:0 2px;"></span>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutStepStyle }}" sc-camel-on-click="{{ onToggleLayoutStep }}" title="How far each arrow press moves an edge">{{ layoutStepLabel }}</button>
-      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a box to every label of this size">+ Box</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutTextBox }}" title="Add a text box to every page of this size">+ Text</button>
+      <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;" sc-camel-on-click="{{ onAddLayoutImgBox }}" title="Add a picture box to every page of this size">+ Img</button>
       <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 8px;{{ layoutFullMenuStyle }}" sc-camel-on-click="{{ onToggleLayoutFullMenu }}" title="Show the area, edge and reset controls">{{ layoutFullMenuLabel }}</button>
       <button class="btn btn-primary" style="height:24px;font-size:11px;padding:0 12px;" sc-camel-on-click="{{ onToggleLayoutMode }}">Done</button>
       <span style="font-size:11px;color:#a33;font-weight:700;">{{ layoutWarning }}</span>
     </div>
   </div>
+</div>
+</sc-if>
+<!-- The magnifier. A read-only mirror of the line being typed, at a size that
+     can be read at arm's length. It never takes focus and never prints; it
+     only reads from the page. Documents only for now. -->
+<sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;">
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <button class="btn btn-icon" sc-camel-on-click="{{ onMagnifierOff }}" title="Turn the magnifier off" style="flex:0 0 auto;width:28px;height:28px;padding:0;background:#22282f;color:#cfe0f5;border:1px solid #3a444f;">×</button>
 </div>
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -807,6 +817,9 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         </sc-raw-select>
         <button class="btn btn-secondary" style="flex:1;" sc-camel-on-click="{{ onOpenCharPicker }}" title="Insert a special character">Characters…</button>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+        <button class="btn btn-secondary" style="flex:1;{{ magnifierToggleStyle }}" sc-camel-on-click="{{ onToggleMagnifier }}" title="A large read-only view of the line you are typing, above the bottom bar">{{ magnifierToggleLabel }}</button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" value="{{ fontSearchValue }}" sc-camel-on-change="{{ onFontSearchChange }}" placeholder="Search fonts…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
         <input type="text" value="{{ fontPreviewValue }}" sc-camel-on-change="{{ onFontPreviewChange }}" placeholder="Preview text…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
@@ -952,9 +965,10 @@ const LABEL_DEFAULT_LAYOUTS = { label46: {
 // Nudge steps, in inches. Fine is a sixteenth; coarse is a quarter.
 // The button cycles through these in order.
 const LAYOUT_STEPS = [
-  { in: 0.0625, label: '1/16"' },
   { in: 0.25, label: '1/4"' },
   { in: 1, label: '1"' },
+  { in: 3, label: '3"' },
+  { in: 0.0625, label: '1/16"' },
 ];
 // A box can never be nudged smaller than this, so it can't collapse to
 // nothing and become impossible to select again.
@@ -1025,8 +1039,27 @@ class Component extends DCLogic {
 
   componentDidMount() {
     if (super.componentDidMount) super.componentDidMount();
-    this._onResize = () => { this.applyFitScale(); this.updatePairFocus(); };
+    this._onResize = () => {
+      this.applyFitScale(); this.updatePairFocus();
+      const narrow = window.innerWidth <= 700;
+      if (narrow !== this.state.narrowScreen) this.setState({ narrowScreen: narrow });
+      this.syncMagnifierPosition();
+    };
     window.addEventListener('resize', this._onResize);
+    if (window.innerWidth <= 700) this.setState({ narrowScreen: true });
+    // The magnifier follows the caret, so it listens to selection as well as
+    // typing — arrow keys and taps move the caret without firing input.
+    this._onMagnifierSync = () => {
+      if (this._magRaf) cancelAnimationFrame(this._magRaf);
+      this._magRaf = requestAnimationFrame(() => this.paintMagnifier());
+    };
+    document.addEventListener('selectionchange', this._onMagnifierSync);
+    document.addEventListener('input', this._onMagnifierSync, true);
+    if (window.visualViewport) {
+      this._onVV = () => this.syncMagnifierPosition();
+      window.visualViewport.addEventListener('resize', this._onVV);
+      window.visualViewport.addEventListener('scroll', this._onVV);
+    }
     try {
       const savedReturn = localStorage.getItem('paste-to-page-return-address');
       if (savedReturn) this.setState({ returnAddressRaw: savedReturn, returnAddressIsDefault: true });
@@ -1366,15 +1399,75 @@ class Component extends DCLogic {
     return txt ? n + ' ' + txt : 'Box ' + n;
   }
 
-  addLayoutTextBox() {
+  // The contents of an added box: a picture if it is a picture box, otherwise
+  // its text. A picture box with nothing in it yet shows a hint in LAYOUT mode
+  // and prints as nothing.
+  customBoxInner(box) {
+    if (box.boxKind === 'img') {
+      if (!box.img) {
+        return '<div data-img-empty="1" style="width:100%;display:flex;align-items:center;justify-content:center;'
+          + 'font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7aa7d6;">Img</div>';
+      }
+      return '<img src="' + box.img + '" alt="" style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:0 auto;">';
+    }
+    return '<div style="font-size:1em;font-weight:400;line-height:1.4;overflow-wrap:break-word;">'
+      + this.escapeHtml(box.text || '').replace(/\n/g, '<br>') + '</div>';
+  }
+
+  // Reads a picture file into the box the panel is pointed at. Stored as a
+  // data URL inside the layout, so it travels with the .docu and survives a
+  // re-render. Downscaled first: browser storage is about 5MB in total and a
+  // phone photograph on its own would fill it.
+  loadImageIntoBox(key, file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1400;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        let url = reader.result;
+        if (scale < 1 || (reader.result.length > 700000)) {
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * scale);
+          c.height = Math.round(img.height * scale);
+          const ctx = c.getContext('2d');
+          // PNGs may be transparent, so those are re-encoded as PNG; anything
+          // else goes to JPEG, which is far smaller for photographs.
+          const keepAlpha = /png|webp|gif/i.test(file.type);
+          if (!keepAlpha) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          url = keepAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85);
+        }
+        this.updateLayoutBox(key, { img: url });
+        this.reRenderLabelPages();
+        this.syncDocBoxes();
+        setTimeout(() => this.renderLayoutChrome(), 30);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  pickImageForBox(key) {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/*';
+    inp.addEventListener('change', () => { this.loadImageIntoBox(key, inp.files && inp.files[0]); });
+    inp.click();
+  }
+
+  addLayoutTextBox(kind) {
     const dims = this.getDims();
     const L = this.getLabelLayout();
     let i = 1; while (L['t' + i]) i++;
     const key = 't' + i;
+    const isImg = kind === 'img';
     this.updateLayoutBox(key, {
       l: +(dims.w * 0.28).toFixed(3), r: +(dims.w * 0.72).toFixed(3),
-      t: +(dims.h * 0.42).toFixed(3), b: +(dims.h * 0.58).toFixed(3),
+      t: +(dims.h * (isImg ? 0.30 : 0.42)).toFixed(3), b: +(dims.h * (isImg ? 0.58 : 0.58)).toFixed(3),
       h: 'left', v: 'top', show: true, custom: true, text: '',
+      boxKind: isImg ? 'img' : 'text', img: '',
     });
     this.setState({ layoutBox: key }, () => { this.syncDocBoxes(); this.markActiveLayoutBox(); this.renderLayoutChrome(); });
   }
@@ -1399,6 +1492,7 @@ class Component extends DCLogic {
     let changed = false;
     el.querySelectorAll('[data-lbl-box][data-custom]').forEach(box => {
       const key = box.getAttribute('data-lbl-box');
+      if (saved[key] && saved[key].boxKind === 'img') return;
       const text = (box.innerText || '').replace(/\u00a0/g, ' ');
       if (saved[key] && saved[key].text !== text) { saved[key] = { ...saved[key], text }; changed = true; }
     });
@@ -1413,15 +1507,23 @@ class Component extends DCLogic {
   // Write a patch to one box and re-render the label pages so the change is
   // visible immediately. Geometry is clamped to the sheet and to a minimum
   // box size here, so no caller can produce an unselectable box.
-  updateLayoutBox(key, patch) {
+  safeBoundsFor(key) {
     const dims = this.getDims();
+    if (key === 'margin') return { l: 0, t: 0, r: dims.w, b: dims.h };
+    const inset = LABEL_SAFE_IN[this.state.defaultSize];
+    if (inset != null) return { l: inset, t: inset, r: dims.w - inset, b: dims.h - inset };
+    const m = this.docMarginBox();
+    return { l: m.l, t: m.t, r: m.r, b: m.b };
+  }
+
+  updateLayoutBox(key, patch) {
     const cur = this.getLabelLayout()[key];
     const next = { ...cur, ...patch };
-    const safe = LABEL_SAFE_IN[this.state.defaultSize] || 0;
-    next.l = Math.max(safe, Math.min(next.l, dims.w - safe - LAYOUT_MIN_BOX_IN));
-    next.t = Math.max(safe, Math.min(next.t, dims.h - safe - LAYOUT_MIN_BOX_IN));
-    next.r = Math.min(dims.w - safe, Math.max(next.r, next.l + LAYOUT_MIN_BOX_IN));
-    next.b = Math.min(dims.h - safe, Math.max(next.b, next.t + LAYOUT_MIN_BOX_IN));
+    const S = this.safeBoundsFor(key);
+    next.l = Math.max(S.l, Math.min(next.l, S.r - LAYOUT_MIN_BOX_IN));
+    next.t = Math.max(S.t, Math.min(next.t, S.b - LAYOUT_MIN_BOX_IN));
+    next.r = Math.min(S.r, Math.max(next.r, next.l + LAYOUT_MIN_BOX_IN));
+    next.b = Math.min(S.b, Math.max(next.b, next.t + LAYOUT_MIN_BOX_IN));
     const size = this.state.defaultSize;
     this.setState(s => ({
       labelLayouts: { ...s.labelLayouts, [size]: { ...(s.labelLayouts || {})[size], [key]: next } },
@@ -1439,6 +1541,19 @@ class Component extends DCLogic {
     const entries = Object.entries(this.state.pageAddresses || {})
       .filter(([id]) => this.state.pageIds.includes(id));
     if (entries.length) this.setPageAddresses(entries);
+  }
+
+  moveLayoutBox(dx, dy) {
+    const step = (LAYOUT_STEPS[this.state.layoutStep] || LAYOUT_STEPS[0]).in;
+    const key = this.state.layoutBox;
+    const box = this.getLabelLayout()[key];
+    if (!box) return;
+    const S = this.safeBoundsFor(key);
+    const w = box.r - box.l, hgt = box.b - box.t;
+    const l = Math.max(S.l, Math.min(box.l + dx * step, S.r - w));
+    const t = Math.max(S.t, Math.min(box.t + dy * step, S.b - hgt));
+    this.updateLayoutBox(key, { l: +l.toFixed(3), t: +t.toFixed(3), r: +(l + w).toFixed(3), b: +(t + hgt).toFixed(3) });
+    setTimeout(() => this.renderLayoutChrome(), 20);
   }
 
   nudgeLayout(edge, dir) {
@@ -1531,8 +1646,44 @@ class Component extends DCLogic {
       });
       host.appendChild(c);
 
+      const boxDef = this.getLabelLayout()[key];
+      if (boxDef && key !== 'margin') {
+        const lc = chip(boxDef.locked ? '\u{1F512}' : '\u{1F513}', r.right - 22, r.top - 15, !!boxDef.locked);
+        lc.title = boxDef.locked
+          ? 'Size is locked — the arrows move the whole box. Click to unlock.'
+          : 'Lock this box\u2019s size so the arrows move it instead of resizing it';
+        lc.addEventListener('click', ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          this.selectLayoutBox(key);
+          this.updateLayoutBox(key, { locked: !boxDef.locked });
+          setTimeout(() => this.renderLayoutChrome(), 20);
+        });
+        host.appendChild(lc);
+      }
+      if (boxDef && boxDef.boxKind === 'img') {
+        const ic = chip(boxDef.img ? 'Img \u21bb' : 'Img +', r.right - 66, r.top - 15, false);
+        ic.title = boxDef.img ? 'Replace the picture in this box' : 'Choose a picture for this box';
+        ic.addEventListener('click', ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          this.selectLayoutBox(key);
+          this.pickImageForBox(key);
+        });
+        host.appendChild(ic);
+      }
+
       if (!isActive) return;
       const midX = r.left + r.width / 2, midY = r.top + r.height / 2;
+      if (boxDef && boxDef.locked) {
+        [
+          ['\u25C0', r.left - 23, midY - 10, -1, 0, 'Move left'],
+          ['\u25B6', r.right + 3, midY - 10, 1, 0, 'Move right'],
+          ['\u25B2', midX - 10, r.top - 23, 0, -1, 'Move up'],
+          ['\u25BC', midX - 10, r.bottom + 3, 0, 1, 'Move down'],
+        ].forEach(([g, x, y, dx, dy, title]) => {
+          host.appendChild(arrow(g, x, y, () => this.moveLayoutBox(dx, dy), title));
+        });
+        return;
+      }
       // The glyph is the direction of travel: on the right edge, ▶ pushes that
       // edge outward, ◀ pulls it in.
       // Each pair straddles the line it moves, so a control is unmistakably
@@ -1570,9 +1721,7 @@ class Component extends DCLogic {
       const basePt = parseFloat(getComputedStyle(el).fontSize) * 0.75 || 10.5;
       wanted.forEach(k => {
         const existing = el.querySelector('[data-lbl-box="' + k + '"]');
-        const html = this.buildLabelBox(k, L[k], basePt,
-          '<div style="font-size:1em;font-weight:400;line-height:1.4;overflow-wrap:break-word;">'
-          + this.escapeHtml(L[k].text || '').replace(/\n/g, '<br>') + '</div>', true);
+        const html = this.buildLabelBox(k, L[k], basePt, this.customBoxInner(L[k]), true);
         if (!existing) {
           el.insertAdjacentHTML('beforeend', html);
         } else {
@@ -1580,6 +1729,9 @@ class Component extends DCLogic {
           tmp.innerHTML = html;
           existing.setAttribute('style', tmp.firstChild.getAttribute('style'));
           existing.setAttribute('data-base-pt', tmp.firstChild.getAttribute('data-base-pt'));
+          // A picture box's contents are owned by the layout, not by the user's
+          // typing, so they are replaced outright rather than left alone.
+          if (L[k].boxKind === 'img') existing.innerHTML = tmp.firstChild.innerHTML;
         }
       });
       this.fitLabelBody(el);
@@ -1685,8 +1837,14 @@ class Component extends DCLogic {
       'font-size:' + basePt.toFixed(2) + 'pt',
     ].join(';');
     const textAlign = box.h === 'center' ? 'center' : box.h === 'right' ? 'right' : 'left';
+    // A picture's wrapper has to stretch to the box's height, or max-height:100%
+    // resolves against nothing and the picture is sized by its width alone.
+    const isPic = /^<img |data-img-empty/.test(inner);
+    const wrapStyle = isPic
+      ? 'width:100%;height:100%;align-self:stretch;display:flex;align-items:center;justify-content:center;overflow:hidden;'
+      : 'width:100%;text-align:' + textAlign + ';';
     return '<div data-lbl-box="' + key + '"' + (isCustom ? ' data-custom="1"' : '') + ' data-base-pt="' + basePt.toFixed(2) + '" style="' + style + ';">'
-      + '<div style="width:100%;text-align:' + textAlign + ';">' + inner + '</div>'
+      + '<div style="' + wrapStyle + '">' + inner + '</div>'
       + '</div>';
   }
 
@@ -1782,9 +1940,7 @@ class Component extends DCLogic {
     Object.keys(L).forEach(key => {
       const box = L[key];
       if (!box.custom || !box.show) return;
-      html += this.buildLabelBox(key, box, cfg.base,
-        '<div style="font-size:1em;font-weight:400;line-height:1.25;overflow-wrap:break-word;">'
-        + this.escapeHtml(box.text || '').replace(/\n/g, '<br>') + '</div>', true);
+      html += this.buildLabelBox(key, box, cfg.base, this.customBoxInner(box), true);
     });
     return html;
   }
@@ -2080,6 +2236,7 @@ class Component extends DCLogic {
       defaultSize: this.state.defaultSize,
       defaultOrientation: this.state.defaultOrientation,
       headerGlobalOn: this.state.headerGlobalOn,
+      magnifierOn: this.state.magnifierOn !== false,
       pageHeaderTitles: this.state.pageHeaderTitles,
       pageKinds: this.state.pageKinds,
       pageAddresses: this.state.pageAddresses,
@@ -2105,6 +2262,7 @@ class Component extends DCLogic {
       defaultSize: data.defaultSize || data.size || 'letter',
       defaultOrientation: data.defaultOrientation || data.orientation || 'portrait',
       headerGlobalOn: !!data.headerGlobalOn,
+      magnifierOn: data.magnifierOn !== false,
       pageHeaderTitles: data.pageHeaderTitles || {},
       pageKinds: data.pageKinds || {},
       pageAddresses: data.pageAddresses || {},
@@ -3035,6 +3193,78 @@ class Component extends DCLogic {
     this.saveDebounced();
   }
 
+  // The words immediately before the caret, as a plain string. The strip is
+  // right-aligned and clipped, so how many of them fit is decided by the type
+  // size rather than by a word count — long words simply yield fewer.
+  // The line split at the caret, so the strip can show what comes after it too.
+  magnifierTextNow() {
+    const sel = window.getSelection && window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const node = sel.focusNode;
+    if (!node) return null;
+    const host = node.nodeType === 1 ? node : node.parentElement;
+    if (!host || !host.closest || !host.closest('[contenteditable]')) return null;
+    const block = host.closest('div,p,li,h1,h2,h3,h4,td,th,[data-lbl-box]') || host;
+    const before = document.createRange();
+    before.selectNodeContents(block);
+    const after = document.createRange();
+    after.selectNodeContents(block);
+    try {
+      before.setEnd(sel.focusNode, sel.focusOffset);
+      after.setStart(sel.focusNode, sel.focusOffset);
+    } catch (e) { return null; }
+    return {
+      before: before.toString().replace(/\s+/g, ' ').replace(/^\s+/, ''),
+      after: after.toString().replace(/\s+/g, ' ')
+    };
+  }
+
+  paintMagnifier() {
+    const el = this.magnifierTextEl;
+    if (!el) return;
+    const t = this.magnifierTextNow();
+    if (!t) {
+      el.textContent = 'Start typing\u2026';
+      el.style.opacity = '0.35';
+      return;
+    }
+    el.style.opacity = '1';
+    el.innerHTML = '';
+    const span = (txt, dim) => {
+      const s = document.createElement('span');
+      s.textContent = txt;
+      if (dim) s.style.opacity = '0.5';
+      return s;
+    };
+    // Half a strip of blank space at each end, so the first and last words of
+    // a line can still be scrolled to the middle.
+    const pad = () => {
+      const s = document.createElement('span');
+      s.style.cssText = 'display:inline-block;width:50%;';
+      return s;
+    };
+    const caret = document.createElement('span');
+    caret.style.cssText = 'display:inline-block;width:2px;height:0.95em;vertical-align:-0.1em;background:#7fc0ff;margin:0 1px;';
+    el.appendChild(pad());
+    el.appendChild(span(t.before, false));
+    el.appendChild(caret);
+    el.appendChild(span(t.after, true));
+    el.appendChild(pad());
+    // Keep the caret at the middle of the visible strip.
+    el.scrollLeft = caret.offsetLeft - el.clientWidth / 2;
+  }
+
+  // The mobile keyboard changes how much of the window is actually visible.
+  // visualViewport reports that; without it the strip would sit underneath the
+  // keyboard on a phone.
+  syncMagnifierPosition() {
+    const el = this.magnifierEl;
+    const vv = window.visualViewport;
+    if (!el || !vv) return;
+    const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    el.style.bottom = (gap + 42) + 'px';
+  }
+
   renderVals() {
     const dims = this.getDims();
     const isLabelDoc = ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize);
@@ -3330,7 +3560,8 @@ class Component extends DCLogic {
         this.updateLayoutBox(k, { show: !this.getLabelLayout()[k].show });
       },
       onResetLayout: () => this.resetLayout(),
-      onAddLayoutTextBox: () => this.addLayoutTextBox(),
+      onAddLayoutTextBox: () => this.addLayoutTextBox('text'),
+      onAddLayoutImgBox: () => this.addLayoutTextBox('img'),
       layoutBoxIsCustom: !!this.activeLayoutBox().custom,
       onDeleteLayoutBox: () => this.deleteLayoutBox(this.state.layoutBox),
       layoutEdges: [
@@ -3339,9 +3570,10 @@ class Component extends DCLogic {
       ].map(e => ({
         name: e.name,
         value: this.activeLayoutBox()[e.key].toFixed(2) + '"',
-        onMinus: () => this.nudgeLayout(e.key, -1),
-        onPlus: () => this.nudgeLayout(e.key, 1),
+        onMinus: () => { if (!this.activeLayoutBox().locked) this.nudgeLayout(e.key, -1); },
+        onPlus: () => { if (!this.activeLayoutBox().locked) this.nudgeLayout(e.key, 1); },
       })),
+      layoutBoxLocked: !!this.activeLayoutBox().locked,
       layoutJustify: [
         { k: 'v', v: 'top', name: 'Top' }, { k: 'v', v: 'middle', name: 'Mid' }, { k: 'v', v: 'bottom', name: 'Bot' },
         { k: 'h', v: 'left', name: 'Left' }, { k: 'h', v: 'center', name: 'Ctr' }, { k: 'h', v: 'right', name: 'Right' },
@@ -3393,6 +3625,19 @@ class Component extends DCLogic {
         const w = Math.abs(selCurrent.x - selStart.x), h = Math.abs(selCurrent.y - selStart.y);
         return 'position:absolute;left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:2px dashed var(--color-accent,#5980a6);background:rgba(89,128,166,0.08);pointer-events:none;z-index:16;';
       })(),
+      magnifierRef: (el) => {
+        this.magnifierEl = el;
+        if (el) { this.syncMagnifierPosition(); setTimeout(() => this.paintMagnifier(), 20); }
+      },
+      magnifierTextRef: (el) => { this.magnifierTextEl = el; if (el) setTimeout(() => this.paintMagnifier(), 20); },
+      magnifierVisible: this.state.docCreated && !isLabelDoc && this.state.magnifierOn !== false,
+      magnifierBottom: '42px',
+      magnifierHeight: this.state.narrowScreen ? '15vh' : '64px',
+      magnifierFontSize: this.state.narrowScreen ? '40px' : '28px',
+      magnifierToggleLabel: this.state.magnifierOn === false ? 'Magnifier: Off' : 'Magnifier: On',
+      magnifierToggleStyle: this.state.magnifierOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
+      onToggleMagnifier: () => this.setState(s => ({ magnifierOn: s.magnifierOn === false }), () => this.saveDebounced()),
+      onMagnifierOff: () => this.setState({ magnifierOn: false }, () => this.saveDebounced()),
       onOpenFontPicker: () => this.openFontPicker(),
       onBoldClick: () => this.applyExecCommandRestore('bold'),
       onItalicClick: () => this.applyExecCommandRestore('italic'),
