@@ -530,6 +530,21 @@ textarea.input { min-height: 90px; resize: vertical; }
   </div>
 </div>
 </sc-if>
+<!-- Reflow editing. On a phone the page view is too small to aim a caret at, so
+     documents get a full-width stream of the same content at a readable size,
+     with the page boundaries drawn as read-only rules. It is not a second
+     document model: the stream is built from the pages on entry and poured back
+     into page one on exit, where the existing flow engine repaginates it. -->
+<sc-if value="{{ reflowVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" style="position:fixed;left:0;right:0;top:34px;bottom:42px;z-index:21;background:#ffffff;display:flex;flex-direction:column;">
+  <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#111418;border-bottom:2px solid #2f6fb0;">
+    <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
+    <button class="btn btn-secondary" sc-camel-on-click="{{ onExitReflow }}" title="See the pages as they will print" style="height:26px;font-size:12px;padding:0 10px;background:#2f6fb0;color:#fff;border-color:#2f6fb0;">Print Preview</button>
+  </div>
+  <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:18px;line-height:1.55;color:#1d1f20;outline:none;"></div>
+</div>
+</sc-if>
+
 <!-- The magnifier. A read-only mirror of the line being typed, at a size that
      can be read at arm's length. It never takes focus and never prints; it
      only reads from the page. Documents only for now. -->
@@ -541,6 +556,9 @@ textarea.input { min-height: 90px; resize: vertical; }
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px);">
     <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
+    <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:52px;height:28px;font-size:12px;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
+    </sc-if>
     <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ addPage }}"><span class="full-label">+ Page</span><span class="short-label">+P</span></button>
     <sc-for list="{{ tabPages }}" as="p" hint-placeholder-count="1">
       <div style="position:relative;display:inline-block;{{ p.tabWrapStyle }}{{ p.dragStyle }}" draggable="{{ p.canDrag }}" sc-camel-on-drag-start="{{ p.onTabDragStart }}" sc-camel-on-drag-enter="{{ p.onTabDragOver }}" sc-camel-on-drag-over="{{ p.onTabDragOver }}" sc-camel-on-drop="{{ p.onTabDrop }}" sc-camel-on-drag-end="{{ p.onTabDragEnd }}" sc-camel-on-mouse-enter="{{ p.onTabHover }}" sc-camel-on-mouse-leave="{{ p.onTabUnhover }}">
@@ -1737,6 +1755,69 @@ class Component extends DCLogic {
   // Changing the margins changes how much text fits, so the pages have to be
   // reflowed — otherwise the last page keeps text that no longer fits, or
   // holds space that has just been freed.
+  // ---- Reflow editing (mobile, documents only) ----
+
+  // A page's flowing content: everything except the absolutely positioned
+  // boxes, which are pinned to their page's geometry and cannot live in a
+  // stream. They stay in the page untouched.
+  flowingChildren(el) {
+    return [...el.childNodes].filter(n => !(n.nodeType === 1 && n.hasAttribute('data-lbl-box')));
+  }
+
+  buildReflowStream() {
+    const stream = this.reflowStreamEl;
+    if (!stream) return;
+    stream.innerHTML = '';
+    const ids = this.state.pageIds;
+    ids.forEach((id, i) => {
+      const el = this.editableEls[id];
+      if (!el) return;
+      if (i > 0) {
+        const rule = document.createElement('div');
+        rule.setAttribute('data-reflow-chrome', '1');
+        rule.setAttribute('contenteditable', 'false');
+        rule.style.cssText = 'margin:18px 0;border-top:1px dashed #9aa4ae;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d8792;padding-top:4px;-webkit-user-select:none;user-select:none;';
+        rule.textContent = 'Page ' + (i + 1);
+        stream.appendChild(rule);
+      }
+      // Positioned boxes are shown as markers so it is clear they exist and
+      // which page they are on, but they are edited in page view.
+      el.querySelectorAll('[data-lbl-box][data-custom]').forEach(b => {
+        const chip = document.createElement('div');
+        chip.setAttribute('data-reflow-chrome', '1');
+        chip.setAttribute('contenteditable', 'false');
+        chip.style.cssText = 'display:inline-block;margin:4px 6px 4px 0;padding:2px 8px;border:1px solid #9aa4ae;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#5b6570;-webkit-user-select:none;user-select:none;';
+        chip.textContent = b.getAttribute('data-lbl-box') && /^t\d+$/.test(b.getAttribute('data-lbl-box'))
+          ? (b.querySelector('img') || b.querySelector('[data-img-empty]') ? 'Img box' : 'Text box')
+          : 'Box';
+        stream.appendChild(chip);
+      });
+      this.flowingChildren(el).forEach(n => stream.appendChild(n.cloneNode(true)));
+    });
+    if (!stream.textContent.trim()) stream.innerHTML = '<div><br></div>';
+  }
+
+  // The stream goes back into page one and the existing flow engine splits it
+  // across pages again. Boxes are left exactly where they were.
+  commitReflowStream() {
+    const stream = this.reflowStreamEl;
+    if (!stream) return;
+    const ids = this.state.pageIds;
+    const firstEl = this.editableEls[ids[0]];
+    if (!firstEl) return;
+    const kept = [...stream.childNodes]
+      .filter(n => !(n.nodeType === 1 && n.hasAttribute('data-reflow-chrome')))
+      .map(n => n.cloneNode(true));
+    ids.forEach(id => {
+      const el = this.editableEls[id];
+      if (el) this.flowingChildren(el).forEach(n => n.remove());
+    });
+    kept.forEach(n => firstEl.appendChild(n));
+    this.state.pageIds.forEach(id => this.updateEmptyState(id));
+    this.flowFrom(ids[0]);
+    this.saveDebounced();
+  }
+
   reflowAllPages() {
     this.state.pageIds.forEach(id => this.flowFrom(id));
   }
@@ -3620,6 +3701,23 @@ class Component extends DCLogic {
         const w = Math.abs(selCurrent.x - selStart.x), h = Math.abs(selCurrent.y - selStart.y);
         return 'position:absolute;left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border:2px dashed var(--color-accent,#5980a6);background:rgba(89,128,166,0.08);pointer-events:none;z-index:16;';
       })(),
+      // Reflow is offered on narrow screens for documents only; labels are
+      // positional and have no stream form.
+      reflowOffered: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen,
+      reflowVisible: this.state.docCreated && !isLabelDoc && !!this.state.narrowScreen && this.state.reflowOn !== false,
+      reflowBtnLabel: this.state.reflowOn === false ? 'Text' : 'Page',
+      reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
+      reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
+      reflowStreamRef: (el) => {
+        this.reflowStreamEl = el;
+        if (el && !el.dataset.built) { el.dataset.built = '1'; setTimeout(() => this.buildReflowStream(), 30); }
+      },
+      onReflowInput: () => { clearTimeout(this._reflowTimer); this._reflowTimer = setTimeout(() => this.commitReflowStream(), 800); },
+      onExitReflow: () => { this.commitReflowStream(); this.setState({ reflowOn: false }); },
+      onToggleReflow: () => {
+        if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setState({ reflowOn: false }); }
+        else { if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }); }
+      },
       magnifierRef: (el) => {
         this.magnifierEl = el;
         if (el) { this.syncMagnifierPosition(); setTimeout(() => this.paintMagnifier(), 20); }
