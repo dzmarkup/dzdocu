@@ -1647,7 +1647,7 @@ class Component extends DCLogic {
       host.appendChild(c);
 
       const boxDef = this.getLabelLayout()[key];
-      if (boxDef && key !== 'margin') {
+      if (boxDef) {
         const lc = chip(boxDef.locked ? '\u{1F512}' : '\u{1F513}', r.right - 22, r.top - 15, !!boxDef.locked);
         lc.title = boxDef.locked
           ? 'Size is locked — the arrows move the whole box. Click to unlock.'
