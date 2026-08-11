@@ -1841,7 +1841,19 @@ class Component extends DCLogic {
     // shrink its layout size, so the document can carry horizontal scroll.
     // Locking mid-scroll would freeze the page wherever that happened to be,
     // cutting off whatever side had drifted out of view.
-    if (on) window.scrollTo(0, 0);
+    if (!this._previewScrollGuard) this._previewScrollGuard = () => window.scrollTo(0, 0);
+    if (on) {
+      window.scrollTo(0, 0);
+      // The reflow stream held focus; dismissing its keyboard (and Safari's
+      // own scroll-into-view reflex on blur) can nudge the page again after
+      // this call returns, so the reset is reapplied a few times as that
+      // settles rather than trusting one synchronous call.
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+      setTimeout(() => window.scrollTo(0, 0), 350);
+      window.addEventListener('scroll', this._previewScrollGuard);
+    } else {
+      window.removeEventListener('scroll', this._previewScrollGuard);
+    }
     document.body.style.overflow = on ? 'hidden' : '';
     document.body.style.touchAction = on ? 'none' : '';
     const meta = document.querySelector('meta[name="viewport"]');
@@ -2354,6 +2366,7 @@ class Component extends DCLogic {
       window.visualViewport.removeEventListener('resize', this._onVV);
       window.visualViewport.removeEventListener('scroll', this._onVV);
     }
+    if (this._previewScrollGuard) window.removeEventListener('scroll', this._previewScrollGuard);
     if (super.componentWillUnmount) super.componentWillUnmount();
   }
 
