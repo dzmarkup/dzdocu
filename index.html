@@ -1562,17 +1562,15 @@ class Component extends DCLogic {
     this.renumberBoxTree(tree);
     this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxSplitPromptOpen: false }), () => {
       this.saveDebounced();
-      setTimeout(() => {
-        // Every box gets its content explicitly set — including the brand
-        // new leaf, to '' — rather than only patching the ones known to have
-        // had something: a reused DOM node can be hosting a stale leftover
-        // that was never captured anywhere just because it wasn't previously
-        // tied to this id, and leaving it alone would let that bleed through.
-        this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
-          const el = this.boxEditableEls[node.id];
-          if (el) el.innerHTML = priorContent[node.id] || '';
-        });
-      }, 30);
+      // Runs synchronously here, not on a timeout: React's setState callback
+      // already fires after the DOM commit, with refs attached, so patching
+      // here lands before the browser paints the reused-node frame at all —
+      // a deferred correction would still show the wrong content for one
+      // visible flash before snapping back.
+      this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+        const el = this.boxEditableEls[node.id];
+        if (el) el.innerHTML = priorContent[node.id] || '';
+      });
     });
   }
 
@@ -1687,15 +1685,12 @@ class Component extends DCLogic {
     this.renumberBoxTree(tree);
     this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxDeletePromptId: null }), () => {
       this.saveDebounced();
-      setTimeout(() => {
-        // Explicit for every surviving box, same reasoning as
-        // splitPageIntoBoxes — a reused node can host a leftover that was
-        // never captured under this id, so leaving it untouched isn't safe.
-        this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
-          const el = this.boxEditableEls[node.id];
-          if (el) el.innerHTML = priorContent[node.id] || '';
-        });
-      }, 30);
+      // Synchronous, same reasoning as splitPageIntoBoxes — lands before the
+      // reused-node frame paints, so there's nothing to flash.
+      this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+        const el = this.boxEditableEls[node.id];
+        if (el) el.innerHTML = priorContent[node.id] || '';
+      });
     });
   }
 
