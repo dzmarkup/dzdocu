@@ -1530,6 +1530,35 @@ class Component extends DCLogic {
   splitPageIntoBoxes(pageId, direction) {
     const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null });
     const existing = this.state.pageBoxTrees[pageId];
+    // A plain page's own text lives in the .editable div that noBoxes
+    // renders — the instant a box tree exists for this page, that div stops
+    // rendering at all, orphaning whatever was typed there with nowhere to
+    // go. An empty page has nothing at risk, so it converts in place same as
+    // always; a page already holding real text or an image gets a fresh
+    // page of its own for the boxes instead, right after it, leaving the
+    // original page and its content completely untouched.
+    if (!existing) {
+      const plainEl = this.editableEls[pageId];
+      const hasContent = !!plainEl && (!!plainEl.textContent.trim() || !!plainEl.querySelector('img, .img-wrap'));
+      if (hasContent) {
+        const newPageId = this.newId();
+        const tree = this.renumberBoxTree({ split: direction, ratio: 0.5, a: makeLeaf(), b: makeLeaf() });
+        const idx = this.state.pageIds.indexOf(pageId);
+        const pageIds = [...this.state.pageIds];
+        pageIds.splice(idx + 1, 0, newPageId);
+        this.setState(s => ({
+          pageIds,
+          pageEmptyMap: { ...s.pageEmptyMap, [newPageId]: true },
+          pageBoxTrees: { ...s.pageBoxTrees, [newPageId]: tree },
+          boxSplitPromptOpen: false,
+        }), () => {
+          this.focusedPageId = newPageId;
+          this.saveDebounced();
+          this.scrollToPage(newPageId);
+        });
+        return;
+      }
+    }
     // sc-for keys its rendered items by array position, not by the box's own
     // id, so inserting a leaf earlier in flattenBoxTree's order shifts every
     // later box's DOM element down one slot — the renderer reuses that
