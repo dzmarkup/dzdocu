@@ -2098,7 +2098,25 @@ class Component extends DCLogic {
       onDragOverBox: isImage
         ? (e) => this.onBoxDragOver(e)
         : (e) => { if (e.dataTransfer && [...e.dataTransfer.items].some(it => it.type.startsWith('image/'))) e.preventDefault(); },
-      onPasteBox: isImage ? (e) => this.onBoxPaste(pageId, node.id, e) : () => {},
+      onPasteBox: isImage
+        ? (e) => this.onBoxPaste(pageId, node.id, e)
+        : (e) => {
+            const items = e.clipboardData ? e.clipboardData.items : [];
+            for (const item of items) {
+              if (item.type && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                  e.preventDefault();
+                  this.onTextBoxImageDrop(pageId, node.id, file);
+                }
+                return;
+              }
+            }
+            // No real image bytes on the clipboard (e.g. a copied file's
+            // path/URI rather than its data, which a browser can't turn
+            // into an image for security reasons) -- falls through to
+            // normal text paste, same as before.
+          },
       onKeyDownBox: isImage ? (e) => this.onBoxKeyDown(e) : () => {},
     };
   }
