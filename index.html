@@ -970,7 +970,6 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             <sc-if value="{{ b.isPending }}" hint-placeholder-val="{{ false }}">
               <div class="no-print" style="{{ b.pendingOverlayStyle }}">
                 <span style="{{ b.pendingLabelStyle }}">{{ b.pendingLabel }}</span>
-                <span style="{{ b.pendingHintStyle }}">{{ b.pendingHint }}</span>
                 <button class="btn btn-secondary" style="{{ b.dontMoveBtnStyle }}" sc-camel-on-click="{{ b.onDontMove }}">Don't Move</button>
                 <button class="btn btn-secondary" style="{{ b.cancelDeleteBtnStyle }}" sc-camel-on-click="{{ b.onCancelDelete }}">Cancel</button>
               </div>
@@ -2006,16 +2005,16 @@ class Component extends DCLogic {
 
   // v1: fixed padding and a plain 14px stack, matching the normal document
   // editable's own defaults closely enough to compare the two side by side.
-  // deletePromptId/mergeCandidateId are page-wide (computed once, passed to
-  // every box) so the one box mid-delete and its one glowing sibling can
-  // each recognize themselves.
-  buildBoxRenderProps(pageId, node, rect, docMargin, dims, lockedMode, docLayoutActive, deletePromptId, mergeCandidateId) {
+  // deletePromptId/mergeCandidateIds are page-wide (computed once, passed
+  // to every box) so the one box mid-delete and every box in its glowing
+  // sibling subtree can each recognize themselves.
+  buildBoxRenderProps(pageId, node, rect, docMargin, dims, lockedMode, docLayoutActive, deletePromptId, mergeCandidateIds) {
     const marginW = docMargin.r - docMargin.l, marginH = docMargin.b - docMargin.t;
     const left = docMargin.l + rect.x * marginW, top = docMargin.t + rect.y * marginH;
     const w = rect.w * marginW, h = rect.h * marginH;
     const isImage = node.type === 'image';
     const isPending = node.id === deletePromptId;
-    const isMergeCandidate = node.id === mergeCandidateId;
+    const isMergeCandidate = !!mergeCandidateIds && mergeCandidateIds.has(node.id);
     // Locked while LAYOUT or Preview is open — same rule labels already use,
     // so a caret can't fight the seam nudges (LAYOUT) or edit text that's
     // only supposed to be edited through the stream (Preview). Image boxes
@@ -2047,10 +2046,8 @@ class Component extends DCLogic {
         : (isImage && !locked ? (e) => { e.stopPropagation(); e.preventDefault(); this.openBoxImagePicker(pageId, node.id); } : () => {}),
       isPending,
       pendingLabel: node.number != null ? ('Delete Box ' + node.number + '?') : 'Delete this box?',
-      pendingHint: mergeCandidateId ? 'Click the glowing box to merge, or:' : 'Nothing else fills this space:',
       pendingOverlayStyle: 'position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:4px;text-align:center;background:rgba(255,255,255,0.94);',
       pendingLabelStyle: 'font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;color:#1d1f20;',
-      pendingHintStyle: 'font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;color:#6b7480;',
       dontMoveBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       cancelDeleteBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       onDontMove: (e) => { e.stopPropagation(); e.preventDefault(); this.clearBoxKeepSlot(pageId, node.id); },
@@ -4270,7 +4267,13 @@ class Component extends DCLogic {
       // as a bare id, in case the user switched pages with it still open.
       const deletePromptId = (docLayoutActive && boxTree && this.findBoxLeaf(boxTree, this.state.boxDeletePromptId)) ? this.state.boxDeletePromptId : null;
       const deleteSibling = deletePromptId ? this.findSiblingNode(boxTree, deletePromptId) : null;
-      const mergeCandidateId = (deleteSibling && deleteSibling.box) ? deleteSibling.id : null;
+      // The sibling glows and merges in as a whole — every leaf under it,
+      // not just when it happens to be a single box. Clicking any of the
+      // glowing boxes promotes the whole sibling subtree up to fill the
+      // freed space, same tree surgery either way.
+      const mergeCandidateIds = deleteSibling
+        ? new Set(this.flattenBoxTree(deleteSibling, { x: 0, y: 0, w: 1, h: 1 }).map(l => l.node.id))
+        : null;
       return {
         id,
         canRemove: this.state.pageIds.length > 1,
@@ -4280,7 +4283,7 @@ class Component extends DCLogic {
         noBoxes: !boxTree,
         boxesVisible: !!boxTree && !streamActive,
         streamActive,
-        boxes: boxLeaves.map(({ node, rect }) => this.buildBoxRenderProps(id, node, rect, docMargin, dims, lockedMode, docLayoutActive, deletePromptId, mergeCandidateId)),
+        boxes: boxLeaves.map(({ node, rect }) => this.buildBoxRenderProps(id, node, rect, docMargin, dims, lockedMode, docLayoutActive, deletePromptId, mergeCandidateIds)),
         docLayoutActive,
         streamRef: (el) => { if (el) { this.boxStreamEl = el; if (!el.dataset.built) { el.dataset.built = '1'; setTimeout(() => this.buildBoxStream(id), 30); } } },
         onCommitStream: () => this.closeBoxStreamToPreview(id),
