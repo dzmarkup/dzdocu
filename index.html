@@ -2087,8 +2087,17 @@ class Component extends DCLogic {
           this.forceUpdate();
         }
       },
-      onDropBox: isImage ? (e) => this.onBoxDrop(pageId, node.id, e) : () => {},
-      onDragOverBox: isImage ? (e) => this.onBoxDragOver(e) : () => {},
+      onDropBox: isImage
+        ? (e) => this.onBoxDrop(pageId, node.id, e)
+        : (e) => {
+            const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            e.preventDefault();
+            this.onTextBoxImageDrop(pageId, node.id, file);
+          },
+      onDragOverBox: isImage
+        ? (e) => this.onBoxDragOver(e)
+        : (e) => { if (e.dataTransfer && [...e.dataTransfer.items].some(it => it.type.startsWith('image/'))) e.preventDefault(); },
       onPasteBox: isImage ? (e) => this.onBoxPaste(pageId, node.id, e) : () => {},
       onKeyDownBox: isImage ? (e) => this.onBoxKeyDown(e) : () => {},
     };
@@ -3802,6 +3811,43 @@ class Component extends DCLogic {
     e.preventDefault();
     const reader = new FileReader();
     reader.onload = (ev) => this.insertImageIntoBox(pageId, boxId, ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // Dropping an image onto a TEXT box used to fall through to the browser's
+  // own default contentEditable behavior — nothing here blocked it — and
+  // insert a raw <img> in the middle of what's supposed to be flowing text.
+  // Instead the box splits and the image gets its own dedicated image box:
+  // stacked if the box is taller than it is wide, side-by-side otherwise, so
+  // the split at least roughly matches the box's own shape without needing
+  // to ask. Reuses splitPageIntoBoxes itself (content-pinning and all)
+  // rather than duplicating that tree surgery — the type flip is done
+  // directly on the fresh leaf afterward instead of through toggleBoxType,
+  // since that method's own auto-open-the-picker side effect would fight
+  // with the image already in hand here.
+  onTextBoxImageDrop(pageId, boxId, file) {
+    const el = this.boxEditableEls[boxId];
+    const rect = el && el.getBoundingClientRect();
+    const direction = (rect && rect.height >= rect.width) ? 'h' : 'v';
+    this.focusedBoxId = boxId;
+    this.splitPageIntoBoxes(pageId, direction);
+    const newLeafId = 'bx' + this._boxIdCounter;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setTimeout(() => {
+        const tree = this.state.pageBoxTrees[pageId];
+        if (!tree) return;
+        const flip = (node) => {
+          if (node.box) return node.id === newLeafId ? { ...node, type: 'image', number: null } : node;
+          return { ...node, a: flip(node.a), b: flip(node.b) };
+        };
+        const flipped = this.renumberBoxTree(flip(tree));
+        this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: flipped } }), () => {
+          this.saveDebounced();
+          setTimeout(() => this.insertImageIntoBox(pageId, newLeafId, ev.target.result), 30);
+        });
+      }, 40);
+    };
     reader.readAsDataURL(file);
   }
 
