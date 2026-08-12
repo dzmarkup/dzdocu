@@ -561,8 +561,8 @@ textarea.input { min-height: 90px; resize: vertical; }
      can be read at arm's length. It never takes focus and never prints; it
      only reads from the page. Documents only for now. -->
 <sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;">
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+<div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;pointer-events:none;">
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:3.3em;overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
 </div>
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -582,6 +582,9 @@ textarea.input { min-height: 90px; resize: vertical; }
     </sc-if>
     <sc-if value="{{ showStreamToggle }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}">{{ streamToggleLabel }}</button>
+    </sc-if>
+    <sc-if value="{{ showReorgButton }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ reorgBtnStyle }}" sc-camel-on-click="{{ onReorgClick }}" title="Redistribute all box text so it fits again">REORG</button>
     </sc-if>
     <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:auto;height:56px;padding:4px 20px;font-size:28px;font-weight:700;white-space:nowrap;flex:0 0 auto;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
@@ -1571,6 +1574,7 @@ class Component extends DCLogic {
         const el = this.boxEditableEls[node.id];
         if (el) el.innerHTML = priorContent[node.id] || '';
       });
+      this.refreshBoxOverflowState(pageId);
     });
   }
 
@@ -1617,7 +1621,15 @@ class Component extends DCLogic {
       return { ...node, [head]: update(node[head], rest) };
     };
     const tree = update(existing, path);
-    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => {
+      this.saveDebounced();
+      // Resizing doesn't reflow content (that stays an explicit, on-demand
+      // action — see reorgBoxText/the stream editor), but a box that's now
+      // too small for what it already holds should still warn immediately
+      // rather than silently sitting over capacity until something else
+      // happens to recheck it.
+      this.refreshBoxOverflowState(pageId);
+    });
   }
 
   // Renumbering is a swap, not an insert — the box that already held the
@@ -1691,6 +1703,7 @@ class Component extends DCLogic {
         const el = this.boxEditableEls[node.id];
         if (el) el.innerHTML = priorContent[node.id] || '';
       });
+      this.refreshBoxOverflowState(pageId);
     });
   }
 
@@ -1699,7 +1712,10 @@ class Component extends DCLogic {
   clearBoxKeepSlot(pageId, boxId) {
     const el = this.boxEditableEls[boxId];
     if (el) el.innerHTML = '';
-    this.setState({ boxDeletePromptId: null }, () => this.saveDebounced());
+    this.setState({ boxDeletePromptId: null }, () => {
+      this.saveDebounced();
+      this.refreshBoxOverflowState(pageId);
+    });
   }
 
   // Text boxes on a page, sorted by their reading-order number (which is
@@ -1804,6 +1820,41 @@ class Component extends DCLogic {
     this.setState({ docBoxOverflowId: overflowing ? last.id : null });
   }
 
+  // General-purpose overflow check for the paths flowBoxesForPage doesn't
+  // cover (a seam nudge or a direct edit can create or resolve overflow on
+  // any box, not just the last one) — scans every text box and flags the
+  // first that's over. Only one id is ever tracked at a time, same as
+  // flowBoxesForPage's own check; that's enough to drive the warning glow
+  // and the REORG button without needing a set of them.
+  refreshBoxOverflowState(pageId) {
+    const overflowingBox = this.numberedTextBoxes(pageId).find(node => {
+      const el = this.boxEditableEls[node.id];
+      return el && el.scrollHeight > el.clientHeight + 1;
+    });
+    this.setState({ docBoxOverflowId: overflowingBox ? overflowingBox.id : null });
+  }
+
+  // The one-click remedy for direct-typing overflow (and for a LAYOUT resize
+  // that leaves a box over capacity): gather every text box's current
+  // content in number order and pour it back through the same push-only
+  // flow engine the stream editor uses, without needing to open the stream
+  // UI at all.
+  reorgBoxText(pageId) {
+    const boxes = this.numberedTextBoxes(pageId);
+    if (boxes.length < 2) return;
+    const wrapper = document.createElement('div');
+    boxes.forEach(node => {
+      const el = this.boxEditableEls[node.id];
+      if (el) [...el.childNodes].forEach(n => wrapper.appendChild(n.cloneNode(true)));
+    });
+    const firstEl = this.boxEditableEls[boxes[0].id];
+    if (!firstEl) return;
+    boxes.forEach(node => { const el = this.boxEditableEls[node.id]; if (el) el.innerHTML = ''; });
+    firstEl.innerHTML = wrapper.innerHTML;
+    this.flowBoxesForPage(pageId);
+    this.saveDebounced();
+  }
+
   openBoxStream(pageId) {
     if (this.boxStreamEl) delete this.boxStreamEl.dataset.built;
     this.setState({ docStreamOpen: true, docPreviewOn: false, docLayoutMode: false });
@@ -1876,7 +1927,23 @@ class Component extends DCLogic {
         : 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
       onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.forceUpdate(); },
-      onInput: () => this.saveDebounced(),
+      onInput: () => {
+        this.saveDebounced();
+        if (isImage) return;
+        // Left alone, an overflowing box auto-scrolls to keep the caret in
+        // view — which silently pushes already-typed text up and out the
+        // top. Pinning scrollTop back to 0 keeps what's visible in the box
+        // stable; the magnifier already mirrors the caret's own line
+        // independent of this box's scroll position, so typing "past the
+        // bottom" still has somewhere to be seen while it's happening.
+        const el = this.boxEditableEls[node.id];
+        if (!el) return;
+        const overflowing = el.scrollHeight > el.clientHeight + 1;
+        if (overflowing) el.scrollTop = 0;
+        const wasFlagged = this.state.docBoxOverflowId === node.id;
+        if (overflowing && !wasFlagged) this.setState({ docBoxOverflowId: node.id });
+        else if (!overflowing && wasFlagged) this.setState({ docBoxOverflowId: null });
+      },
       onDropBox: isImage ? (e) => this.onBoxDrop(pageId, node.id, e) : () => {},
       onDragOverBox: isImage ? (e) => this.onBoxDragOver(e) : () => {},
       onPasteBox: isImage ? (e) => this.onBoxPaste(pageId, node.id, e) : () => {},
@@ -3971,22 +4038,16 @@ class Component extends DCLogic {
       if (dim) s.style.opacity = '0.5';
       return s;
     };
-    // Half a strip of blank space at each end, so the first and last words of
-    // a line can still be scrolled to the middle.
-    const pad = () => {
-      const s = document.createElement('span');
-      s.style.cssText = 'display:inline-block;width:50%;';
-      return s;
-    };
     const caret = document.createElement('span');
     caret.style.cssText = 'display:inline-block;width:2px;height:0.95em;vertical-align:-0.1em;background:#7fc0ff;margin:0 1px;';
-    el.appendChild(pad());
     el.appendChild(span(t.before, false));
     el.appendChild(caret);
     el.appendChild(span(t.after, true));
-    el.appendChild(pad());
-    // Keep the caret at the middle of the visible strip.
-    el.scrollLeft = caret.offsetLeft - el.clientWidth / 2;
+    // Text now wraps across up to 3 visible lines (capped by the container's
+    // fixed height) instead of running out along one long horizontally
+    // panned line — so keeping the caret in view means scrolling vertically
+    // to its own line, the same "pan to the caret" idea just turned sideways.
+    el.scrollTop = caret.offsetTop - el.clientHeight / 2;
   }
 
   // The mobile keyboard changes how much of the window is actually visible.
@@ -4441,6 +4502,15 @@ class Component extends DCLogic {
         if (this.state.docStreamOpen) this.closeBoxStreamToPreview(pid);
         else this.openBoxStream(pid);
       },
+      // Only offered once the overflowing box is confirmed to actually
+      // belong to the page currently in view — docBoxOverflowId is a single
+      // global flag, so this guards against showing (and reorganizing) the
+      // wrong page if the user switched pages without resolving it first.
+      showReorgButton: !this.state.narrowScreen && !isLabelDoc && !this.state.docStreamOpen
+        && !!this.state.docBoxOverflowId
+        && !!this.findBoxLeaf(this.state.pageBoxTrees[this.focusedPageId || this.state.pageIds[0]], this.state.docBoxOverflowId),
+      reorgBtnStyle: 'background:#c9822a;color:#fff;border-color:#c9822a;',
+      onReorgClick: () => this.reorgBoxText(this.focusedPageId || this.state.pageIds[0]),
       reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
@@ -4468,7 +4538,7 @@ class Component extends DCLogic {
       // The magnifier earns its place on desktop; on a phone reflow replaces it.
       magnifierVisible: this.state.docCreated && !isLabelDoc && !this.state.narrowScreen,
       magnifierBottom: '42px',
-      magnifierHeight: this.state.narrowScreen ? '15vh' : '64px',
+      magnifierHeight: this.state.narrowScreen ? '15vh' : '192px',
       magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
       magnifierToggleLabel: this.state.magnifierOn === false ? 'Magnifier: Off' : 'Magnifier: On',
       magnifierToggleStyle: this.state.magnifierOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
