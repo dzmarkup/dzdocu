@@ -572,6 +572,9 @@ textarea.input { min-height: 90px; resize: vertical; }
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitVertical }}" title="Split into a left and right box">Split ↔</button>
       </sc-if>
     </sc-if>
+    <sc-if value="{{ showDocLayoutButton }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-secondary" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ docLayoutBtnStyle }}" sc-camel-on-click="{{ onToggleDocLayout }}">{{ docLayoutBtnLabel }}</button>
+    </sc-if>
     <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:auto;height:56px;padding:4px 20px;font-size:28px;font-weight:700;white-space:nowrap;flex:0 0 auto;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
     </sc-if>
@@ -945,10 +948,19 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <sc-for list="{{ p.boxes }}" as="b" hint-placeholder-count="1">
           <div class="doc-box" style="{{ b.style }}">
             <span class="no-print" style="{{ b.badgeStyle }}">{{ b.badgeText }}</span>
+            <sc-if value="{{ b.showNumberInput }}" hint-placeholder-val="{{ false }}">
+              <input class="no-print" type="number" min="1" style="{{ b.numberInputStyle }}" value="{{ b.numberValue }}" sc-camel-on-change="{{ b.onNumberChange }}" title="Renumber this box" />
+            </sc-if>
             <span class="no-print" style="{{ b.typeToggleStyle }}" sc-camel-on-click="{{ b.onToggleType }}" title="Switch text/image">⇄</span>
             <div ref="{{ b.ref }}" sc-camel-content-editable="{{ b.editable }}" sc-camel-suppress-content-editable-warning="true" sc-camel-on-focus="{{ b.onFocus }}" sc-camel-on-input="{{ b.onInput }}" style="{{ b.contentStyle }}"></div>
           </div>
         </sc-for>
+        <sc-if value="{{ p.docLayoutActive }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ p.seams }}" as="s" hint-placeholder-count="1">
+            <button class="no-print" style="{{ s.minusStyle }}" sc-camel-on-click="{{ s.onMinus }}" title="Shrink">−</button>
+            <button class="no-print" style="{{ s.plusStyle }}" sc-camel-on-click="{{ s.onPlus }}" title="Grow">+</button>
+          </sc-for>
+        </sc-if>
       </sc-if>
     </section>
   </sc-for>
@@ -1019,7 +1031,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1512,26 +1524,107 @@ class Component extends DCLogic {
     this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
   }
 
+  // One entry per split node — the shared seam a nudge moves. path is the
+  // a/b route from the root, used to find and update that exact node
+  // without needing split nodes to carry their own id.
+  flattenSeams(node, rect, path) {
+    if (!node || node.box) return [];
+    const isV = node.split === 'v';
+    const ratio = node.ratio;
+    const rectA = isV ? { x: rect.x, y: rect.y, w: rect.w * ratio, h: rect.h }
+      : { x: rect.x, y: rect.y, w: rect.w, h: rect.h * ratio };
+    const rectB = isV ? { x: rect.x + rect.w * ratio, y: rect.y, w: rect.w * (1 - ratio), h: rect.h }
+      : { x: rect.x, y: rect.y + rect.h * ratio, w: rect.w, h: rect.h * (1 - ratio) };
+    const seam = { path, direction: node.split, atX: isV ? rectA.x + rectA.w : rect.x, atY: isV ? rect.y : rectA.y + rectA.h,
+      along: isV ? rect.h : rect.w };
+    return [seam, ...this.flattenSeams(node.a, rectA, [...path, 'a']), ...this.flattenSeams(node.b, rectB, [...path, 'b'])];
+  }
+
+  nudgeSeam(pageId, path, delta) {
+    const existing = this.state.pageBoxTrees[pageId];
+    if (!existing) return;
+    const update = (node, p) => {
+      if (p.length === 0) return { ...node, ratio: Math.max(0.1, Math.min(0.9, node.ratio + delta)) };
+      const [head, ...rest] = p;
+      return { ...node, [head]: update(node[head], rest) };
+    };
+    const tree = update(existing, path);
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
+  }
+
+  // Renumbering is a swap, not an insert — the box that already held the
+  // requested number takes the moved box's old one, so numbers never
+  // duplicate or leave a gap.
+  setBoxNumber(pageId, boxId, newNumber) {
+    const existing = this.state.pageBoxTrees[pageId];
+    if (!existing) return;
+    const textLeaves = this.flattenBoxTree(existing, { x: 0, y: 0, w: 1, h: 1 }).map(l => l.node).filter(n => n.type === 'text');
+    const target = textLeaves.find(n => n.id === boxId);
+    if (!target) return;
+    const clamped = Math.max(1, Math.min(textLeaves.length, Math.round(newNumber)));
+    if (clamped === target.number) return;
+    const other = textLeaves.find(n => n.number === clamped);
+    const swap = (node) => {
+      if (node.box) {
+        if (node.id === target.id) return { ...node, number: clamped };
+        if (other && node.id === other.id) return { ...node, number: target.number };
+        return node;
+      }
+      return { ...node, a: swap(node.a), b: swap(node.b) };
+    };
+    const tree = swap(existing);
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
+  }
+
   // v1: fixed padding and a plain 14px stack, matching the normal document
   // editable's own defaults closely enough to compare the two side by side.
-  buildBoxRenderProps(pageId, node, rect, docMargin, dims) {
+  buildBoxRenderProps(pageId, node, rect, docMargin, dims, docLayoutActive) {
     const marginW = docMargin.r - docMargin.l, marginH = docMargin.b - docMargin.t;
     const left = docMargin.l + rect.x * marginW, top = docMargin.t + rect.y * marginH;
     const w = rect.w * marginW, h = rect.h * marginH;
     const isImage = node.type === 'image';
+    // Locked while LAYOUT is open — same rule labels already use, so a caret
+    // can't fight the seam nudges the same way it can't fight the label's
+    // own box controls.
+    const locked = isImage || docLayoutActive;
     return {
       id: node.id,
-      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + (isImage ? '#b4433a' : '#5980a6') + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : 'rgba(89,128,166,0.06)') + ';overflow:hidden;',
-      editable: isImage ? 'false' : 'true',
+      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + (isImage ? '#b4433a' : '#5980a6') + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : 'rgba(89,128,166,0.06)') + ';overflow:hidden;' + (docLayoutActive ? 'box-shadow:0 0 0 1px #2f6fb0;' : ''),
+      editable: locked ? 'false' : 'true',
       isImage,
+      showNumberInput: docLayoutActive && !isImage,
       badgeText: isImage ? 'IMAGE' : (node.number != null ? String(node.number) : ''),
       badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : '#5980a6') + ';color:#fff;pointer-events:none;',
+      numberInputStyle: 'position:absolute;top:1px;left:24px;z-index:1;width:28px;height:15px;font-size:10px;padding:0 2px;border:1px solid #5980a6;',
+      numberValue: node.number,
+      onNumberChange: (e) => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) this.setBoxNumber(pageId, node.id, v); },
       typeToggleStyle: 'position:absolute;top:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:11px;border:1px solid #fff;background:rgba(0,0,0,0.35);color:#fff;cursor:pointer;',
       onToggleType: (e) => { e.stopPropagation(); e.preventDefault(); this.toggleBoxType(pageId, node.id); },
       contentStyle: 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
-      onFocus: () => { this.focusedBoxId = node.id; },
+      onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.forceUpdate(); },
       onInput: () => this.saveDebounced(),
+    };
+  }
+
+  buildSeamRenderProps(pageId, seam, docMargin, dims, idx) {
+    const marginW = docMargin.r - docMargin.l, marginH = docMargin.b - docMargin.t;
+    const isV = seam.direction === 'v';
+    const BTN_IN = 0.17, SPREAD_IN = 0.14;
+    // A small pair of nudge buttons centred along the seam, in the same inch
+    // units as everything else here — mixing px offsets into an in-based
+    // style string put earlier versions of these buttons off the page.
+    const left = docMargin.l + seam.atX * marginW, top = docMargin.t + seam.atY * marginH;
+    const alongCenterIn = (isV ? seam.along * marginH : seam.along * marginW) / 2;
+    const baseLeft = isV ? left - BTN_IN / 2 : left + alongCenterIn - BTN_IN / 2;
+    const baseTop = isV ? top + alongCenterIn - BTN_IN / 2 : top - BTN_IN / 2;
+    const mk = (dLeft, dTop) => 'position:absolute;left:' + (baseLeft + dLeft).toFixed(3) + 'in;top:' + (baseTop + dTop).toFixed(3) + 'in;z-index:2;width:' + BTN_IN + 'in;height:' + BTN_IN + 'in;line-height:' + (BTN_IN - 0.02) + 'in;text-align:center;font-size:11px;font-weight:700;border:1px solid #2f6fb0;background:#fff;color:#2f6fb0;cursor:pointer;';
+    return {
+      key: idx,
+      minusStyle: mk(isV ? 0 : -SPREAD_IN, isV ? -SPREAD_IN : 0),
+      plusStyle: mk(isV ? 0 : SPREAD_IN, isV ? SPREAD_IN : 0),
+      onMinus: () => this.nudgeSeam(pageId, seam.path, -0.02),
+      onPlus: () => this.nudgeSeam(pageId, seam.path, 0.02),
     };
   }
 
@@ -3601,6 +3694,10 @@ class Component extends DCLogic {
       // and mobile never gets one at all (reflow is its editing surface).
       const boxTree = (!isLabel && !this.state.narrowScreen) ? this.state.pageBoxTrees[id] : null;
       const boxLeaves = boxTree ? this.flattenBoxTree(boxTree, { x: 0, y: 0, w: 1, h: 1 }) : [];
+      const docLayoutActive = this.state.docLayoutMode && this.focusedPageId === id;
+      const seams = (boxTree && docLayoutActive)
+        ? this.flattenSeams(boxTree, { x: 0, y: 0, w: 1, h: 1 }, []).map((s, i) => this.buildSeamRenderProps(id, s, docMargin, dims, i))
+        : [];
       return {
         id,
         canRemove: this.state.pageIds.length > 1,
@@ -3608,7 +3705,9 @@ class Component extends DCLogic {
         editable: !this.state.narrowScreen,
         hasBoxes: !!boxTree,
         noBoxes: !boxTree,
-        boxes: boxLeaves.map(({ node, rect }) => this.buildBoxRenderProps(id, node, rect, docMargin, dims)),
+        boxes: boxLeaves.map(({ node, rect }) => this.buildBoxRenderProps(id, node, rect, docMargin, dims, docLayoutActive)),
+        docLayoutActive,
+        seams,
         onAddBox: (dir) => this.splitPageIntoBoxes(id, dir),
         boxSplitPromptOpenHere: this.state.boxSplitPromptOpen && this.focusedPageId === id,
         previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
@@ -3944,6 +4043,14 @@ class Component extends DCLogic {
       onBoxButtonClick: () => this.setState(s => ({ boxSplitPromptOpen: !s.boxSplitPromptOpen })),
       onSplitHorizontal: () => this.splitPageIntoBoxes(this.focusedPageId || this.state.pageIds[0], 'h'),
       onSplitVertical: () => this.splitPageIntoBoxes(this.focusedPageId || this.state.pageIds[0], 'v'),
+      // LAYOUT for document boxes is deliberately its own toggle (docLayoutMode),
+      // not the label LAYOUT system (layoutMode) — the two box models are
+      // different enough (fixed named boxes vs. a split-tree) that sharing
+      // the state risked tangling working label code with new, unproven code.
+      showDocLayoutButton: !this.state.narrowScreen && !isLabelDoc && !!this.state.pageBoxTrees[this.focusedPageId],
+      docLayoutBtnLabel: this.state.docLayoutMode ? 'Done' : 'LAYOUT',
+      docLayoutBtnStyle: this.state.docLayoutMode ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
+      onToggleDocLayout: () => this.setState(s => ({ docLayoutMode: !s.docLayoutMode })),
       reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
