@@ -962,7 +962,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             <sc-if value="{{ b.showNumberInput }}" hint-placeholder-val="{{ false }}">
               <input class="no-print" type="number" min="1" style="{{ b.numberInputStyle }}" value="{{ b.numberValue }}" sc-camel-on-change="{{ b.onNumberChange }}" title="Renumber this box" />
             </sc-if>
-            <span class="no-print" style="{{ b.typeToggleStyle }}" sc-camel-on-click="{{ b.onToggleType }}" title="Switch text/image">⇄</span>
+            <span class="no-print" style="{{ b.typeToggleStyle }}" sc-camel-on-click="{{ b.onToggleType }}" title="Switch text/image/independent">⇄</span>
             <sc-if value="{{ b.showDeleteButton }}" hint-placeholder-val="{{ false }}">
               <span class="no-print" style="{{ b.deleteBtnStyle }}" sc-camel-on-click="{{ b.onDelete }}" title="Delete this box">×</span>
             </sc-if>
@@ -1606,12 +1606,20 @@ class Component extends DCLogic {
     });
   }
 
+  // Cycles text -> image -> independent -> text. Independent is a text box
+  // in every way that matters for editing (typed directly, holds its own
+  // content) except it's excluded from numbering and the flow engine
+  // entirely — numberedTextBoxes only ever collects type 'text', so an
+  // independent box just never enters that list, the same mechanism that
+  // already keeps image boxes out of it.
   toggleBoxType(pageId, boxId) {
     const existing = this.state.pageBoxTrees[pageId];
     if (!existing) return;
-    const becameImage = this.findBoxLeaf(existing, boxId)?.type !== 'image';
+    const TYPE_CYCLE = { text: 'image', image: 'independent', independent: 'text' };
+    const currentType = this.findBoxLeaf(existing, boxId)?.type || 'text';
+    const nextType = TYPE_CYCLE[currentType] || 'text';
     const flip = (node) => {
-      if (node.box) return node.id === boxId ? { ...node, type: node.type === 'text' ? 'image' : 'text' } : node;
+      if (node.box) return node.id === boxId ? { ...node, type: nextType } : node;
       return { ...node, a: flip(node.a), b: flip(node.b) };
     };
     const tree = flip(existing);
@@ -1620,7 +1628,9 @@ class Component extends DCLogic {
       this.saveDebounced();
       // Switching a box to image is the ask for an image — go straight to
       // the file picker rather than leaving a red, empty box behind.
-      if (becameImage) this.openBoxImagePicker(pageId, boxId);
+      // Independent doesn't get this treatment; it starts out simply ready
+      // to type into, same as a fresh text box.
+      if (nextType === 'image') this.openBoxImagePicker(pageId, boxId);
     });
   }
 
@@ -2013,6 +2023,7 @@ class Component extends DCLogic {
     const left = docMargin.l + rect.x * marginW, top = docMargin.t + rect.y * marginH;
     const w = rect.w * marginW, h = rect.h * marginH;
     const isImage = node.type === 'image';
+    const isIndependent = node.type === 'independent';
     const isPending = node.id === deletePromptId;
     const isMergeCandidate = !!mergeCandidateIds && mergeCandidateIds.has(node.id);
     // Locked while LAYOUT or Preview is open — same rule labels already use,
@@ -2022,17 +2033,17 @@ class Component extends DCLogic {
     // own right-click "Paste" and Ctrl+V reach them — onBoxKeyDown blocks
     // them from ever taking typed text.
     const locked = lockedMode;
-    const overflowing = !isImage && node.id === this.state.docBoxOverflowId;
-    const borderColor = isMergeCandidate ? '#c9822a' : isImage ? '#b4433a' : (overflowing ? '#c9822a' : '#5980a6');
+    const overflowing = !isImage && !isIndependent && node.id === this.state.docBoxOverflowId;
+    const borderColor = isMergeCandidate ? '#c9822a' : isImage ? '#b4433a' : isIndependent ? '#3f8f52' : (overflowing ? '#c9822a' : '#5980a6');
     const mergeGlow = isMergeCandidate ? 'box-shadow:inset 0 0 14px 3px rgba(201,130,42,0.65),0 0 0 2px #c9822a;cursor:pointer;' : '';
     return {
       id: node.id,
-      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + borderColor + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : (overflowing ? 'rgba(201,130,42,0.12)' : 'rgba(89,128,166,0.06)')) + ';overflow:hidden;' + (docLayoutActive ? 'box-shadow:0 0 0 1px #2f6fb0;' : '') + (overflowing ? 'box-shadow:inset 0 0 14px 2px rgba(201,130,42,0.55);' : '') + mergeGlow,
+      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + borderColor + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : isIndependent ? 'rgba(63,143,82,0.08)' : (overflowing ? 'rgba(201,130,42,0.12)' : 'rgba(89,128,166,0.06)')) + ';overflow:hidden;' + (docLayoutActive ? 'box-shadow:0 0 0 1px #2f6fb0;' : '') + (overflowing ? 'box-shadow:inset 0 0 14px 2px rgba(201,130,42,0.55);' : '') + mergeGlow,
       editable: locked ? 'false' : 'true',
       isImage,
-      showNumberInput: docLayoutActive && !isImage,
-      badgeText: isImage ? 'IMAGE' : (node.number != null ? String(node.number) : ''),
-      badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : '#5980a6') + ';color:#fff;pointer-events:none;',
+      showNumberInput: docLayoutActive && !isImage && !isIndependent,
+      badgeText: isImage ? 'IMAGE' : isIndependent ? 'INDEP' : (node.number != null ? String(node.number) : ''),
+      badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : isIndependent ? '#3f8f52' : '#5980a6') + ';color:#fff;pointer-events:none;',
       numberInputStyle: 'position:absolute;top:1px;left:24px;z-index:1;width:28px;height:15px;font-size:10px;padding:0 2px;border:1px solid #5980a6;',
       numberValue: node.number,
       onNumberChange: (e) => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) this.setBoxNumber(pageId, node.id, v); },
@@ -2098,7 +2109,25 @@ class Component extends DCLogic {
       onDragOverBox: isImage
         ? (e) => this.onBoxDragOver(e)
         : (e) => { if (e.dataTransfer && [...e.dataTransfer.items].some(it => it.type.startsWith('image/'))) e.preventDefault(); },
-      onPasteBox: isImage ? (e) => this.onBoxPaste(pageId, node.id, e) : () => {},
+      onPasteBox: isImage
+        ? (e) => this.onBoxPaste(pageId, node.id, e)
+        : (e) => {
+            const items = e.clipboardData ? e.clipboardData.items : [];
+            for (const item of items) {
+              if (item.type && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                  e.preventDefault();
+                  this.onTextBoxImageDrop(pageId, node.id, file);
+                }
+                return;
+              }
+            }
+            // No real image bytes on the clipboard (e.g. a copied file's
+            // path/URI rather than its data, which a browser can't turn
+            // into an image for security reasons) -- falls through to
+            // normal text paste, same as before.
+          },
       onKeyDownBox: isImage ? (e) => this.onBoxKeyDown(e) : () => {},
     };
   }
