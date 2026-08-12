@@ -636,6 +636,9 @@ textarea.input { min-height: 90px; resize: vertical; }
 <button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
 </button>
+<button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Email</span>
+</button>
 </sc-if>
 
 <sc-if value="{{ setupOpen }}" hint-placeholder-val="{{ false }}">
@@ -840,6 +843,34 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
               <button class="btn btn-secondary" sc-camel-on-click="{{ onAddPageClose }}" style="width:102px;">Cancel</button>
             </div>
           </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ emailPromptOpen }}" hint-placeholder-val="{{ false }}">
+  <div class="no-print" sc-camel-on-click="{{ onCloseEmailPanel }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
+    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Arial Narrow', Arial, sans-serif;">
+      <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;width:280px;text-align:left;">
+        <button class="btn btn-ghost" sc-camel-on-click="{{ onCloseEmailPanel }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
+        <div style="font-size:20px;margin-bottom:12px;color:#1d1f20;text-transform:uppercase;">Save to Email</div>
+        <sc-if value="{{ emailWorkerNotConfigured }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13px;color:#6b7480;margin-bottom:8px;">Not set up yet — this needs a Worker URL filled in before it can send anything.</div>
+        </sc-if>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1d1f20;margin-bottom:14px;cursor:pointer;">
+          <input type="checkbox" checked="{{ emailSaveEnabled }}" sc-camel-on-change="{{ onToggleEmailEnabled }}" />
+          Enable Save to Email
+        </label>
+        <sc-if value="{{ emailSaveEnabled }}" hint-placeholder-val="{{ false }}">
+          <input type="email" value="{{ emailAddress }}" sc-camel-on-change="{{ onEmailAddressChange }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:10px;color:#1d1f20;" />
+          <button class="btn btn-primary" sc-camel-on-click="{{ onSendToEmail }}" disabled="{{ emailSending }}" style="width:100%;background:var(--color-accent,#5980a6);color:#fff;">{{ emailSendBtnLabel }}</button>
+          <sc-if value="{{ emailSendError }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;color:#b4433a;margin-top:8px;">{{ emailSendError }}</div>
+          </sc-if>
+          <sc-if value="{{ emailSent }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;color:#3f8f52;margin-top:8px;">Sent — check your inbox.</div>
+          </sc-if>
         </sc-if>
       </div>
     </div>
@@ -1058,9 +1089,14 @@ const LAYOUT_STEPS = [
 const LAYOUT_MIN_BOX_IN = 0.25;
 // Warn when a box comes closer than this to the trim edge.
 const LAYOUT_EDGE_WARN_IN = 0.1;
+// The Cloudflare Worker that actually sends the email — this repo is static,
+// no server of its own, so "Save to Email" has nothing to call until this is
+// filled in with a deployed Worker's URL. Left blank, the feature stays
+// visibly "not set up yet" rather than silently failing.
+const EMAIL_WORKER_URL = '';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1123,6 +1159,7 @@ class Component extends DCLogic {
 
   componentDidMount() {
     if (super.componentDidMount) super.componentDidMount();
+    this.loadEmailPref();
     // The toolbar's real height depends on the toggle button's rendered
     // size and the phone's safe-area inset, neither of which necessarily
     // lands before the render that reads them, and neither reliably fires
@@ -3072,7 +3109,7 @@ class Component extends DCLogic {
     // measured against, which walks the tabs inward on top of the label. Park
     // them at the viewport edges for the duration instead.
     const pinned = this.state.layoutMode && this.hasBoxLayout();
-    [this.openTabEl, this.saveTabEl, this.printTabEl].forEach(el => { if (el) el.style.left = (pinned ? 0 : tabLeftPos) + 'px'; });
+    [this.openTabEl, this.saveTabEl, this.printTabEl, this.emailTabEl].forEach(el => { if (el) el.style.left = (pinned ? 0 : tabLeftPos) + 'px'; });
     [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = (pinned ? 0 : tabRightPos) + 'px'; });
 
   }
@@ -3307,6 +3344,65 @@ class Component extends DCLogic {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Whether Save to Email is turned on, and the last address used, are a
+  // device preference — not part of any one document — so they live in
+  // their own localStorage entry rather than riding along with a save file.
+  loadEmailPref() {
+    let raw;
+    try { raw = localStorage.getItem('dzdocu-email-save-pref'); } catch (e) { raw = null; }
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw);
+      this.setState({ emailSaveEnabled: !!p.enabled, emailAddress: p.address || '' });
+    } catch (e) {}
+  }
+
+  saveEmailPref() {
+    try {
+      localStorage.setItem('dzdocu-email-save-pref', JSON.stringify({ enabled: this.state.emailSaveEnabled, address: this.state.emailAddress }));
+    } catch (e) {}
+  }
+
+  onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
+  onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
+  onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
+  onEmailAddressChange(e) { this.setState({ emailAddress: e.target.value }, () => this.saveEmailPref()); }
+
+  // Sends the exact same data the local .docu download does — buildSaveData
+  // is the one existing, already-correct source of "everything in this
+  // document" — as a base64 attachment to a Cloudflare Worker, which is the
+  // only piece able to actually hold an email-service key safely, since this
+  // whole site is static with nowhere else to keep a secret.
+  async onSendToEmail() {
+    const email = (this.state.emailAddress || '').trim();
+    if (!EMAIL_WORKER_URL) {
+      this.setState({ emailSendStatus: 'error', emailSendError: "Email saving isn't set up yet." });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.setState({ emailSendStatus: 'error', emailSendError: 'Enter a valid email address.' });
+      return;
+    }
+    this.setState({ emailSendStatus: 'sending', emailSendError: null });
+    this.saveEmailPref();
+    try {
+      const data = this.buildSaveData();
+      const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
+      const json = JSON.stringify(data);
+      const dataUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(json)));
+      const resp = await fetch(EMAIL_WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, filename: title + '.docu', dataUrl }),
+      });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(result.error || 'Send failed.');
+      this.setState({ emailSendStatus: 'sent' });
+    } catch (err) {
+      this.setState({ emailSendStatus: 'error', emailSendError: (err && err.message) || 'Something went wrong.' });
+    }
   }
 
   onOpenEzdocClick() {
@@ -4590,6 +4686,19 @@ class Component extends DCLogic {
       ezdocInputRef: (el) => { if (el) this.ezdocInputEl = el; },
       onOpenEzdocClick: () => this.onOpenEzdocClick(),
       onOpenEzdoc: (e) => this.onOpenEzdoc(e),
+      emailPromptOpen: this.state.emailPromptOpen,
+      onOpenEmailPanel: () => this.onOpenEmailPanel(),
+      onCloseEmailPanel: () => this.onCloseEmailPanel(),
+      emailWorkerNotConfigured: !EMAIL_WORKER_URL,
+      emailSaveEnabled: this.state.emailSaveEnabled,
+      onToggleEmailEnabled: () => this.onToggleEmailEnabled(),
+      emailAddress: this.state.emailAddress,
+      onEmailAddressChange: (e) => this.onEmailAddressChange(e),
+      onSendToEmail: () => this.onSendToEmail(),
+      emailSending: this.state.emailSendStatus === 'sending',
+      emailSendBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send',
+      emailSendError: this.state.emailSendStatus === 'error' ? this.state.emailSendError : null,
+      emailSent: this.state.emailSendStatus === 'sent',
       uniformBtnStyle: 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
       printPdfBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;color:#fff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);' : 'background:#ffffff;border:2px solid #000000;color:var(--color-text,#1d1f20);box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
       headerGlobalBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:#fff;' : 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:var(--color-text,#1d1f20);',
@@ -4601,6 +4710,7 @@ class Component extends DCLogic {
       openTabRef: (el) => { if (el) { this.openTabEl = el; this.positionEdgeTabs(); } },
       saveTabRef: (el) => { if (el) { this.saveTabEl = el; this.positionEdgeTabs(); } },
       printTabRef: (el) => { if (el) { this.printTabEl = el; this.positionEdgeTabs(); } },
+      emailTabRef: (el) => { if (el) { this.emailTabEl = el; this.positionEdgeTabs(); } },
       fontTabRef: (el) => { if (el) { this.fontTabEl = el; this.positionEdgeTabs(); } },
       headerTabRef: (el) => { if (el) { this.headerTabEl = el; this.positionEdgeTabs(); } },
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
