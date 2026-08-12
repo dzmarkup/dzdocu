@@ -1621,6 +1621,12 @@ class Component extends DCLogic {
   setBoxType(pageId, boxId, newType) {
     const existing = this.state.pageBoxTrees[pageId];
     if (!existing) return;
+    // Only worth asking when there's actually something to lose — an
+    // already-empty box switches instantly, same as before this warning
+    // existed.
+    const currentEl = this.boxEditableEls[boxId];
+    const hasContent = !!currentEl && (!!currentEl.textContent.trim() || !!currentEl.querySelector('img'));
+    if (hasContent && !window.confirm("Switching this box's type will clear its content. Continue?")) return;
     const flip = (node) => {
       if (node.box) return node.id === boxId ? { ...node, type: newType } : node;
       return { ...node, a: flip(node.a), b: flip(node.b) };
