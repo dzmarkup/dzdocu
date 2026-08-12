@@ -561,8 +561,8 @@ textarea.input { min-height: 90px; resize: vertical; }
      can be read at arm's length. It never takes focus and never prints; it
      only reads from the page. Documents only for now. -->
 <sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;">
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+<div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;pointer-events:none;">
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:3.3em;overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
 </div>
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -3971,22 +3971,16 @@ class Component extends DCLogic {
       if (dim) s.style.opacity = '0.5';
       return s;
     };
-    // Half a strip of blank space at each end, so the first and last words of
-    // a line can still be scrolled to the middle.
-    const pad = () => {
-      const s = document.createElement('span');
-      s.style.cssText = 'display:inline-block;width:50%;';
-      return s;
-    };
     const caret = document.createElement('span');
     caret.style.cssText = 'display:inline-block;width:2px;height:0.95em;vertical-align:-0.1em;background:#7fc0ff;margin:0 1px;';
-    el.appendChild(pad());
     el.appendChild(span(t.before, false));
     el.appendChild(caret);
     el.appendChild(span(t.after, true));
-    el.appendChild(pad());
-    // Keep the caret at the middle of the visible strip.
-    el.scrollLeft = caret.offsetLeft - el.clientWidth / 2;
+    // Text now wraps across up to 3 visible lines (capped by the container's
+    // fixed height) instead of running out along one long horizontally
+    // panned line — so keeping the caret in view means scrolling vertically
+    // to its own line, the same "pan to the caret" idea just turned sideways.
+    el.scrollTop = caret.offsetTop - el.clientHeight / 2;
   }
 
   // The mobile keyboard changes how much of the window is actually visible.
@@ -4468,7 +4462,7 @@ class Component extends DCLogic {
       // The magnifier earns its place on desktop; on a phone reflow replaces it.
       magnifierVisible: this.state.docCreated && !isLabelDoc && !this.state.narrowScreen,
       magnifierBottom: '42px',
-      magnifierHeight: this.state.narrowScreen ? '15vh' : '64px',
+      magnifierHeight: this.state.narrowScreen ? '15vh' : '192px',
       magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
       magnifierToggleLabel: this.state.magnifierOn === false ? 'Magnifier: Off' : 'Magnifier: On',
       magnifierToggleStyle: this.state.magnifierOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
