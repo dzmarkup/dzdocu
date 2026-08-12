@@ -1627,6 +1627,12 @@ class Component extends DCLogic {
     };
     const tree = flip(existing);
     this.renumberBoxTree(tree);
+    // A box switching type starts fresh — an image doesn't belong in a text
+    // box's content and typed text doesn't belong in an image box's, so
+    // whatever was there gets cleared rather than left lingering underneath
+    // the new type's own styling.
+    const el = this.boxEditableEls[boxId];
+    if (el) el.innerHTML = '';
     this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => {
       this.saveDebounced();
       // Switching a box to image is the ask for an image — go straight to
