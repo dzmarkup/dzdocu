@@ -1530,6 +1530,35 @@ class Component extends DCLogic {
   splitPageIntoBoxes(pageId, direction) {
     const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null });
     const existing = this.state.pageBoxTrees[pageId];
+    // A plain page's own text lives in the .editable div that noBoxes
+    // renders — the instant a box tree exists for this page, that div stops
+    // rendering at all, orphaning whatever was typed there with nowhere to
+    // go. An empty page has nothing at risk, so it converts in place same as
+    // always; a page already holding real text or an image gets a fresh
+    // page of its own for the boxes instead, right after it, leaving the
+    // original page and its content completely untouched.
+    if (!existing) {
+      const plainEl = this.editableEls[pageId];
+      const hasContent = !!plainEl && (!!plainEl.textContent.trim() || !!plainEl.querySelector('img, .img-wrap'));
+      if (hasContent) {
+        const newPageId = this.newId();
+        const tree = this.renumberBoxTree({ split: direction, ratio: 0.5, a: makeLeaf(), b: makeLeaf() });
+        const idx = this.state.pageIds.indexOf(pageId);
+        const pageIds = [...this.state.pageIds];
+        pageIds.splice(idx + 1, 0, newPageId);
+        this.setState(s => ({
+          pageIds,
+          pageEmptyMap: { ...s.pageEmptyMap, [newPageId]: true },
+          pageBoxTrees: { ...s.pageBoxTrees, [newPageId]: tree },
+          boxSplitPromptOpen: false,
+        }), () => {
+          this.focusedPageId = newPageId;
+          this.saveDebounced();
+          this.scrollToPage(newPageId);
+        });
+        return;
+      }
+    }
     // sc-for keys its rendered items by array position, not by the box's own
     // id, so inserting a leaf earlier in flattenBoxTree's order shifts every
     // later box's DOM element down one slot — the renderer reuses that
@@ -1781,19 +1810,112 @@ class Component extends DCLogic {
     return wrapper.innerHTML;
   }
 
-  // Pours previously-captured stream HTML into box 1 in one shot — the
-  // dividers were only ever a reading aid, not a boundary the commit
-  // respects. flowBoxesForPage does the real redistribution based on what
-  // actually fits. Only called once the (fresh) box elements are mounted
-  // and tracked in this.boxEditableEls.
+  // A user-typed "<NEWBOX>" is a manual break: everything after it starts
+  // the next box outright, rather than waiting for natural overflow to get
+  // there. Splits wrapper's own top-level child nodes, in order, into one
+  // DocumentFragment per marker — only ever splitting a text node itself
+  // (never anything else), so a marker typed mid-image-wrapper or similar
+  // just can't occur in practice. Matched a little loosely (case, stray
+  // spaces) since it's hand-typed, not real markup.
+  splitContentAtMarkers(wrapper) {
+    const MARKER = /<\s*newbox\s*>/i;
+    const segments = [document.createDocumentFragment()];
+    [...wrapper.childNodes].forEach(node => {
+      if (node.nodeType === 3 && MARKER.test(node.textContent)) {
+        const parts = node.textContent.split(MARKER);
+        parts.forEach((part, i) => {
+          if (part) segments[segments.length - 1].appendChild(document.createTextNode(part));
+          if (i < parts.length - 1) segments.push(document.createDocumentFragment());
+        });
+      } else {
+        segments[segments.length - 1].appendChild(node);
+      }
+    });
+    return segments;
+  }
+
+  // Pours one marker-delimited segment into each box in order (extra
+  // segments beyond the box count pile into the last box; fewer segments
+  // than boxes just leaves the rest to fill from natural overflow), then
+  // lets flowBoxesForPage handle anything that still overflows a segment's
+  // own box.
+  distributeSegmentsToBoxes(pageId, segments) {
+    const boxes = this.numberedTextBoxes(pageId);
+    if (!boxes.length) return;
+    boxes.forEach(node => { const el = this.boxEditableEls[node.id]; if (el) el.innerHTML = ''; });
+    segments.forEach((frag, i) => {
+      const el = this.boxEditableEls[boxes[Math.min(i, boxes.length - 1)].id];
+      if (el) el.appendChild(frag);
+    });
+    this.flowBoxesForPage(pageId);
+  }
+
+  // Pours previously-captured stream HTML into the boxes, respecting any
+  // "<NEWBOX>" markers first — the dividers were only ever a reading aid,
+  // not a boundary the commit respects, but a typed marker is an explicit
+  // instruction. Only called once the (fresh) box elements are mounted and
+  // tracked in this.boxEditableEls.
   applyBoxStreamHtml(pageId, html) {
     const boxes = this.numberedTextBoxes(pageId);
-    const firstEl = boxes[0] && this.boxEditableEls[boxes[0].id];
-    if (!firstEl) return;
-    boxes.forEach(node => { const el = this.boxEditableEls[node.id]; if (el) el.innerHTML = ''; });
-    firstEl.innerHTML = html || '';
-    this.flowBoxesForPage(pageId);
+    if (!boxes.length) return;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html || '';
+    this.distributeSegmentsToBoxes(pageId, this.splitContentAtMarkers(wrapper));
     this.saveDebounced();
+  }
+
+  // The escape valve for flowBoxesForPage's whole-node moves: a single
+  // node (a bare typed run, or a plain paragraph wrapping one) that's
+  // bigger than an entire box would otherwise move all-or-nothing. This
+  // finds the exact character offset where the node's own rendered
+  // content stops fitting inside fromEl — via a Range bound to real
+  // layout, not an estimate — snaps it back to the nearest word boundary,
+  // and moves only the overflow tail into toEl, leaving the fitting head
+  // behind. Deliberately narrow about what it'll touch: a bare text node,
+  // or an element with exactly one text child (a plain paragraph, no
+  // inline formatting) — anything with real structure (bold/italic runs,
+  // an image) is left to the caller's whole-node fallback rather than
+  // risk mangling it.
+  splitNodeForFlow(node, fromEl, toEl) {
+    let textNode = null, wrapper = null;
+    if (node.nodeType === 3) {
+      textNode = node;
+    } else if (node.nodeType === 1 && node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+      wrapper = node;
+      textNode = node.firstChild;
+    } else {
+      return false;
+    }
+    const text = textNode.textContent;
+    if (!text || !text.trim()) return false;
+    const boxBottom = fromEl.getBoundingClientRect().bottom;
+    const range = document.createRange();
+    const fitsAt = (offset) => {
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, offset);
+      return range.getBoundingClientRect().bottom <= boxBottom;
+    };
+    if (fitsAt(text.length)) return false;
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (fitsAt(mid)) lo = mid; else hi = mid - 1;
+    }
+    // Walk back to the nearest whitespace at or before the fitting cutoff,
+    // then forward past it — so the head keeps whole words and the tail
+    // starts clean at the next one, instead of slicing through the middle.
+    let cut = Math.min(lo, text.length - 1);
+    while (cut > 0 && !/\s/.test(text[cut])) cut--;
+    let splitAt = cut;
+    while (splitAt < text.length && /\s/.test(text[splitAt])) splitAt++;
+    if (splitAt <= 0 || splitAt >= text.length) return false;
+    const headText = text.slice(0, splitAt).replace(/\s+$/, '');
+    const tailText = text.slice(splitAt);
+    if (!headText) return false;
+    textNode.textContent = headText;
+    const tailNode = wrapper ? (() => { const c = wrapper.cloneNode(false); c.textContent = tailText; return c; })() : document.createTextNode(tailText);
+    toEl.insertBefore(tailNode, toEl.firstChild);
+    return true;
   }
 
   // Push-only, matching flowFrom's own contract exactly (see that method's
@@ -1801,7 +1923,9 @@ class Component extends DCLogic {
   // overflows, into the next box by number, cascading forward. No box ever
   // pulls content back from a later one — same tradeoff the page engine
   // already makes, for the same reason (safe, no live-typing caret risk).
-  // Scoped to one page only; never reaches across pages.
+  // Scoped to one page only; never reaches across pages. Prefers a
+  // word-boundary split (splitNodeForFlow) when a single node is itself
+  // too big to move whole; falls back to moving the whole node otherwise.
   flowBoxesForPage(pageId) {
     const boxes = this.numberedTextBoxes(pageId);
     for (let i = 0; i < boxes.length - 1; i++) {
@@ -1810,7 +1934,9 @@ class Component extends DCLogic {
       if (!fromEl || !toEl) continue;
       let guard = 0;
       while (fromEl.scrollHeight > fromEl.clientHeight + 1 && fromEl.lastChild && guard < 5000) {
-        toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+        if (!this.splitNodeForFlow(fromEl.lastChild, fromEl, toEl)) {
+          toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+        }
         guard++;
       }
     }
@@ -1834,11 +1960,23 @@ class Component extends DCLogic {
     this.setState({ docBoxOverflowId: overflowingBox ? overflowingBox.id : null });
   }
 
+  // A marker typed straight into a box (rather than via the stream) needs
+  // REORG to actually be there to apply it, even when nothing is
+  // overflowing yet — otherwise there'd be no way to trigger the split
+  // without deliberately overflowing a box first.
+  hasNewboxMarker(pageId) {
+    return this.numberedTextBoxes(pageId).some(node => {
+      const el = this.boxEditableEls[node.id];
+      return el && /<\s*newbox\s*>/i.test(el.textContent);
+    });
+  }
+
   // The one-click remedy for direct-typing overflow (and for a LAYOUT resize
   // that leaves a box over capacity): gather every text box's current
   // content in number order and pour it back through the same push-only
   // flow engine the stream editor uses, without needing to open the stream
-  // UI at all.
+  // UI at all. Respects "<NEWBOX>" markers typed directly into a box too,
+  // same as the stream commit does.
   reorgBoxText(pageId) {
     const boxes = this.numberedTextBoxes(pageId);
     if (boxes.length < 2) return;
@@ -1847,11 +1985,7 @@ class Component extends DCLogic {
       const el = this.boxEditableEls[node.id];
       if (el) [...el.childNodes].forEach(n => wrapper.appendChild(n.cloneNode(true)));
     });
-    const firstEl = this.boxEditableEls[boxes[0].id];
-    if (!firstEl) return;
-    boxes.forEach(node => { const el = this.boxEditableEls[node.id]; if (el) el.innerHTML = ''; });
-    firstEl.innerHTML = wrapper.innerHTML;
-    this.flowBoxesForPage(pageId);
+    this.distributeSegmentsToBoxes(pageId, this.splitContentAtMarkers(wrapper));
     this.saveDebounced();
   }
 
@@ -1943,6 +2077,18 @@ class Component extends DCLogic {
         const wasFlagged = this.state.docBoxOverflowId === node.id;
         if (overflowing && !wasFlagged) this.setState({ docBoxOverflowId: node.id });
         else if (!overflowing && wasFlagged) this.setState({ docBoxOverflowId: null });
+        // REORG's visibility also depends on whether any box holds a
+        // <NEWBOX> marker, which typing alone doesn't otherwise trigger a
+        // re-render for — uncontrolled contentEditable content isn't part
+        // of React's own state. Only forces one when that specific fact
+        // actually flips (typing the marker's closing ">", or deleting it),
+        // not on every keystroke.
+        const hasMarker = /<\s*newbox\s*>/i.test(el.textContent);
+        this._boxMarkerFlags = this._boxMarkerFlags || {};
+        if (hasMarker !== !!this._boxMarkerFlags[node.id]) {
+          this._boxMarkerFlags[node.id] = hasMarker;
+          this.forceUpdate();
+        }
       },
       onDropBox: isImage ? (e) => this.onBoxDrop(pageId, node.id, e) : () => {},
       onDragOverBox: isImage ? (e) => this.onBoxDragOver(e) : () => {},
@@ -4502,13 +4648,17 @@ class Component extends DCLogic {
         if (this.state.docStreamOpen) this.closeBoxStreamToPreview(pid);
         else this.openBoxStream(pid);
       },
-      // Only offered once the overflowing box is confirmed to actually
+      // Offered either when the overflowing box is confirmed to actually
       // belong to the page currently in view — docBoxOverflowId is a single
       // global flag, so this guards against showing (and reorganizing) the
-      // wrong page if the user switched pages without resolving it first.
+      // wrong page if the user switched pages without resolving it first —
+      // or whenever a box on this page has a <NEWBOX> marker waiting to be
+      // applied, regardless of whether anything is currently overflowing.
       showReorgButton: !this.state.narrowScreen && !isLabelDoc && !this.state.docStreamOpen
-        && !!this.state.docBoxOverflowId
-        && !!this.findBoxLeaf(this.state.pageBoxTrees[this.focusedPageId || this.state.pageIds[0]], this.state.docBoxOverflowId),
+        && (
+          (!!this.state.docBoxOverflowId && !!this.findBoxLeaf(this.state.pageBoxTrees[this.focusedPageId || this.state.pageIds[0]], this.state.docBoxOverflowId))
+          || this.hasNewboxMarker(this.focusedPageId || this.state.pageIds[0])
+        ),
       reorgBtnStyle: 'background:#c9822a;color:#fff;border-color:#c9822a;',
       onReorgClick: () => this.reorgBoxText(this.focusedPageId || this.state.pageIds[0]),
       reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
