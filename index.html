@@ -1825,12 +1825,68 @@ class Component extends DCLogic {
     this.saveDebounced();
   }
 
+  // The escape valve for flowBoxesForPage's whole-node moves: a single
+  // node (a bare typed run, or a plain paragraph wrapping one) that's
+  // bigger than an entire box would otherwise move all-or-nothing. This
+  // finds the exact character offset where the node's own rendered
+  // content stops fitting inside fromEl — via a Range bound to real
+  // layout, not an estimate — snaps it back to the nearest word boundary,
+  // and moves only the overflow tail into toEl, leaving the fitting head
+  // behind. Deliberately narrow about what it'll touch: a bare text node,
+  // or an element with exactly one text child (a plain paragraph, no
+  // inline formatting) — anything with real structure (bold/italic runs,
+  // an image) is left to the caller's whole-node fallback rather than
+  // risk mangling it.
+  splitNodeForFlow(node, fromEl, toEl) {
+    let textNode = null, wrapper = null;
+    if (node.nodeType === 3) {
+      textNode = node;
+    } else if (node.nodeType === 1 && node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+      wrapper = node;
+      textNode = node.firstChild;
+    } else {
+      return false;
+    }
+    const text = textNode.textContent;
+    if (!text || !text.trim()) return false;
+    const boxBottom = fromEl.getBoundingClientRect().bottom;
+    const range = document.createRange();
+    const fitsAt = (offset) => {
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, offset);
+      return range.getBoundingClientRect().bottom <= boxBottom;
+    };
+    if (fitsAt(text.length)) return false;
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (fitsAt(mid)) lo = mid; else hi = mid - 1;
+    }
+    // Walk back to the nearest whitespace at or before the fitting cutoff,
+    // then forward past it — so the head keeps whole words and the tail
+    // starts clean at the next one, instead of slicing through the middle.
+    let cut = Math.min(lo, text.length - 1);
+    while (cut > 0 && !/\s/.test(text[cut])) cut--;
+    let splitAt = cut;
+    while (splitAt < text.length && /\s/.test(text[splitAt])) splitAt++;
+    if (splitAt <= 0 || splitAt >= text.length) return false;
+    const headText = text.slice(0, splitAt).replace(/\s+$/, '');
+    const tailText = text.slice(splitAt);
+    if (!headText) return false;
+    textNode.textContent = headText;
+    const tailNode = wrapper ? (() => { const c = wrapper.cloneNode(false); c.textContent = tailText; return c; })() : document.createTextNode(tailText);
+    toEl.insertBefore(tailNode, toEl.firstChild);
+    return true;
+  }
+
   // Push-only, matching flowFrom's own contract exactly (see that method's
   // comments): move whole nodes off the end of a box only while it
   // overflows, into the next box by number, cascading forward. No box ever
   // pulls content back from a later one — same tradeoff the page engine
   // already makes, for the same reason (safe, no live-typing caret risk).
-  // Scoped to one page only; never reaches across pages.
+  // Scoped to one page only; never reaches across pages. Prefers a
+  // word-boundary split (splitNodeForFlow) when a single node is itself
+  // too big to move whole; falls back to moving the whole node otherwise.
   flowBoxesForPage(pageId) {
     const boxes = this.numberedTextBoxes(pageId);
     for (let i = 0; i < boxes.length - 1; i++) {
@@ -1839,7 +1895,9 @@ class Component extends DCLogic {
       if (!fromEl || !toEl) continue;
       let guard = 0;
       while (fromEl.scrollHeight > fromEl.clientHeight + 1 && fromEl.lastChild && guard < 5000) {
-        toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+        if (!this.splitNodeForFlow(fromEl.lastChild, fromEl, toEl)) {
+          toEl.insertBefore(fromEl.lastChild, toEl.firstChild);
+        }
         guard++;
       }
     }
