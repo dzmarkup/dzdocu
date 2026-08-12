@@ -962,7 +962,9 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             <sc-if value="{{ b.showNumberInput }}" hint-placeholder-val="{{ false }}">
               <input class="no-print" type="number" min="1" style="{{ b.numberInputStyle }}" value="{{ b.numberValue }}" sc-camel-on-change="{{ b.onNumberChange }}" title="Renumber this box" />
             </sc-if>
-            <span class="no-print" style="{{ b.typeToggleStyle }}" sc-camel-on-click="{{ b.onToggleType }}" title="Switch text/image/independent">⇄</span>
+            <sc-for list="{{ b.typeButtons }}" as="tb" hint-placeholder-count="2">
+              <span class="no-print" style="{{ tb.style }}" sc-camel-on-click="{{ tb.onClick }}" title="{{ tb.title }}">{{ tb.label }}</span>
+            </sc-for>
             <sc-if value="{{ b.showDeleteButton }}" hint-placeholder-val="{{ false }}">
               <span class="no-print" style="{{ b.deleteBtnStyle }}" sc-camel-on-click="{{ b.onDelete }}" title="Delete this box">×</span>
             </sc-if>
@@ -1606,20 +1608,21 @@ class Component extends DCLogic {
     });
   }
 
-  // Cycles text -> image -> independent -> text. Independent is a text box
-  // in every way that matters for editing (typed directly, holds its own
+  // Sets a box's type directly rather than cycling through a fixed order —
+  // the box's two corner buttons each name one of the two types not
+  // currently active, so the user picks the destination outright (image box
+  // showing TXT and IND buttons can go to either in one click, no detour
+  // through the third type to get there). Independent is a text box in
+  // every way that matters for editing (typed directly, holds its own
   // content) except it's excluded from numbering and the flow engine
   // entirely — numberedTextBoxes only ever collects type 'text', so an
   // independent box just never enters that list, the same mechanism that
   // already keeps image boxes out of it.
-  toggleBoxType(pageId, boxId) {
+  setBoxType(pageId, boxId, newType) {
     const existing = this.state.pageBoxTrees[pageId];
     if (!existing) return;
-    const TYPE_CYCLE = { text: 'image', image: 'independent', independent: 'text' };
-    const currentType = this.findBoxLeaf(existing, boxId)?.type || 'text';
-    const nextType = TYPE_CYCLE[currentType] || 'text';
     const flip = (node) => {
-      if (node.box) return node.id === boxId ? { ...node, type: nextType } : node;
+      if (node.box) return node.id === boxId ? { ...node, type: newType } : node;
       return { ...node, a: flip(node.a), b: flip(node.b) };
     };
     const tree = flip(existing);
@@ -1628,9 +1631,9 @@ class Component extends DCLogic {
       this.saveDebounced();
       // Switching a box to image is the ask for an image — go straight to
       // the file picker rather than leaving a red, empty box behind.
-      // Independent doesn't get this treatment; it starts out simply ready
-      // to type into, same as a fresh text box.
-      if (nextType === 'image') this.openBoxImagePicker(pageId, boxId);
+      // Independent and text don't get this treatment; they start out
+      // simply ready to type into.
+      if (newType === 'image') this.openBoxImagePicker(pageId, boxId);
     });
   }
 
@@ -2047,8 +2050,20 @@ class Component extends DCLogic {
       numberInputStyle: 'position:absolute;top:1px;left:24px;z-index:1;width:28px;height:15px;font-size:10px;padding:0 2px;border:1px solid #5980a6;',
       numberValue: node.number,
       onNumberChange: (e) => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) this.setBoxNumber(pageId, node.id, v); },
-      typeToggleStyle: 'position:absolute;top:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:11px;border:1px solid #fff;background:rgba(0,0,0,0.35);color:#fff;cursor:pointer;',
-      onToggleType: (e) => { e.stopPropagation(); e.preventDefault(); this.toggleBoxType(pageId, node.id); },
+      // Two buttons, not one cycling toggle: whichever two types aren't the
+      // box's current one each get a button offering a direct switch to it
+      // (e.g. an image box shows TXT and IND — never a third click through
+      // an in-between state to get from image to independent or back).
+      typeButtons: (() => {
+        const TYPE_META = { text: { label: 'TXT', color: '#5980a6' }, image: { label: 'IMG', color: '#b4433a' }, independent: { label: 'IND', color: '#3f8f52' } };
+        const currentType = isImage ? 'image' : isIndependent ? 'independent' : 'text';
+        return Object.keys(TYPE_META).filter(t => t !== currentType).map((t, i) => ({
+          label: TYPE_META[t].label,
+          title: 'Switch to ' + TYPE_META[t].label,
+          style: 'position:absolute;top:2px;right:' + (2 + i * 20) + 'px;z-index:1;width:18px;height:16px;line-height:14px;text-align:center;font-size:8px;font-weight:700;letter-spacing:0.02em;border:1px solid #fff;background:' + TYPE_META[t].color + ';color:#fff;cursor:pointer;',
+          onClick: (e) => { e.stopPropagation(); e.preventDefault(); this.setBoxType(pageId, node.id, t); },
+        }));
+      })(),
       showDeleteButton: docLayoutActive && !isPending,
       deleteBtnStyle: 'position:absolute;bottom:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:12px;font-weight:700;border:1px solid #fff;background:rgba(180,67,58,0.85);color:#fff;cursor:pointer;',
       onDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.requestDeleteBox(pageId, node.id); },
@@ -3851,7 +3866,7 @@ class Component extends DCLogic {
   // the split at least roughly matches the box's own shape without needing
   // to ask. Reuses splitPageIntoBoxes itself (content-pinning and all)
   // rather than duplicating that tree surgery — the type flip is done
-  // directly on the fresh leaf afterward instead of through toggleBoxType,
+  // directly on the fresh leaf afterward instead of through setBoxType,
   // since that method's own auto-open-the-picker side effect would fight
   // with the image already in hand here.
   onTextBoxImageDrop(pageId, boxId, file) {
