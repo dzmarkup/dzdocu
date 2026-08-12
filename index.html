@@ -469,11 +469,16 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media print {
       .doc-box{border:none !important;background:none !important;}
     }
+    .box-img-content:empty::before{content:'Click, paste, or drop an image';display:block;text-align:center;font-family:'Arial Narrow', Arial, sans-serif;font-size:11px;color:#b4433a;padding:8px;pointer-events:none;}
+    @media print {
+      .box-img-content:empty::before{content:none !important;}
+    }
   </style>
 </helmet>
 
 <input type="file" accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain,.rtf,application/rtf,text/rtf" style="display:none;" ref="{{ fileInputRef }}" sc-camel-on-change="{{ onFileChosen }}">
 <input type="file" accept=".docu,application/json" style="display:none;" ref="{{ ezdocInputRef }}" sc-camel-on-change="{{ onOpenEzdoc }}">
+<input type="file" accept="image/*" style="display:none;" ref="{{ boxFileInputRef }}" sc-camel-on-change="{{ onBoxFileChosen }}">
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" ref="{{ toolbarRef1 }}" style="position:fixed;left:0;right:0;top:0;z-index:20;display:flex;justify-content:center;gap:16px;padding:6px var(--space-4,16px);background:#e6e6e6;border-bottom:1px solid var(--color-neutral-300,#ccc);">
   <div style="width:170px;display:flex;gap:6px;align-items:center;">
@@ -958,7 +963,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             <sc-if value="{{ b.showDeleteButton }}" hint-placeholder-val="{{ false }}">
               <span class="no-print" style="{{ b.deleteBtnStyle }}" sc-camel-on-click="{{ b.onDelete }}" title="Delete this box">×</span>
             </sc-if>
-            <div ref="{{ b.ref }}" sc-camel-content-editable="{{ b.editable }}" sc-camel-suppress-content-editable-warning="true" sc-camel-on-focus="{{ b.onFocus }}" sc-camel-on-input="{{ b.onInput }}" style="{{ b.contentStyle }}"></div>
+            <div ref="{{ b.ref }}" class="{{ b.contentClass }}" sc-camel-content-editable="{{ b.editable }}" sc-camel-suppress-content-editable-warning="true" sc-camel-on-focus="{{ b.onFocus }}" sc-camel-on-input="{{ b.onInput }}" sc-camel-on-drop="{{ b.onDropBox }}" sc-camel-on-drag-over="{{ b.onDragOverBox }}" sc-camel-on-paste="{{ b.onPasteBox }}" sc-camel-on-key-down="{{ b.onKeyDownBox }}" style="{{ b.contentStyle }}"></div>
             <sc-if value="{{ b.isPending }}" hint-placeholder-val="{{ false }}">
               <div class="no-print" style="{{ b.pendingOverlayStyle }}">
                 <span style="{{ b.pendingLabelStyle }}">{{ b.pendingLabel }}</span>
@@ -1545,13 +1550,19 @@ class Component extends DCLogic {
   toggleBoxType(pageId, boxId) {
     const existing = this.state.pageBoxTrees[pageId];
     if (!existing) return;
+    const becameImage = this.findBoxLeaf(existing, boxId)?.type !== 'image';
     const flip = (node) => {
       if (node.box) return node.id === boxId ? { ...node, type: node.type === 'text' ? 'image' : 'text' } : node;
       return { ...node, a: flip(node.a), b: flip(node.b) };
     };
     const tree = flip(existing);
     this.renumberBoxTree(tree);
-    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => {
+      this.saveDebounced();
+      // Switching a box to image is the ask for an image — go straight to
+      // the file picker rather than leaving a red, empty box behind.
+      if (becameImage) this.openBoxImagePicker(pageId, boxId);
+    });
   }
 
   // One entry per split node — the shared seam a nudge moves. path is the
@@ -1777,8 +1788,11 @@ class Component extends DCLogic {
     const isMergeCandidate = node.id === mergeCandidateId;
     // Locked while LAYOUT or Preview is open — same rule labels already use,
     // so a caret can't fight the seam nudges (LAYOUT) or edit text that's
-    // only supposed to be edited through the stream (Preview).
-    const locked = isImage || lockedMode;
+    // only supposed to be edited through the stream (Preview). Image boxes
+    // stay contentEditable the rest of the time too, purely so the browser's
+    // own right-click "Paste" and Ctrl+V reach them — onBoxKeyDown blocks
+    // them from ever taking typed text.
+    const locked = lockedMode;
     const overflowing = !isImage && node.id === this.state.docBoxOverflowId;
     const borderColor = isMergeCandidate ? '#c9822a' : isImage ? '#b4433a' : (overflowing ? '#c9822a' : '#5980a6');
     const mergeGlow = isMergeCandidate ? 'box-shadow:inset 0 0 14px 3px rgba(201,130,42,0.65),0 0 0 2px #c9822a;cursor:pointer;' : '';
@@ -1798,7 +1812,9 @@ class Component extends DCLogic {
       showDeleteButton: docLayoutActive && !isPending,
       deleteBtnStyle: 'position:absolute;bottom:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:12px;font-weight:700;border:1px solid #fff;background:rgba(180,67,58,0.85);color:#fff;cursor:pointer;',
       onDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.requestDeleteBox(pageId, node.id); },
-      onBoxClick: isMergeCandidate ? (e) => { e.stopPropagation(); e.preventDefault(); this.mergeBoxIntoSibling(pageId, deletePromptId); } : () => {},
+      onBoxClick: isMergeCandidate
+        ? (e) => { e.stopPropagation(); e.preventDefault(); this.mergeBoxIntoSibling(pageId, deletePromptId); }
+        : (isImage && !locked ? (e) => { e.stopPropagation(); e.preventDefault(); this.openBoxImagePicker(pageId, node.id); } : () => {}),
       isPending,
       pendingLabel: node.number != null ? ('Delete Box ' + node.number + '?') : 'Delete this box?',
       pendingHint: mergeCandidateId ? 'Click the glowing box to merge, or:' : 'Nothing else fills this space:',
@@ -1809,10 +1825,17 @@ class Component extends DCLogic {
       cancelDeleteBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       onDontMove: (e) => { e.stopPropagation(); e.preventDefault(); this.clearBoxKeepSlot(pageId, node.id); },
       onCancelDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.cancelDeletePrompt(); },
-      contentStyle: 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
+      contentClass: isImage ? 'box-img-content' : '',
+      contentStyle: isImage
+        ? 'height:100%;box-sizing:border-box;padding:0;display:flex;align-items:center;justify-content:center;outline:none;cursor:' + (locked ? 'default' : 'pointer') + ';'
+        : 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
       onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.forceUpdate(); },
       onInput: () => this.saveDebounced(),
+      onDropBox: isImage ? (e) => this.onBoxDrop(pageId, node.id, e) : () => {},
+      onDragOverBox: isImage ? (e) => this.onBoxDragOver(e) : () => {},
+      onPasteBox: isImage ? (e) => this.onBoxPaste(pageId, node.id, e) : () => {},
+      onKeyDownBox: isImage ? (e) => this.onBoxKeyDown(e) : () => {},
     };
   }
 
@@ -3474,6 +3497,86 @@ class Component extends DCLogic {
     img.src = dataUrl;
   }
 
+  // An image box holds exactly one image sized to fill the box — unlike
+  // insertImage's resizable inline wrapper for flowing page text, the box's
+  // own geometry (from the split tree) is the image's footprint, not
+  // something the image grows or gets dragged to resize.
+  insertImageIntoBox(pageId, boxId, dataUrl) {
+    const img = new Image();
+    img.onload = () => {
+      const el = this.boxEditableEls[boxId];
+      if (!el) return;
+      let compressedSrc = dataUrl;
+      try { compressedSrc = this.compressImage(img, img.naturalWidth, img.naturalHeight); } catch (e) {}
+      el.innerHTML = '';
+      const imageEl = document.createElement('img');
+      imageEl.src = compressedSrc;
+      imageEl.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+      el.appendChild(imageEl);
+      this.saveDebounced();
+    };
+    img.src = dataUrl;
+  }
+
+  // Click-to-upload: opens the box-scoped file picker, remembering which box
+  // asked so onBoxFileChosen lands the image in the right place even though
+  // focus/selection can move around before the OS dialog resolves.
+  openBoxImagePicker(pageId, boxId) {
+    this.pendingBoxImageTarget = { pageId, boxId };
+    if (this.boxFileInputEl) this.boxFileInputEl.click();
+  }
+
+  onBoxFileChosen(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    const target = this.pendingBoxImageTarget;
+    this.pendingBoxImageTarget = null;
+    if (!file || !target || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => this.insertImageIntoBox(target.pageId, target.boxId, ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  onBoxDragOver(e) {
+    if (e.dataTransfer && [...e.dataTransfer.items].some(it => it.type.startsWith('image/'))) e.preventDefault();
+  }
+
+  onBoxDrop(pageId, boxId, e) {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    e.preventDefault();
+    const reader = new FileReader();
+    reader.onload = (ev) => this.insertImageIntoBox(pageId, boxId, ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // The box stays contentEditable so the browser's own right-click "Paste"
+  // and Ctrl+V reach it, but an image box never holds typed text — onKeyDown
+  // blocks ordinary keys (letting modifier combos like Ctrl+V through, since
+  // paste is a separate event this doesn't interfere with) and onPaste only
+  // ever accepts an image off the clipboard, dropping anything else.
+  onBoxKeyDown(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+  }
+
+  onBoxPaste(pageId, boxId, e) {
+    const items = e.clipboardData ? e.clipboardData.items : [];
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => this.insertImageIntoBox(pageId, boxId, ev.target.result);
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+    }
+    e.preventDefault();
+  }
+
   async onDropPDF(pageId, file) {
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -4144,7 +4247,10 @@ class Component extends DCLogic {
       fontTabRef: (el) => { if (el) { this.fontTabEl = el; this.positionEdgeTabs(); } },
       headerTabRef: (el) => { if (el) { this.headerTabEl = el; this.positionEdgeTabs(); } },
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
-      showLayoutTab: this.hasBoxLayout(),
+      // The label 4-area panel (ret/main/postal/country) — documents now have
+      // their own, separate LAYOUT toolbar button for the box-tree feature,
+      // so this side tab has no business appearing outside label sizes.
+      showLayoutTab: this.hasBoxLayout() && isLabelDoc,
       layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
       layoutModeOn: this.state.layoutMode,
@@ -4362,6 +4468,8 @@ class Component extends DCLogic {
       onFontSizeChange: (e) => { const val = e.target.value; e.target.value = ''; if (val) this.restoreSelectionAndApply('fontSize', val + 'px'); },
       fileInputRef: (el) => { if (el) this.fileInputEl = el; },
       onFileChosen: (e) => this.onFileChosen(e),
+      boxFileInputRef: (el) => { if (el) this.boxFileInputEl = el; },
+      onBoxFileChosen: (e) => this.onBoxFileChosen(e),
       onDropButtonClick: () => this.onDropButtonClick(),
       dropChooserOpen: this.state.dropStep === 'choose',
       onDropChooseUrl: () => this.onDropChooseUrl(),
