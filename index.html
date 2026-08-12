@@ -462,6 +462,13 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media print {
       [data-lbl-box]{outline:none !important;background:none !important;}
     }
+    /* Document text-box layouts (separate from the label box model above).
+       The tint/border is a screen-only aid for seeing box boundaries; the
+       printed page shows only the content, positioned the same either way
+       since position:absolute isn't reset. */
+    @media print {
+      .doc-box{border:none !important;background:none !important;}
+    }
   </style>
 </helmet>
 
@@ -557,6 +564,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px) calc(6px + env(safe-area-inset-bottom, 0px)) var(--space-4,16px);">
     <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
       <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
+    </sc-if>
+    <sc-if value="{{ showBoxButton }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-secondary" style="width:66px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onBoxButtonClick }}">+ Box</button>
+      <sc-if value="{{ boxSplitPromptOpen }}" hint-placeholder-val="{{ false }}">
+        <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitHorizontal }}" title="Split into a top and bottom box">Split ↕</button>
+        <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitVertical }}" title="Split into a left and right box">Split ↔</button>
+      </sc-if>
     </sc-if>
     <sc-if value="{{ reflowOffered }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" sc-camel-on-click="{{ onToggleReflow }}" title="Switch between the reflow editor and the printed page" style="width:auto;height:56px;padding:4px 20px;font-size:28px;font-weight:700;white-space:nowrap;flex:0 0 auto;{{ uniformBtnStyle }}{{ reflowBtnStyle }}">{{ reflowBtnLabel }}</button>
@@ -924,7 +938,18 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <sc-if value="{{ p.headerOff }}" hint-placeholder-val="{{ true }}">
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
-      <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
+      <sc-if value="{{ p.noBoxes }}" hint-placeholder-val="{{ true }}">
+        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
+      </sc-if>
+      <sc-if value="{{ p.hasBoxes }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ p.boxes }}" as="b" hint-placeholder-count="1">
+          <div class="doc-box" style="{{ b.style }}">
+            <span class="no-print" style="{{ b.badgeStyle }}">{{ b.badgeText }}</span>
+            <span class="no-print" style="{{ b.typeToggleStyle }}" sc-camel-on-click="{{ b.onToggleType }}" title="Switch text/image">⇄</span>
+            <div ref="{{ b.ref }}" sc-camel-content-editable="{{ b.editable }}" sc-camel-suppress-content-editable-warning="true" sc-camel-on-focus="{{ b.onFocus }}" sc-camel-on-input="{{ b.onInput }}" style="{{ b.contentStyle }}"></div>
+          </div>
+        </sc-for>
+      </sc-if>
     </section>
   </sc-for>
 </x-import>
@@ -994,7 +1019,7 @@ const LAYOUT_MIN_BOX_IN = 0.25;
 const LAYOUT_EDGE_WARN_IN = 0.1;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {} };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1021,6 +1046,7 @@ class Component extends DCLogic {
     super(props);
     this.pageCounter = 1;
     this.editableEls = {};
+    this.boxEditableEls = {};
     this.sectionEls = {};
     this.titleEls = {};
     this.inputTimers = {};
@@ -1389,6 +1415,124 @@ class Component extends DCLogic {
   // The page's text area in inches, after any adjustment.
   docMarginBox() {
     return this.getLabelLayout().margin || this.docDefaultLayout().margin;
+  }
+
+  // ---- Document text-box layouts (desktop only; labels keep their own,
+  // separate box model). A page with no entry in pageBoxTrees is a plain
+  // page — box mode doesn't exist until the user asks for a split, so
+  // nothing here runs for the vast majority of documents. A tree node is
+  // either a split ({split:'h'|'v', ratio, a, b} — one shared seam position,
+  // so both sides move together and overlap is structurally impossible) or
+  // a leaf/box ({box:true, id, type:'text'|'image', number}).
+
+  pageHasBoxes(pageId) {
+    return !!this.state.pageBoxTrees[pageId];
+  }
+
+  // Leaves only, each paired with its rect as a 0-1 fraction of the page's
+  // margin box. Order is tree order, not reading order — callers that need
+  // reading order sort the result themselves.
+  flattenBoxTree(node, rect) {
+    if (!node) return [];
+    if (node.box) return [{ node, rect }];
+    const isV = node.split === 'v';
+    const ratio = node.ratio;
+    const rectA = isV ? { x: rect.x, y: rect.y, w: rect.w * ratio, h: rect.h }
+      : { x: rect.x, y: rect.y, w: rect.w, h: rect.h * ratio };
+    const rectB = isV ? { x: rect.x + rect.w * ratio, y: rect.y, w: rect.w * (1 - ratio), h: rect.h }
+      : { x: rect.x, y: rect.y + rect.h * ratio, w: rect.w, h: rect.h * (1 - ratio) };
+    return [...this.flattenBoxTree(node.a, rectA), ...this.flattenBoxTree(node.b, rectB)];
+  }
+
+  // Reading order: top to bottom, then left to right, rounded a little so
+  // boxes meant to be "the same row" don't get separated by sub-pixel rect
+  // differences. Image boxes never get a number — they aren't part of the
+  // text flow. Mutates the leaf nodes in place; callers pass a tree they
+  // already own (freshly built, or about to be stored via setState).
+  renumberBoxTree(root) {
+    const leaves = this.flattenBoxTree(root, { x: 0, y: 0, w: 1, h: 1 });
+    const textLeaves = leaves.filter(l => l.node.type === 'text');
+    textLeaves.sort((a, b) => {
+      const dy = Math.round(a.rect.y * 1000) - Math.round(b.rect.y * 1000);
+      if (Math.abs(dy) > 5) return dy;
+      return Math.round(a.rect.x * 1000) - Math.round(b.rect.x * 1000);
+    });
+    textLeaves.forEach((l, i) => { l.node.number = i + 1; });
+    leaves.filter(l => l.node.type !== 'text').forEach(l => { l.node.number = null; });
+    return root;
+  }
+
+  findBoxLeaf(node, boxId) {
+    if (!node) return null;
+    if (node.box) return node.id === boxId ? node : null;
+    return this.findBoxLeaf(node.a, boxId) || this.findBoxLeaf(node.b, boxId);
+  }
+
+  newBoxId() {
+    this._boxIdCounter = (this._boxIdCounter || 0) + 1;
+    return 'bx' + this._boxIdCounter;
+  }
+
+  // Splits the page (if it has no box tree yet — this is how a plain page
+  // enters box mode at all) or splits whichever box is currently focused (if
+  // it already has one). Same operation either way, which is the point: no
+  // separate "create the first box" mechanism to maintain.
+  splitPageIntoBoxes(pageId, direction) {
+    const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null });
+    const existing = this.state.pageBoxTrees[pageId];
+    let tree;
+    if (!existing) {
+      tree = { split: direction, ratio: 0.5, a: makeLeaf(), b: makeLeaf() };
+    } else {
+      const targetId = this.focusedBoxId && this.findBoxLeaf(existing, this.focusedBoxId)
+        ? this.focusedBoxId
+        : this.flattenBoxTree(existing, { x: 0, y: 0, w: 1, h: 1 })[0].node.id;
+      const replace = (node) => {
+        if (node.box) {
+          if (node.id !== targetId) return node;
+          return { split: direction, ratio: 0.5, a: node, b: makeLeaf() };
+        }
+        return { ...node, a: replace(node.a), b: replace(node.b) };
+      };
+      tree = replace(existing);
+    }
+    this.renumberBoxTree(tree);
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxSplitPromptOpen: false }), () => this.saveDebounced());
+  }
+
+  toggleBoxType(pageId, boxId) {
+    const existing = this.state.pageBoxTrees[pageId];
+    if (!existing) return;
+    const flip = (node) => {
+      if (node.box) return node.id === boxId ? { ...node, type: node.type === 'text' ? 'image' : 'text' } : node;
+      return { ...node, a: flip(node.a), b: flip(node.b) };
+    };
+    const tree = flip(existing);
+    this.renumberBoxTree(tree);
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
+  }
+
+  // v1: fixed padding and a plain 14px stack, matching the normal document
+  // editable's own defaults closely enough to compare the two side by side.
+  buildBoxRenderProps(pageId, node, rect, docMargin, dims) {
+    const marginW = docMargin.r - docMargin.l, marginH = docMargin.b - docMargin.t;
+    const left = docMargin.l + rect.x * marginW, top = docMargin.t + rect.y * marginH;
+    const w = rect.w * marginW, h = rect.h * marginH;
+    const isImage = node.type === 'image';
+    return {
+      id: node.id,
+      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + (isImage ? '#b4433a' : '#5980a6') + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : 'rgba(89,128,166,0.06)') + ';overflow:hidden;',
+      editable: isImage ? 'false' : 'true',
+      isImage,
+      badgeText: isImage ? 'IMAGE' : (node.number != null ? String(node.number) : ''),
+      badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : '#5980a6') + ';color:#fff;pointer-events:none;',
+      typeToggleStyle: 'position:absolute;top:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:11px;border:1px solid #fff;background:rgba(0,0,0,0.35);color:#fff;cursor:pointer;',
+      onToggleType: (e) => { e.stopPropagation(); e.preventDefault(); this.toggleBoxType(pageId, node.id); },
+      contentStyle: 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
+      ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
+      onFocus: () => { this.focusedBoxId = node.id; },
+      onInput: () => this.saveDebounced(),
+    };
   }
 
   getLabelLayout() {
@@ -2406,6 +2550,7 @@ class Component extends DCLogic {
     Object.values(this.editableEls).forEach(el => { if (el) el.innerHTML = ''; });
     this.pageCounter = 1;
     this.editableEls = {};
+    this.boxEditableEls = {};
     this.sectionEls = {};
     this.titleEls = {};
     this.undoStacks = {};
@@ -2413,7 +2558,7 @@ class Component extends DCLogic {
     const nextStep = this.pendingResumeNextStep || 'size';
     const patch = {
       setupStep: nextStep, pageIds: ['p1'], pageKinds: {}, pageHeaderTitles: {},
-      pageEmptyMap: {}, docTitle: '', headerGlobalOn: false, customFonts: [],
+      pageEmptyMap: {}, docTitle: '', headerGlobalOn: false, customFonts: [], pageBoxTrees: {},
     };
     if (this.pendingResumeSizeValue) patch.defaultSize = this.pendingResumeSizeValue;
     if (nextStep === 'labelAddress') patch.labelAddressRaw = '';
@@ -2426,6 +2571,11 @@ class Component extends DCLogic {
       const el = this.editableEls[id];
       if (el) pageHtml[id] = el.innerHTML;
     });
+    const boxHtml = {};
+    Object.keys(this.boxEditableEls).forEach(boxId => {
+      const el = this.boxEditableEls[boxId];
+      if (el) boxHtml[boxId] = el.innerHTML;
+    });
     return {
       pageIds: this.state.pageIds,
       docTitle: this.state.docTitle,
@@ -2437,9 +2587,11 @@ class Component extends DCLogic {
       pageKinds: this.state.pageKinds,
       pageAddresses: this.state.pageAddresses,
       labelLayouts: this.state.labelLayouts,
+      pageBoxTrees: this.state.pageBoxTrees,
       pageCounter: this.pageCounter,
       customFonts: this.state.customFonts,
       pageHtml,
+      boxHtml,
     };
   }
 
@@ -2452,6 +2604,7 @@ class Component extends DCLogic {
     if (!data || !Array.isArray(data.pageIds) || !data.pageIds.length) return;
     this.pageCounter = data.pageCounter || data.pageIds.length;
     this.editableEls = {};
+    this.boxEditableEls = {};
     this.setState({
       pageIds: data.pageIds,
       docTitle: data.docTitle || '',
@@ -2465,6 +2618,8 @@ class Component extends DCLogic {
       // Documents saved before LAYOUT existed have none; getLabelLayout falls
       // back to the shipped defaults for anything missing.
       labelLayouts: data.labelLayouts || {},
+      // Same story for documents saved before box layouts existed.
+      pageBoxTrees: data.pageBoxTrees || {},
       customFonts: data.customFonts || [],
       // Restoring a document *is* creating one. Without this the setup screen
       // stays up and the editables never mount, so the restored pageHtml has
@@ -2475,6 +2630,12 @@ class Component extends DCLogic {
     }, () => {
       (data.customFonts || []).forEach(n => this.injectGoogleFont(n));
       setTimeout(() => {
+        if (data.boxHtml) {
+          Object.keys(data.boxHtml).forEach(boxId => {
+            const el = this.boxEditableEls[boxId];
+            if (el) el.innerHTML = data.boxHtml[boxId];
+          });
+        }
         const pageEmptyMap = {};
         data.pageIds.forEach(id => {
           const el = this.editableEls[id];
@@ -3436,11 +3597,20 @@ class Component extends DCLogic {
       const headerOn = this.state.headerGlobalOn && !isCover && !isLabel;
       const headerOff = !headerOn && !isCover && !isLabel;
       const canDrag = isCover || !!adjacentCoverId[id];
+      // Box mode is desktop-document-only — labels keep their own box model,
+      // and mobile never gets one at all (reflow is its editing surface).
+      const boxTree = (!isLabel && !this.state.narrowScreen) ? this.state.pageBoxTrees[id] : null;
+      const boxLeaves = boxTree ? this.flattenBoxTree(boxTree, { x: 0, y: 0, w: 1, h: 1 }) : [];
       return {
         id,
         canRemove: this.state.pageIds.length > 1,
         ref: (el) => { if (el) this.editableEls[id] = el; },
         editable: !this.state.narrowScreen,
+        hasBoxes: !!boxTree,
+        noBoxes: !boxTree,
+        boxes: boxLeaves.map(({ node, rect }) => this.buildBoxRenderProps(id, node, rect, docMargin, dims)),
+        onAddBox: (dir) => this.splitPageIntoBoxes(id, dir),
+        boxSplitPromptOpenHere: this.state.boxSplitPromptOpen && this.focusedPageId === id,
         previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
@@ -3767,6 +3937,13 @@ class Component extends DCLogic {
       // matters on a phone — the reflow/print-preview toggle. Mobile
       // documents lose them; labels and desktop keep them as before.
       mobileDocChrome: !(this.state.narrowScreen && !isLabelDoc),
+      // Desktop only, documents only — the box layout feature. Splits
+      // whichever page is currently focused, or the first page if none is.
+      showBoxButton: !this.state.narrowScreen && !isLabelDoc,
+      boxSplitPromptOpen: this.state.boxSplitPromptOpen,
+      onBoxButtonClick: () => this.setState(s => ({ boxSplitPromptOpen: !s.boxSplitPromptOpen })),
+      onSplitHorizontal: () => this.splitPageIntoBoxes(this.focusedPageId || this.state.pageIds[0], 'h'),
+      onSplitVertical: () => this.splitPageIntoBoxes(this.focusedPageId || this.state.pageIds[0], 'v'),
       reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
