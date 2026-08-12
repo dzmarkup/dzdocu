@@ -1527,6 +1527,22 @@ class Component extends DCLogic {
   splitPageIntoBoxes(pageId, direction) {
     const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null });
     const existing = this.state.pageBoxTrees[pageId];
+    // sc-for keys its rendered items by array position, not by the box's own
+    // id, so inserting a leaf earlier in flattenBoxTree's order shifts every
+    // later box's DOM element down one slot — the renderer reuses that
+    // physical <div> (contentEditable's own children are never diffed) for
+    // whatever box now lands on it, leaving typed text or a pasted image
+    // sitting in the wrong box. Capturing every box's live content now, by
+    // its real id, and pouring it back in by id once refs re-settle after
+    // the split is what keeps content pinned to the box it actually belongs
+    // to regardless of where it ends up in the array.
+    const priorContent = {};
+    if (existing) {
+      this.flattenBoxTree(existing, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+        const el = this.boxEditableEls[node.id];
+        if (el) priorContent[node.id] = el.innerHTML;
+      });
+    }
     let tree;
     if (!existing) {
       tree = { split: direction, ratio: 0.5, a: makeLeaf(), b: makeLeaf() };
@@ -1544,7 +1560,20 @@ class Component extends DCLogic {
       tree = replace(existing);
     }
     this.renumberBoxTree(tree);
-    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxSplitPromptOpen: false }), () => this.saveDebounced());
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxSplitPromptOpen: false }), () => {
+      this.saveDebounced();
+      setTimeout(() => {
+        // Every box gets its content explicitly set — including the brand
+        // new leaf, to '' — rather than only patching the ones known to have
+        // had something: a reused DOM node can be hosting a stale leftover
+        // that was never captured anywhere just because it wasn't previously
+        // tied to this id, and leaving it alone would let that bleed through.
+        this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+          const el = this.boxEditableEls[node.id];
+          if (el) el.innerHTML = priorContent[node.id] || '';
+        });
+      }, 30);
+    });
   }
 
   toggleBoxType(pageId, boxId) {
@@ -1637,6 +1666,16 @@ class Component extends DCLogic {
     const existing = this.state.pageBoxTrees[pageId];
     if (!existing) return;
     if (!this.findSiblingNode(existing, boxId)) return;
+    // Same array-position/DOM-reuse hazard as splitPageIntoBoxes: removing a
+    // leaf shifts every later box's index, so its content has to be
+    // re-pinned to its id after the re-render rather than trusted to follow
+    // the (reused) DOM node it used to sit in.
+    const priorContent = {};
+    this.flattenBoxTree(existing, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+      if (node.id === boxId) return;
+      const el = this.boxEditableEls[node.id];
+      if (el) priorContent[node.id] = el.innerHTML;
+    });
     delete this.boxEditableEls[boxId];
     const collapse = (node) => {
       if (node.box) return node;
@@ -1646,7 +1685,18 @@ class Component extends DCLogic {
     };
     const tree = collapse(existing);
     this.renumberBoxTree(tree);
-    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxDeletePromptId: null }), () => this.saveDebounced());
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree }, boxDeletePromptId: null }), () => {
+      this.saveDebounced();
+      setTimeout(() => {
+        // Explicit for every surviving box, same reasoning as
+        // splitPageIntoBoxes — a reused node can host a leftover that was
+        // never captured under this id, so leaving it untouched isn't safe.
+        this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).forEach(({ node }) => {
+          const el = this.boxEditableEls[node.id];
+          if (el) el.innerHTML = priorContent[node.id] || '';
+        });
+      }, 30);
+    });
   }
 
   // "Don't Move": the box keeps its slot and its number, it's just emptied.
