@@ -811,9 +811,14 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
       <sc-if value="{{ setupStepIsDocLayoutChoice }}" hint-placeholder-val="{{ false }}">
         <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:24px 20px 20px;max-width:420px;">
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromDocLayoutChoice }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
-          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
-          <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
-          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Layout Document</div>
+          <div style="text-align:center;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
+            <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:4px;">Layout Document</div>
+            <div style="font-size:11px;color:var(--setup-text);opacity:0.75;margin-bottom:10px;">These are examples — you can redesign your layout.</div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(3, auto);gap:10px;justify-content:center;">
             <sc-for list="{{ docLayoutTemplates }}" as="tmpl" hint-placeholder-count="9">
               <button sc-camel-on-click="{{ tmpl.onPick }}" title="{{ tmpl.title }}" style="{{ tmpl.wrapStyle }}">
@@ -4738,7 +4743,7 @@ class Component extends DCLogic {
         const h = 108, w = Math.round(h * (dims.w / dims.h));
         return {
           onPick: () => this.onPickFullPageDocument(),
-          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
+          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:inline-block;',
         };
       })(),
       docLayoutTemplates: (() => {
