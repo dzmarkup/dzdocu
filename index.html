@@ -405,7 +405,7 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media print { .no-print{display:none !important;} }
     .editable:focus{outline:2px solid var(--color-accent,#5980a6);outline-offset:-2px;}
     .editable img{max-width:100%;}
-    body, button, input, .btn, .seg-opt{font-family:'Arial Narrow', Arial, sans-serif !important;}
+    body, button, input, .btn, .seg-opt{font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif !important;}
     .btn, .seg-opt, .page-title{text-transform:uppercase;}
     .page-header-input::placeholder{color:#999;}
     .raw-address-input::placeholder{color:#aaa;}
@@ -422,7 +422,7 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media (prefers-reduced-motion: reduce) { .mtx-col, .mtx-streak { animation: none !important; } }
     @keyframes mtx-fall { from{transform:translateY(0%);} to{transform:translateY(200%);} }
     @keyframes mtx-streak-fall { from{transform:translateY(-100%);} to{transform:translateY(100%);} }
-    .mtx-col{position:absolute;top:-100%;height:100%;display:flex;flex-direction:column;justify-content:flex-start;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.08em;color:rgba(120,200,255,0.85);text-align:center;}
+    .mtx-col{position:absolute;top:-100%;height:100%;display:flex;flex-direction:column;justify-content:flex-start;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.08em;color:rgba(120,200,255,0.85);text-align:center;}
     .mtx-col span{text-shadow:0 0 6px rgba(80,190,255,0.85),0 0 16px rgba(80,190,255,0.45);}
     .mtx-streak{position:absolute;top:-100%;height:300%;width:2.5px;filter:blur(0.3px);animation-name:mtx-streak-fall;animation-timing-function:linear;animation-iteration-count:infinite;background:linear-gradient(to bottom, transparent 0%, rgba(70,190,255,0.06) 40%, rgba(90,200,255,0.35) 70%, rgba(170,230,255,1) 100%);box-shadow:0 0 8px rgba(120,210,255,0.6);}
     @media print { .doc-stage{transform:none !important;margin:0 !important;} body{padding-bottom:0 !important;} }
@@ -469,7 +469,7 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media print {
       .doc-box{border:none !important;background:none !important;}
     }
-    .box-img-content:empty::before{content:'Click, paste, or drop an image';display:block;text-align:center;font-family:'Arial Narrow', Arial, sans-serif;font-size:11px;color:#b4433a;padding:8px;pointer-events:none;}
+    .box-img-content:empty::before{content:'Click, paste, or drop an image';display:block;text-align:center;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:11px;color:#b4433a;padding:8px;pointer-events:none;}
     @media print {
       .box-img-content:empty::before{content:none !important;}
     }
@@ -482,9 +482,9 @@ textarea.input { min-height: 90px; resize: vertical; }
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" ref="{{ toolbarRef1 }}" style="position:fixed;left:0;right:0;top:0;z-index:20;display:flex;justify-content:center;gap:16px;padding:6px var(--space-4,16px);background:#e6e6e6;border-bottom:1px solid var(--color-neutral-300,#ccc);">
   <div style="width:170px;display:flex;gap:6px;align-items:center;">
-    <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="width:100%;height:32px;padding:6px 8px;font-size:13px;background:#0a0a0a;border:2px solid #ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:#ffffff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;text-shadow:3px 3px 3px #000000;box-sizing:border-box;display:flex;align-items:center;justify-content:center;line-height:1.1;white-space:nowrap;"><span>D-Z</span></button>
+    <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="width:100%;height:32px;padding:6px 8px;font-size:13px;background:#0a0a0a;border:2px solid #ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:#ffffff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;text-shadow:3px 3px 3px #000000;box-sizing:border-box;display:flex;align-items:center;justify-content:center;line-height:1.1;white-space:nowrap;"><span>D-Z</span></button>
     <div style="position:relative;width:100%;">
-      <input class="page-title" value="{{ docTitleValue }}" placeholder="DOCU" sc-camel-on-change="{{ onDocTitleChange }}" style="width:100%;box-sizing:border-box;height:32px;text-align:center;border:2px solid #000000;border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;background:#ffffff;color:var(--color-text,#1d1f20);padding:0 6px;">
+      <input class="page-title" value="{{ docTitleValue }}" placeholder="DOCU" sc-camel-on-change="{{ onDocTitleChange }}" style="width:100%;box-sizing:border-box;height:32px;text-align:center;border:2px solid #000000;border-radius:var(--radius-sm,4px);outline:none;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;background:#ffffff;color:var(--color-text,#1d1f20);padding:0 6px;">
       <button class="btn btn-secondary" sc-camel-on-click="{{ onDocTitleDoubleClick }}" title="Return to the size/type selection screen" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;">⌂</button>
     </div>
   </div>
@@ -496,13 +496,13 @@ textarea.input { min-height: 90px; resize: vertical; }
        next to D-Z/title at phone widths. -->
   <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
   <div style="display:flex;gap:4px;align-items:center;">
-    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Font…</option>
       <sc-for list="{{ topBarFontOptions }}" as="fn" hint-placeholder-count="5">
         <option value="{{ fn.name }}">{{ fn.name }}</option>
       </sc-for>
     </sc-raw-select>
-    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Size…</option>
       <option value="10">10</option>
       <option value="12">12</option>
@@ -537,7 +537,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      so chrome placed inside a box would be written into the user's .docu. -->
 <div class="no-print" ref="{{ layoutChromeRef }}" style="position:fixed;inset:0;z-index:21;pointer-events:none;"></div>
 <div class="no-print layout-panel" style="position:fixed;left:0;right:0;bottom:42px;z-index:20;display:flex;justify-content:center;pointer-events:none;">
-  <div style="pointer-events:auto;background:#ffffff;border:2px solid #000;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);padding:8px 12px;font-family:'Arial Narrow', Arial, sans-serif;max-width:96vw;">
+  <div style="pointer-events:auto;background:#ffffff;border:2px solid #000;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.4);padding:8px 12px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;max-width:96vw;">
     <!-- The extra rows are folded away by default: selecting an area and
          nudging an edge are both done on the label now, so these are the
          fallbacks rather than the main controls. -->
@@ -590,7 +590,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 <sc-if value="{{ reflowVisible }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" style="position:fixed;left:0;right:0;top:34px;bottom:{{ reflowBottomInset }};z-index:21;background:#ffffff;display:flex;flex-direction:column;">
   <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#111418;border-bottom:2px solid #2f6fb0;">
-    <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
+    <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;">Reflow</span>
   </div>
   <div ref="{{ reflowStreamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" sc-camel-on-input="{{ onReflowInput }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40vh;box-sizing:border-box;font-family:{{ reflowFontFamily }};font-size:54px;line-height:1.5;color:#1d1f20;outline:none;"></div>
 </div>
@@ -604,7 +604,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:center;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:center;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
@@ -616,7 +616,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      box), so only the horizontal justify it also just did actually landed.
      See onAlignGridClick. -->
 <sc-if value="{{ vertAlignNoticeVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:200;max-width:80vw;padding:8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);pointer-events:none;">{{ vertAlignNoticeMsg }}</div>
+<div class="no-print" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:200;max-width:80vw;padding:8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);pointer-events:none;">{{ vertAlignNoticeMsg }}</div>
 </sc-if>
 
 <!-- Tells someone their work wasn't lost after a reload mid-edit — see
@@ -624,7 +624,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      use Start New, since unlike the align-grid toast this is answering a
      real "did I lose it?" worry, not a quick correction. -->
 <sc-if value="{{ autoResumeBannerVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);">
+<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);">
   <span>Resumed your last document.</span>
   <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 10px;" sc-camel-on-click="{{ onStartNewFromResumeBanner }}">Start New</button>
   <button class="no-print" style="width:20px;height:20px;line-height:18px;text-align:center;padding:0;box-sizing:border-box;border:1px solid #445;border-radius:3px;background:transparent;color:#9dc6f0;font-size:13px;cursor:pointer;" sc-camel-on-click="{{ onDismissResumeBanner }}" title="Dismiss">×</button>
@@ -656,7 +656,7 @@ textarea.input { min-height: 90px; resize: vertical; }
       <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ addPage }}"><span class="full-label">+ Page</span><span class="short-label">+P</span></button>
       <sc-for list="{{ tabPages }}" as="p" hint-placeholder-count="1">
         <div style="position:relative;display:inline-block;{{ p.tabWrapStyle }}{{ p.dragStyle }}" draggable="{{ p.canDrag }}" sc-camel-on-drag-start="{{ p.onTabDragStart }}" sc-camel-on-drag-enter="{{ p.onTabDragOver }}" sc-camel-on-drag-over="{{ p.onTabDragOver }}" sc-camel-on-drop="{{ p.onTabDrop }}" sc-camel-on-drag-end="{{ p.onTabDragEnd }}" sc-camel-on-mouse-enter="{{ p.onTabHover }}" sc-camel-on-mouse-leave="{{ p.onTabUnhover }}">
-          <button class="{{ p.tabClass }} page-tab-btn" sc-camel-on-click="{{ p.onScrollTo }}" style="width:38px;height:28px;box-sizing:border-box;white-space:nowrap;padding-left:0;padding-right:0;font-family:'Arial Narrow', Arial, sans-serif;{{ uniformBtnStyle }}{{ p.tabCursor }}{{ p.coverTabStyle }}{{ p.tabActiveStyle }}">
+          <button class="{{ p.tabClass }} page-tab-btn" sc-camel-on-click="{{ p.onScrollTo }}" style="width:38px;height:28px;box-sizing:border-box;white-space:nowrap;padding-left:0;padding-right:0;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;{{ uniformBtnStyle }}{{ p.tabCursor }}{{ p.coverTabStyle }}{{ p.tabActiveStyle }}">
             <span style="font-weight:700;text-transform:none;opacity:{{ p.tabNumOpacity }};transition:opacity 0.15s ease;">{{ p.num }}</span>
             <sc-if value="{{ p.hasTitle }}" hint-placeholder-val="{{ false }}">
               <span style="font-weight:400;font-size:0.6em;opacity:{{ p.tabNumOpacity }};"> {{ p.tabTitleShort }}</span>
@@ -674,40 +674,40 @@ textarea.input { min-height: 90px; resize: vertical; }
      exists is version-proof. -->
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ headerTabRef }}" sc-camel-on-click="{{ onToggleHeaderGlobal }}" title="Header" style="position:fixed;right:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ headerGlobalBtnStyle }}">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Header</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Header</span>
 </button>
 <button class="no-print side-tab" ref="{{ fontTabRef }}" sc-camel-on-click="{{ onOpenFontPicker }}" title="Font, size, bold, italic, underline, characters" style="position:fixed;right:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:20px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1;writing-mode:vertical-rl;letter-spacing:0.02em;">Aa</span>
+  <span style="font-family:'Barlow Condensed', 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:20px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1;writing-mode:vertical-rl;letter-spacing:0.02em;">Aa</span>
 </button>
 <sc-if value="{{ showLayoutTab }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ layoutTabRef }}" sc-camel-on-click="{{ onToggleLayoutMode }}" title="Move and resize the label's four areas" style="position:fixed;right:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ layoutBtnStyle }}">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
 </sc-if>
 <!-- Same rail slot as the label Layout tab above — a document is either a
      label or a box-doc, never both, so the two conditions never overlap. -->
 <sc-if value="{{ showDocLayoutButton }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ docLayoutTabRef }}" sc-camel-on-click="{{ onToggleDocLayout }}" title="Move and resize this page's text boxes" style="position:fixed;right:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ docLayoutTabStyle }}">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
 </sc-if>
 <button class="no-print side-tab" ref="{{ clearTabRef }}" sc-camel-on-click="{{ onClearActivePage }}" title="Clear this page's content" style="position:fixed;right:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Clear</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Clear</span>
 </button>
 
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ openTabRef }}" sc-camel-on-click="{{ onOpenEzdocClick }}" title="Open .docu" style="position:fixed;left:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Open</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Open</span>
 </button>
 <button class="no-print side-tab" ref="{{ saveTabRef }}" sc-camel-on-click="{{ onSaveEzdoc }}" title="Save .docu" style="position:fixed;left:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save</span>
 </button>
 <button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
 </button>
 <button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">E-SAVE</span>
+  <span style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">E-SAVE</span>
 </button>
 </sc-if>
 
@@ -797,12 +797,12 @@ textarea.input { min-height: 90px; resize: vertical; }
   <div style="position:absolute;left:0;right:0;bottom:0;height:35%;background:linear-gradient(to bottom, transparent 0%, rgba(20,140,255,0.08) 40%, rgba(60,180,255,0.22) 100%);"></div>
     </sc-if>
 </div>
-    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:transparent;border-radius:var(--radius-sm,4px);padding:32px 20px;margin:auto;max-width:90vw;box-sizing:border-box;text-align:center;font-family:'Arial Narrow', Arial, sans-serif;position:relative;z-index:10;">
+    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:transparent;border-radius:var(--radius-sm,4px);padding:32px 20px;margin:auto;max-width:90vw;box-sizing:border-box;text-align:center;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;position:relative;z-index:10;">
 
       <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
         <div style="position:absolute;left:50%;top:4px;width:340px;height:300px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
         <img src="assets/dzdocu-logo.png" alt="DZDOCU" style="position:relative;z-index:1;display:block;width:236px;height:auto;margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(90,190,255,0.45));" />
-        <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
         <div style="padding:16px 0 4px;display:grid;grid-template-columns:repeat(2,91px);gap:12px 8px;justify-content:center;">
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:100%;{{ letterBtnSpan }}">8.5×11</button>
           <sc-if value="{{ offerTabloid }}" hint-placeholder-val="{{ true }}">
@@ -815,11 +815,11 @@ textarea.input { min-height: 90px; resize: vertical; }
              per storage bucket (letter / tabloid / label). -->
         <sc-if value="{{ hasSavedDocs }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:14px;">
-            <div style="font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;line-height:1.4;color:#f0b4b4;text-shadow:0 0 8px rgba(210,90,90,0.65);">In browser memory</div>
+            <div style="font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;line-height:1.4;color:#f0b4b4;text-shadow:0 0 8px rgba(210,90,90,0.65);">In browser memory</div>
             <sc-for list="{{ savedDocs }}" as="doc" hint-placeholder-count="1">
-              <button class="btn btn-classy" sc-camel-on-click="{{ doc.open }}" style="width:190px;height:auto;min-height:38px;padding:7px 10px;white-space:nowrap;background:#a65959;color:#ffffff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span>{{ doc.title }}</span><sc-if value="{{ doc.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:400;letter-spacing:0.02em;opacity:0.85;">{{ doc.sub }}</span></sc-if></button>
+              <button class="btn btn-classy" sc-camel-on-click="{{ doc.open }}" style="width:190px;height:auto;min-height:38px;padding:7px 10px;white-space:nowrap;background:#a65959;color:#ffffff;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span>{{ doc.title }}</span><sc-if value="{{ doc.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:400;letter-spacing:0.02em;opacity:0.85;">{{ doc.sub }}</span></sc-if></button>
             </sc-for>
-            <button class="btn btn-classy" sc-camel-on-click="{{ onClearSavedDocs }}" title="Erase every document held in this browser" style="width:190px;height:34px;margin-top:4px;background:transparent;color:#f0b4b4;border:2px solid #a65959;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;">Clear</button>
+            <button class="btn btn-classy" sc-camel-on-click="{{ onClearSavedDocs }}" title="Erase every document held in this browser" style="width:190px;height:34px;margin-top:4px;background:transparent;color:#f0b4b4;border:2px solid #a65959;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;">Clear</button>
           </div>
         </sc-if>
       </sc-if>
@@ -834,7 +834,7 @@ textarea.input { min-height: 90px; resize: vertical; }
         <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:flex-start;align-items:flex-start;">
           <div style="text-align:left;">
             <div style="font-size:12.5px;margin-bottom:6px;color:var(--setup-text);line-height:1.3;">RETURN ADDRESS</div>
-            <textarea value="{{ returnAddressValue }}" sc-camel-on-change="{{ onReturnAddressChange }}" placeholder="..." rows="6" style="width:135px;height:82px;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Arial Narrow', Arial, sans-serif;font-size:12.2px;margin-bottom:16px;margin-left:-8px;resize:vertical;{{ returnAddressColorStyle }}"></textarea>
+            <textarea value="{{ returnAddressValue }}" sc-camel-on-change="{{ onReturnAddressChange }}" placeholder="..." rows="6" style="width:135px;height:82px;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:12.2px;margin-bottom:16px;margin-left:-8px;resize:vertical;{{ returnAddressColorStyle }}"></textarea>
           </div>
           <div style="text-align:left;margin-left:-5px;max-width:100%;margin-top:-16px;">
             <div style="font-size:20px;margin-top:0;margin-bottom:24px;color:var(--setup-text);line-height:1.3;">PASTE RAW ADDRESS</div>
@@ -842,7 +842,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE.
 
-MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;"></textarea>
+MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--setup-panel-border);border-radius:4px;background:rgba(0,0,0,0.28);color:var(--setup-text);font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;"></textarea>
             <div>
               <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onLabelAddressContinue }}" style="width:160px;{{ labelAddressBtnStyle }}">{{ labelAddressBtnLabel }}</button>
             </div>
@@ -899,7 +899,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
 
 <sc-if value="{{ dropChooserOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" sc-camel-on-click="{{ onDropChooserClose }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:56;display:flex;align-items:center;justify-content:center;">
-    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Arial Narrow', Arial, sans-serif;">
+    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;">
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onDropChooserClose }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
         <div style="font-size:20px;margin-bottom:6px;color:#1d1f20;text-transform:uppercase;">DROP-ZONE</div>
@@ -915,7 +915,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
 
 <sc-if value="{{ addPageOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" sc-camel-on-click="{{ onAddPageClose }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
-    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Arial Narrow', Arial, sans-serif;">
+    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;">
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onAddPageClose }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
         <sc-if value="{{ addPageStepIsChoose }}" hint-placeholder-val="{{ true }}">
@@ -933,7 +933,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
             <div style="font-size:20px;margin-bottom:16px;color:#1d1f20;">PASTE RAW ADDRESS</div>
             <textarea value="{{ addPageAddressValue }}" sc-camel-on-change="{{ onAddPageAddressChange }}" placeholder="PASTE ADDRESS...
 
-FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;color:#1d1f20;"></textarea>
+FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="raw-address-input" style="width:300px;max-width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:16px;resize:vertical;color:#1d1f20;"></textarea>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-primary" sc-camel-on-click="{{ onAddPageAddressConfirm }}" style="width:190px;background:var(--color-accent,#5980a6);color:#fff;">{{ addPageAddressBtnLabel }}</button>
               <button class="btn btn-secondary" sc-camel-on-click="{{ onAddPageClose }}" style="width:102px;">Cancel</button>
@@ -973,7 +973,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 
 <sc-if value="{{ emailPromptOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" sc-camel-on-click="{{ onCloseEmailPanel }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
-    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Arial Narrow', Arial, sans-serif;">
+    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;">
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;width:280px;text-align:left;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onCloseEmailPanel }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
         <div style="font-size:20px;margin-bottom:12px;color:#1d1f20;text-transform:uppercase;">Save to Email</div>
@@ -981,7 +981,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
              file here is naming the document, not a separate email-only
              label, so nothing needs to be kept in sync by hand. -->
         <div style="font-size:12px;color:#6b7480;margin-bottom:4px;">Document name</div>
-        <input type="text" value="{{ docTitleValue }}" placeholder="DOCU" sc-camel-on-change="{{ onDocTitleChange }}" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:14px;color:#1d1f20;" />
+        <input type="text" value="{{ docTitleValue }}" placeholder="DOCU" sc-camel-on-change="{{ onDocTitleChange }}" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:14px;color:#1d1f20;" />
         <sc-if value="{{ emailWorkerNotConfigured }}" hint-placeholder-val="{{ false }}">
           <div style="font-size:13px;color:#6b7480;margin-bottom:8px;">Not set up yet — this needs a Worker URL filled in before it can send anything.</div>
         </sc-if>
@@ -990,7 +990,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
           Enable Save to Email
         </label>
         <sc-if value="{{ emailSaveEnabled }}" hint-placeholder-val="{{ false }}">
-          <input type="email" value="{{ emailAddress }}" sc-camel-on-change="{{ onEmailAddressChange }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:10px;color:#1d1f20;" />
+          <input type="email" value="{{ emailAddress }}" sc-camel-on-change="{{ onEmailAddressChange }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:10px;color:#1d1f20;" />
           <button class="btn btn-primary" sc-camel-on-click="{{ onSendToEmail }}" disabled="{{ emailSending }}" style="width:100%;background:var(--color-accent,#5980a6);color:#fff;">{{ emailSendBtnLabel }}</button>
           <sc-if value="{{ emailSendError }}" hint-placeholder-val="{{ false }}">
             <div style="font-size:12px;color:#b4433a;margin-top:8px;">{{ emailSendError }}</div>
@@ -1007,7 +1007,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 <div style="display:flex;justify-content:center;">
 <sc-if value="{{ fontPickerOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:60;display:flex;align-items:center;justify-content:center;" sc-camel-on-click="{{ onFontPickerClose }}">
-    <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:420px;max-height:70vh;display:flex;flex-direction:column;font-family:'Arial Narrow', Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
+    <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:420px;max-height:70vh;display:flex;flex-direction:column;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:18px;color:#1d1f20;">Font &amp; format</div>
         <button class="btn btn-icon" sc-camel-on-click="{{ onFontPickerClose }}" title="Close">×</button>
@@ -1016,7 +1016,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <button class="btn btn-secondary" style="width:36px;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
         <button class="btn btn-secondary" style="width:36px;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
         <button class="btn btn-secondary" style="width:36px;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
-        <sc-raw-select sc-camel-on-change="{{ onFontSizeChange }}" sc-camel-default-value="" style="width:76px;height:36px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;padding:2px 6px;">
+        <sc-raw-select sc-camel-on-change="{{ onFontSizeChange }}" sc-camel-default-value="" style="width:76px;height:36px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;padding:2px 6px;">
           <option value="">Size…</option>
           <option value="10">10</option>
           <option value="12">12</option>
@@ -1048,8 +1048,8 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <button class="btn btn-primary" sc-camel-on-click="{{ onApplyFontChanges }}" disabled="{{ fontApplyDisabled }}" style="background:var(--color-accent,#5980a6);color:#fff;padding:6px 16px;">APPLY</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input type="text" value="{{ fontSearchValue }}" sc-camel-on-change="{{ onFontSearchChange }}" placeholder="Search fonts…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
-        <input type="text" value="{{ fontPreviewValue }}" sc-camel-on-change="{{ onFontPreviewChange }}" placeholder="Preview text…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
+        <input type="text" value="{{ fontSearchValue }}" sc-camel-on-change="{{ onFontSearchChange }}" placeholder="Search fonts…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
+        <input type="text" value="{{ fontPreviewValue }}" sc-camel-on-change="{{ onFontPreviewChange }}" placeholder="Preview text…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
       </div>
       <sc-if value="{{ hasAddedFonts }}" hint-placeholder-val="{{ false }}">
         <div style="font-size:12px;color:#666;margin-bottom:4px;">Your added fonts</div>
@@ -1079,12 +1079,12 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 </sc-if>
 <sc-if value="{{ charPickerOpen }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:61;display:flex;align-items:center;justify-content:center;" sc-camel-on-click="{{ onCharPickerClose }}">
-    <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:400px;max-height:70vh;display:flex;flex-direction:column;font-family:'Arial Narrow', Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
+    <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:400px;max-height:70vh;display:flex;flex-direction:column;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:18px;color:#1d1f20;">Special characters</div>
         <button class="btn btn-icon" sc-camel-on-click="{{ onCharPickerClose }}" title="Close">×</button>
       </div>
-      <input type="text" value="{{ charSearchValue }}" sc-camel-on-change="{{ onCharSearchChange }}" placeholder="Search characters (e.g. arrow, degree, dash)…" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:12px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
+      <input type="text" value="{{ charSearchValue }}" sc-camel-on-change="{{ onCharSearchChange }}" placeholder="Search characters (e.g. arrow, degree, dash)…" style="width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:12px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
       <div style="overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;">
         <sc-for list="{{ filteredChars }}" as="c" hint-placeholder-count="24">
           <button class="btn btn-secondary" sc-camel-on-click="{{ c.onInsert }}" title="{{ c.name }}" style="width:40px;height:40px;padding:0;font-size:19px;">{{ c.ch }}</button>
@@ -1111,7 +1111,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <button class="btn btn-icon no-print" style="position:absolute;top:8px;right:8px;z-index:5;" sc-camel-on-click="{{ p.onRemove }}" title="Remove page">×</button>
       </sc-if>
       <sc-if value="{{ p.headerOn }}" hint-placeholder-val="{{ false }}">
-        <div style="position:absolute;top:0.2in;left:1in;right:1in;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;color:#1d1f20;">
+        <div style="position:absolute;top:0.2in;left:1in;right:1in;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;color:#1d1f20;">
           <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;">
             <span>{{ docTitleValue }}</span>
             <textarea class="page-header-input" ref="{{ p.titleRef }}" value="{{ p.pageTitleValue }}" placeholder="PAGE" sc-camel-on-click="{{ p.stopClick }}" sc-camel-on-change="{{ p.onPageTitleChange }}" sc-camel-on-input="{{ p.onPageTitleInput }}" rows="1" style="flex:1;padding:0;margin:0;resize:none;overflow:hidden;text-align:center;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;line-height:1.4;color:#1d1f20;"></textarea>
@@ -1121,7 +1121,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         </div>
       </sc-if>
       <sc-if value="{{ p.isCover }}" hint-placeholder-val="{{ false }}">
-        <div style="position:absolute;top:0.35in;left:1in;right:1in;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;color:#1d1f20;">
+        <div style="position:absolute;top:0.35in;left:1in;right:1in;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;color:#1d1f20;">
           <textarea class="page-header-input" ref="{{ p.titleRef }}" value="{{ p.pageTitleValue }}" placeholder="COVER" sc-camel-on-click="{{ p.stopClick }}" sc-camel-on-change="{{ p.onPageTitleChange }}" sc-camel-on-input="{{ p.onPageTitleInput }}" rows="1" style="display:block;width:100%;padding:0;margin:0;resize:none;overflow:hidden;text-align:center;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;line-height:1.4;color:#1d1f20;"></textarea>
         </div>
       </sc-if>
@@ -1129,7 +1129,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
       <sc-if value="{{ p.noBoxes }}" hint-placeholder-val="{{ true }}">
-        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
+        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
       </sc-if>
       <sc-if value="{{ p.boxesVisible }}" hint-placeholder-val="{{ false }}">
         <sc-for list="{{ p.boxes }}" as="b" hint-placeholder-count="1">
@@ -1173,8 +1173,8 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       </sc-if>
       <sc-if value="{{ p.streamActive }}" hint-placeholder-val="{{ false }}">
         <div class="no-print" style="position:absolute;left:{{ docMarginLeftIn }};top:{{ docMarginTopIn }};width:{{ docMarginWidthIn }};height:{{ docMarginHeightIn }};box-sizing:border-box;border:2px solid #2f6fb0;background:#ffffff;overflow:hidden;display:flex;flex-direction:column;">
-          <div style="flex:0 0 auto;padding:4px 8px;background:#111418;color:#9dc6f0;font-family:'Arial Narrow', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">Box Text</div>
-          <div ref="{{ p.streamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" style="flex:1;min-height:0;overflow-y:auto;padding:10px 12px;box-sizing:border-box;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;line-height:1.5;color:#1d1f20;outline:none;"></div>
+          <div style="flex:0 0 auto;padding:4px 8px;background:#111418;color:#9dc6f0;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">Box Text</div>
+          <div ref="{{ p.streamRef }}" class="editable" sc-camel-content-editable="true" sc-camel-suppress-content-editable-warning="true" style="flex:1;min-height:0;overflow-y:auto;padding:10px 12px;box-sizing:border-box;font-family:'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;font-size:15px;line-height:1.5;color:#1d1f20;outline:none;"></div>
         </div>
       </sc-if>
     </section>
@@ -2086,7 +2086,7 @@ class Component extends DCLogic {
         const rule = document.createElement('div');
         rule.setAttribute('data-stream-chrome', '1');
         rule.setAttribute('contenteditable', 'false');
-        rule.style.cssText = 'margin:14px 0;border-top:1px dashed #9aa4ae;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#7d8792;padding-top:4px;-webkit-user-select:none;user-select:none;';
+        rule.style.cssText = 'margin:14px 0;border-top:1px dashed #9aa4ae;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#7d8792;padding-top:4px;-webkit-user-select:none;user-select:none;';
         rule.textContent = 'Box ' + node.number;
         stream.appendChild(rule);
       }
@@ -2349,7 +2349,7 @@ class Component extends DCLogic {
       isImage,
       showNumberInput: docLayoutActive && !isImage && !isIndependent,
       badgeText: isImage ? 'IMAGE' : isIndependent ? 'INDEP' : (node.number != null ? String(node.number) : ''),
-      badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : isIndependent ? '#3f8f52' : '#5980a6') + ';color:#fff;pointer-events:none;',
+      badgeStyle: 'position:absolute;top:2px;left:2px;z-index:1;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;background:' + (isImage ? '#b4433a' : isIndependent ? '#3f8f52' : '#5980a6') + ';color:#fff;pointer-events:none;',
       numberInputStyle: 'position:absolute;top:1px;left:24px;z-index:1;width:28px;height:15px;font-size:10px;padding:0 2px;border:1px solid #5980a6;',
       numberValue: node.number,
       onNumberChange: (e) => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) this.setBoxNumber(pageId, node.id, v); },
@@ -2382,7 +2382,7 @@ class Component extends DCLogic {
       isPending,
       pendingLabel: node.number != null ? ('Delete Box ' + node.number + '?') : 'Delete this box?',
       pendingOverlayStyle: 'position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:4px;text-align:center;background:rgba(255,255,255,0.94);',
-      pendingLabelStyle: 'font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;color:#1d1f20;',
+      pendingLabelStyle: 'font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;color:#1d1f20;',
       dontMoveBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       cancelDeleteBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       onDontMove: (e) => { e.stopPropagation(); e.preventDefault(); this.clearBoxKeepSlot(pageId, node.id); },
@@ -2407,9 +2407,9 @@ class Component extends DCLogic {
           return 'height:100%;box-sizing:border-box;padding:0;display:flex;align-items:' + flexPos[vAlign] + ';justify-content:' + flexPos[hAlign] + ';outline:none;cursor:' + (locked ? 'default' : 'pointer') + ';';
         }
         if (isIndependent) {
-          return 'height:100%;box-sizing:border-box;padding:6px 8px;display:flex;flex-direction:column;justify-content:' + flexPos[vAlign] + ';text-align:' + hAlign + ';font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
+          return 'height:100%;box-sizing:border-box;padding:6px 8px;display:flex;flex-direction:column;justify-content:' + flexPos[vAlign] + ';text-align:' + hAlign + ';font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
         }
-        return 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
+        return 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
       })(),
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
       onFocus: () => {
@@ -2547,7 +2547,7 @@ class Component extends DCLogic {
     if (box.boxKind === 'img') {
       if (!box.img) {
         return '<div data-img-empty="1" style="width:100%;display:flex;align-items:center;justify-content:center;'
-          + 'font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7aa7d6;">Img</div>';
+          + 'font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7aa7d6;">Img</div>';
       }
       return '<img src="' + box.img + '" alt="" style="display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:0 auto;">';
     }
@@ -2729,7 +2729,7 @@ class Component extends DCLogic {
       const b = document.createElement('button');
       b.textContent = text;
       b.style.cssText = 'position:fixed;left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px;'
-        + 'pointer-events:auto;cursor:pointer;font-family:\'Arial Narrow\', Arial, sans-serif;'
+        + 'pointer-events:auto;cursor:pointer;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;'
         + 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;'
         + 'padding:1px 5px;border-radius:3px;line-height:1.5;'
         + (active ? 'background:#2f6fb0;color:#fff;border:1px solid #2f6fb0;'
@@ -2903,7 +2903,7 @@ class Component extends DCLogic {
         const rule = document.createElement('div');
         rule.setAttribute('data-reflow-chrome', '1');
         rule.setAttribute('contenteditable', 'false');
-        rule.style.cssText = 'margin:18px 0;border-top:1px dashed #9aa4ae;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d8792;padding-top:4px;-webkit-user-select:none;user-select:none;';
+        rule.style.cssText = 'margin:18px 0;border-top:1px dashed #9aa4ae;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#7d8792;padding-top:4px;-webkit-user-select:none;user-select:none;';
         rule.textContent = 'Page ' + (i + 1);
         stream.appendChild(rule);
       }
@@ -2913,7 +2913,7 @@ class Component extends DCLogic {
         const chip = document.createElement('div');
         chip.setAttribute('data-reflow-chrome', '1');
         chip.setAttribute('contenteditable', 'false');
-        chip.style.cssText = 'display:inline-block;margin:4px 6px 4px 0;padding:2px 8px;border:1px solid #9aa4ae;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#5b6570;-webkit-user-select:none;user-select:none;';
+        chip.style.cssText = 'display:inline-block;margin:4px 6px 4px 0;padding:2px 8px;border:1px solid #9aa4ae;font-family:\'Barlow Condensed\', \'Arial Narrow\', Arial, sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#5b6570;-webkit-user-select:none;user-select:none;';
         chip.textContent = b.getAttribute('data-lbl-box') && /^t\d+$/.test(b.getAttribute('data-lbl-box'))
           ? (b.querySelector('img') || b.querySelector('[data-img-empty]') ? 'Img box' : 'Text box')
           : 'Box';
@@ -3965,9 +3965,20 @@ class Component extends DCLogic {
   applyPendingFontChanges() {
     const { fontPendingFamily, fontPendingSize } = this.state;
     if (!fontPendingFamily && !fontPendingSize) return;
-    if (fontPendingFamily) this.restoreSelectionAndApply('fontFamily', "'" + fontPendingFamily + "', sans-serif");
+    if (fontPendingFamily) this.restoreSelectionAndApply('fontFamily', this.resolveFontFamilyValue(fontPendingFamily));
     if (fontPendingSize) this.restoreSelectionAndApply('fontSize', fontPendingSize + 'px');
     this.setState({ fontPendingFamily: null, fontPendingSize: null });
+  }
+
+  // The picker keeps listing "Arial Narrow" by name — familiar, and nothing
+  // about the UI looks different — but applies Barlow Condensed underneath,
+  // same as the app's own default text: guaranteed to render everywhere
+  // instead of only on machines that actually have Arial Narrow installed.
+  // Real "Arial Narrow"/"Arial" stay in the stack after it as a harmless
+  // fallback for anywhere the font tag gets exported or pasted elsewhere.
+  resolveFontFamilyValue(name) {
+    if (name === 'Arial Narrow') return "'Barlow Condensed', 'Arial Narrow', Arial, sans-serif";
+    return "'" + name + "', sans-serif";
   }
 
   // The Aa panel and character picker apply to whatever was last selected,
@@ -5454,7 +5465,7 @@ class Component extends DCLogic {
       onReorgClick: () => this.reorgBoxText(this.focusedPageId || this.state.pageIds[0]),
       reflowBtnLabel: this.state.reflowOn === false ? 'BACK TO REFLOW' : 'PRINT PREVIEW',
       reflowBtnStyle: this.state.reflowOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
-      reflowFontFamily: "'Barlow', 'Arial Narrow', Arial, sans-serif",
+      reflowFontFamily: "'Barlow', 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif",
       reflowStreamRef: (el) => {
         this.reflowStreamEl = el;
         if (el && !el.dataset.built) {
@@ -5586,7 +5597,7 @@ class Component extends DCLogic {
         this.injectGoogleFont(val);
         this.setState(s => ({ customFonts: s.customFonts.includes(val) ? s.customFonts : [...s.customFonts, val] }), () => {
           this.saveDebounced();
-          this.restoreSelectionAndApply('fontFamily', "'" + val + "', sans-serif");
+          this.restoreSelectionAndApply('fontFamily', this.resolveFontFamilyValue(val));
         });
       },
       onTopBarSizeChange: (e) => {
