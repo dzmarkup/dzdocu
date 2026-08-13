@@ -446,7 +446,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   </style>
 </helmet>
 
-<input type="file" accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain,.rtf,application/rtf,text/rtf" style="display:none;" ref="{{ fileInputRef }}" sc-camel-on-change="{{ onFileChosen }}">
+<input type="file" accept=".docu,image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain,.rtf,application/rtf,text/rtf" style="display:none;" ref="{{ fileInputRef }}" sc-camel-on-change="{{ onFileChosen }}">
 <input type="file" accept=".docu,application/json" style="display:none;" ref="{{ ezdocInputRef }}" sc-camel-on-change="{{ onOpenEzdoc }}">
 <input type="file" accept="image/*" style="display:none;" ref="{{ boxFileInputRef }}" sc-camel-on-change="{{ onBoxFileChosen }}">
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -682,7 +682,14 @@ textarea.input { min-height: 90px; resize: vertical; }
 </sc-if>
 
 <sc-if value="{{ setupOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" sc-camel-on-click="{{ onOverlayBackgroundClick }}" style="position:fixed;inset:0;background:{{ setupOverlayBg }};z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;">
+  <!-- Drag-and-drop is wired at this level, not just on the DROP-ZONE
+       button — a drop anywhere on the entry screen (the logo, the dark
+       background around it) should work, not just the narrow button.
+       onEntryScreenDragOver/Drop both no-op unless setupStep is still
+       'size', so a drop on the orientation or label-address steps' own
+       text fields (which share this same overlay) is left alone for
+       native behavior instead of being hijacked. -->
+  <div class="no-print" sc-camel-on-click="{{ onOverlayBackgroundClick }}" sc-camel-on-drag-over="{{ onEntryScreenDragOver }}" sc-camel-on-drop="{{ onEntryScreenDrop }}" style="position:fixed;inset:0;background:{{ setupOverlayBg }};z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;">
     <!-- The dark-to-accent gradient behind every setup step, not just the
          first — so orientation, label-size and paste-address share the
          entry screen's ground. Only the falling text stays scoped to the
@@ -1412,6 +1419,20 @@ class Component extends DCLogic {
     };
     document.addEventListener('selectionchange', this._onSelectionChange);
     document.addEventListener('selectionchange', this._onSelectionChangeAny);
+    // Files pasted (Ctrl+V, or right-click Paste) anywhere on the entry
+    // screen — same import path as a drop. Gated on docWasOpen being false
+    // (i.e. the setup screen is actually showing) and on clipboardData
+    // actually carrying files, so a normal text paste into the
+    // return-address/raw-address textareas on other setup steps is left
+    // completely alone rather than intercepted.
+    this._onEntryScreenPaste = (e) => {
+      if (this.state.docCreated) return;
+      const files = e.clipboardData && e.clipboardData.files;
+      if (!files || !files.length) return;
+      e.preventDefault();
+      [...files].forEach(f => this.handleFile(f));
+    };
+    document.addEventListener('paste', this._onEntryScreenPaste);
     this.fitScale = 1;
     setTimeout(() => { this.updateColsLayout(); this.applyFitScale(); }, 500);
   }
@@ -3564,6 +3585,7 @@ class Component extends DCLogic {
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
     document.removeEventListener('selectionchange', this._onMagnifierSync);
     document.removeEventListener('input', this._onMagnifierSync, true);
+    document.removeEventListener('paste', this._onEntryScreenPaste);
     if (window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this._onVV);
       window.visualViewport.removeEventListener('scroll', this._onVV);
@@ -4756,12 +4778,17 @@ class Component extends DCLogic {
      the choice is never made over the document or a label. Whether the doc
      was open is remembered, and restored once a way in is picked (or the
      chooser is cancelled) — a first visit with no document yet stays on the
-     entry screen, where the size buttons are. */
+     entry screen, where the size buttons are. This is also what a click on
+     either DROP-ZONE (entry screen) or D-Z (top bar, from inside a document)
+     actually does: dropStep was never being set to 'choose' anywhere, so the
+     URL/Browse chooser this opens was fully unreachable by click — only
+     drag-and-drop onto the button itself worked. */
   onDropButtonClick() {
     this.setState(s => ({
       dropResumeDoc: s.docCreated,
       docCreated: false,
       setupStep: 'size',
+      dropStep: 'choose',
     }));
   }
 
@@ -4797,6 +4824,20 @@ class Component extends DCLogic {
       const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
       if (url) this.handleUrl(url);
     }
+  }
+
+  // Same idea as onDropButtonDragOver/Drop above, but for the whole entry
+  // screen (logo, background) rather than just the DROP-ZONE button — see
+  // where these are wired in the markup for why they're gated to setupStep
+  // 'size' rather than acting on every setup step.
+  onEntryScreenDragOver(e) {
+    if (this.state.setupStep !== 'size') return;
+    this.onDropButtonDragOver(e);
+  }
+
+  onEntryScreenDrop(e) {
+    if (this.state.setupStep !== 'size') return;
+    this.onDropButtonDrop(e);
   }
 
   onFileChosen(e) {
@@ -5601,6 +5642,8 @@ class Component extends DCLogic {
       onDropChooserClose: () => this.closeDropChooser(),
       onDropButtonDragOver: (e) => this.onDropButtonDragOver(e),
       onDropButtonDrop: (e) => this.onDropButtonDrop(e),
+      onEntryScreenDragOver: (e) => this.onEntryScreenDragOver(e),
+      onEntryScreenDrop: (e) => this.onEntryScreenDrop(e),
       print: () => {
         const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
         const now = new Date();
