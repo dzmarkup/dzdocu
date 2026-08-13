@@ -601,6 +601,17 @@ textarea.input { min-height: 90px; resize: vertical; }
 </div>
 </sc-if>
 
+<!-- A PDF imports as its rendered pages (see onDropPDF). Text extraction is
+     offered here afterward rather than being done automatically, and only
+     when the PDF actually has a text layer worth pulling. -->
+<sc-if value="{{ pdfExtractOfferVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);max-width:92vw;">
+  <span>Imported as pages. Want the text instead?</span>
+  <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 10px;white-space:nowrap;" sc-camel-on-click="{{ onExtractPdfText }}">Extract Text</button>
+  <button class="no-print" style="width:20px;height:20px;line-height:18px;text-align:center;padding:0;box-sizing:border-box;border:1px solid #445;border-radius:3px;background:transparent;color:#9dc6f0;font-size:13px;cursor:pointer;" sc-camel-on-click="{{ onDismissPdfExtractOffer }}" title="Dismiss">×</button>
+</div>
+</sc-if>
+
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px) calc(6px + env(safe-area-inset-bottom, 0px)) var(--space-4,16px);">
     <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
@@ -780,6 +791,16 @@ textarea.input { min-height: 90px; resize: vertical; }
         <div style="position:absolute;left:50%;top:4px;width:340px;height:300px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
         <img src="assets/dzdocu-logo.png" alt="DZDOCU" title="Click, drop, or paste a file" sc-camel-on-click="{{ onEntryDropZoneClick }}" style="position:relative;z-index:1;display:block;width:236px;height:auto;margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(90,190,255,0.45));cursor:pointer;" />
         <button class="btn btn-secondary" sc-camel-on-click="{{ onEntryDropZoneClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
+        <!-- A dropped/pasted file waits here until a page size is picked (see
+             handleFile). Without this the screen looked completely unchanged
+             after a drop, so a drop that worked fine was indistinguishable
+             from one that did nothing. -->
+        <sc-if value="{{ hasQueuedDrops }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;z-index:1;margin:-6px 0 14px;padding:10px 12px;border-radius:6px;background:rgba(20,60,40,0.72);border:2px solid rgba(120,230,170,0.85);box-shadow:0 0 12px rgba(90,220,150,0.35);color:#d6ffe9;font-family:Arial, sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;line-height:1.35;">
+            <div style="text-transform:uppercase;">Ready to import: {{ queuedDropLabel }}</div>
+            <div style="font-size:12px;font-weight:400;opacity:0.9;margin-top:3px;">Now choose a page size below.</div>
+          </div>
+        </sc-if>
         <div style="padding:16px 0 4px;display:grid;grid-template-columns:repeat(2,91px);gap:12px 8px;justify-content:center;">
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:100%;{{ letterBtnSpan }}">8.5×11</button>
           <sc-if value="{{ offerTabloid }}" hint-placeholder-val="{{ true }}">
@@ -1251,7 +1272,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfExtractOfferName: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -4565,34 +4586,32 @@ class Component extends DCLogic {
     const buf = await file.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
 
-    // Try real text extraction first (works for born-digital PDFs); only
-    // falls back to flattened page images when there's no text layer to pull
-    // (scanned/photographed PDFs), so editable text isn't sacrificed needlessly.
-    let extractedPages = [];
-    try {
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const text = content.items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
-        extractedPages.push(text);
-      }
-    } catch (err) {
-      extractedPages = [];
-    }
-    const totalText = extractedPages.join('').trim();
-    if (totalText.length > 20) {
-      this.checkpoint(pageId);
-      const html = extractedPages.filter(t => t).map(t => '<p>' + this.escapeHtml(t) + '</p>').join('');
-      this.insertHTML(pageId, html);
-      setTimeout(() => { this.flowFrom(pageId); this.updateEmptyState(pageId); }, 50);
-      this.saveDebounced();
-      return;
-    }
+    // A PDF comes in as it looks on paper — each page rendered to an image,
+    // layout/fonts/graphics intact. This used to silently prefer pulling the
+    // text layer out into flowing paragraphs whenever there was one, which
+    // threw away the document's actual appearance without asking. Text
+    // extraction is still available, but as a deliberate follow-up choice
+    // (the banner offered below) rather than the default.
+    this.checkpoint(pageId);
+    await this.renderPdfAsPages(pageId, pdf);
+    this.saveDebounced();
 
+    // Only worth offering on a PDF that actually has a text layer to pull —
+    // a scanned/photographed one has nothing to extract, so don't advertise it.
+    if (await this.pdfHasTextLayer(pdf)) {
+      this._pdfExtractFile = file;
+      this.setState({ pdfExtractOfferName: file.name || 'this PDF' });
+    }
+  }
+
+  // Each PDF page rendered to a flattened image at 2x for print sharpness,
+  // with the document's page size/orientation matched to the PDF's own first
+  // page so the sheets line up with the original.
+  async renderPdfAsPages(pageId, pdf) {
     const firstPage = await pdf.getPage(1);
     const pv = firstPage.getViewport({ scale: 1 });
     const wIn = pv.width / 72, hIn = pv.height / 72;
-    const longIn = Math.max(wIn, hIn), shortIn = Math.min(wIn, hIn);
+    const longIn = Math.max(wIn, hIn);
     const size = Math.abs(longIn - 17) < Math.abs(longIn - 11) ? 'tabloid' : 'letter';
     const orientation = wIn > hIn ? 'landscape' : 'portrait';
     if (size !== this.state.defaultSize || orientation !== this.state.defaultOrientation) {
@@ -4613,6 +4632,69 @@ class Component extends DCLogic {
       await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
       this.insertImage(pageId, canvas.toDataURL('image/png'));
     }
+  }
+
+  // Cheap probe: a born-digital PDF gives up text immediately, a scan gives
+  // up nothing. Samples the first few pages rather than walking a 200-page
+  // document just to answer yes/no.
+  async pdfHasTextLayer(pdf) {
+    try {
+      const probe = Math.min(pdf.numPages, 3);
+      let total = '';
+      for (let i = 1; i <= probe; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        total += content.items.map(it => it.str).join(' ');
+        if (total.replace(/\s+/g, '').length > 20) return true;
+      }
+      return total.replace(/\s+/g, '').length > 20;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  async extractPdfTextInto(pageId, pdf) {
+    const extractedPages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      extractedPages.push(content.items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim());
+    }
+    const html = extractedPages.filter(t => t).map(t => '<p>' + this.escapeHtml(t) + '</p>').join('');
+    this.insertHTML(pageId, html);
+    setTimeout(() => { this.flowFrom(pageId); this.updateEmptyState(pageId); }, 50);
+    this.saveDebounced();
+  }
+
+  // "Extract Text Instead" on the post-import banner: throws away the
+  // rendered page images and re-imports the same PDF as editable text.
+  // Collapses back to a single page first — the image import will have
+  // created one page per PDF page, and those all have to go.
+  async onExtractPdfText() {
+    const file = this._pdfExtractFile;
+    if (!file) { this.setState({ pdfExtractOfferName: null }); return; }
+    if (!window.confirm('Replace the imported pages with editable text? The page images will be discarded.')) return;
+    const id = this.state.pageIds[0];
+    Object.keys(this.editableEls).forEach(pid => { if (pid !== id) delete this.editableEls[pid]; });
+    Object.keys(this.sectionEls || {}).forEach(pid => { if (pid !== id) delete this.sectionEls[pid]; });
+    const el = this.editableEls[id];
+    if (el) el.innerHTML = '';
+    await new Promise(res => this.setState({
+      pageIds: [id], pageKinds: {}, pageHeaderTitles: {}, pageEmptyMap: {},
+      pdfExtractOfferName: null,
+    }, res));
+    await new Promise(r => setTimeout(r, 40));
+    try {
+      // Re-read from the File rather than reusing the first ArrayBuffer —
+      // pdf.js takes ownership of the buffer it's handed and can detach it.
+      const buf = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+      this.checkpoint(id);
+      await this.extractPdfTextInto(id, pdf);
+    } catch (err) {
+      alert('Could not extract text from that PDF.');
+    }
+    this._pdfExtractFile = null;
   }
 
   async onDropDocx(pageId, file) {
@@ -4692,6 +4774,7 @@ class Component extends DCLogic {
   importPendingDrops() {
     const files = this.pendingDropFiles || [];
     this.pendingDropFiles = null;
+    if (this.state.queuedDropNames.length) this.setState({ queuedDropNames: [] });
     if (files.length) setTimeout(() => files.forEach(f => this.handleFile(f)), 60);
   }
 
@@ -4723,7 +4806,16 @@ class Component extends DCLogic {
     // were already made — and made wrongly — before the user chose anything.
     if (!this.state.docCreated) {
       this.pendingDropFiles = (this.pendingDropFiles || []).concat(file);
-      this.setState({ setupStep: 'size' });
+      // pendingDropFiles is an instance field, so queuing alone re-renders
+      // nothing — a drop on the entry screen used to change absolutely
+      // nothing on screen, which reads as "dropping is broken" even though
+      // the file was received fine and imports correctly once a size is
+      // picked. Mirroring the names into state is what makes the queue
+      // visible (see queuedDropNames in the markup).
+      this.setState({
+        setupStep: 'size',
+        queuedDropNames: (this.pendingDropFiles || []).map(f => f.name || 'file'),
+      });
       return;
     }
     const pageId = this.targetPageId();
@@ -5111,6 +5203,8 @@ class Component extends DCLogic {
       setupStepIsSize: this.state.setupStep === 'size',
       savedDocs: savedDocs,
       hasSavedDocs: savedDocs.length > 0,
+      hasQueuedDrops: this.state.queuedDropNames.length > 0,
+      queuedDropLabel: this.state.queuedDropNames.join(', '),
       // The gradient div behind every step now paints the background, so the
       // overlay itself stays transparent regardless of which step is showing.
       setupOverlayBg: 'transparent',
@@ -5482,6 +5576,9 @@ class Component extends DCLogic {
       vertAlignNoticeVisible: !!this.state.vertAlignNoticeMsg,
       vertAlignNoticeMsg: this.state.vertAlignNoticeMsg || '',
       autoResumeBannerVisible: this.state.autoResumeBannerOpen,
+      pdfExtractOfferVisible: !!this.state.pdfExtractOfferName,
+      onExtractPdfText: () => this.onExtractPdfText(),
+      onDismissPdfExtractOffer: () => { this._pdfExtractFile = null; this.setState({ pdfExtractOfferName: null }); },
       onStartNewFromResumeBanner: () => this.onResumeStartNew(),
       onDismissResumeBanner: () => this.setState({ autoResumeBannerOpen: false }),
       magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),

@@ -192,6 +192,43 @@ just applies that name directly (`'<name>', sans-serif`), no substitution.
 Google-hosted picks (`POPULAR_FONTS`) are fetched live from Google Fonts on
 first use, independent of anything bundled locally.
 
+## A dropped file on the entry screen is queued, not imported
+
+`handleFile()` deliberately holds a file in `pendingDropFiles` when
+`docCreated` is false — importing before a page size is picked used to flow
+the content at whatever size happened to be current. The catch: for a long
+time nothing on screen changed when this happened, because
+`pendingDropFiles` is an instance field, not state. A drop that worked
+perfectly looked identical to one that did nothing, and got reported as
+"drag and drop is broken" more than once. `queuedDropNames` mirrors the
+queued filenames into state purely so the entry screen can show a
+"Ready to import" confirmation; `importPendingDrops()` clears it.
+
+If you ever chase a "drop doesn't work" report again: verify with a **real**
+drag (CDP `Input.dispatchDragEvent`, which does genuine hit-testing), not a
+synthetic `new DragEvent('drop')` dispatched at an element. The synthetic
+kind bypasses hit-testing entirely and will happily pass while real drags
+fail — that exact blind spot hid this for a while.
+
+## PDF import: pages first, text only if asked
+
+A dropped PDF comes in as **rendered page images** (`renderPdfAsPages`), so
+it looks like the original. It used to prefer text extraction whenever the
+PDF had a text layer, which silently discarded the document's actual
+appearance. Extraction is still there but is now an offer, not the default:
+`pdfHasTextLayer()` probes the first few pages, and only if there's real
+text does a banner appear offering "Extract Text"
+(`onExtractPdfText` → `extractPdfTextInto`). Taking that offer collapses the
+document back to one page and re-imports as flowing text, so it needs the
+original `File` kept around (`_pdfExtractFile`) — re-read it rather than
+reusing the first `ArrayBuffer`, since pdf.js takes ownership of the buffer
+it's handed and can detach it.
+
+**pdf.js's worker still comes from cdnjs.cloudflare.com** (see the
+`workerSrc` line in `onDropPDF`). That means PDF import needs the network
+even though everything else in the app is local — worth bundling the worker
+alongside `assets/pdf.min.js` if offline use ever matters.
+
 ## PDF/DOCX import is lazy-loaded
 
 `pdf.min.js` and `mammoth.browser.js` (~940 KB together) are not `<script
