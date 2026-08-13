@@ -387,8 +387,10 @@ textarea.input { min-height: 90px; resize: vertical; }
 </style>
   <script src="assets/ds-bundle.js"></script>
   <script src="assets/doc-page.js"></script>
-  <script src="assets/pdf.min.js"></script>
-  <script src="assets/mammoth.browser.js"></script>
+  <!-- pdf.min.js (313KB) and mammoth.browser.js (626KB) are loaded lazily,
+       on the first actual PDF/DOCX drop -- see ensurePdfJs/ensureMammoth
+       below. Together they dwarfed everything else fetched here, for a
+       feature most visits never touch. -->
   <style id="__om-edit-overrides"></style>
   <style>
     doc-page:not(:defined){visibility:hidden}
@@ -4565,7 +4567,39 @@ class Component extends DCLogic {
     e.preventDefault();
   }
 
+  // Injects a <script src> once and memoizes the load, so a second PDF/DOCX
+  // drop in the same visit doesn't refetch or re-append it. Kept generic
+  // (not pdf/mammoth-specific) in case something else ever wants this.
+  loadScriptOnce(src) {
+    this._scriptPromises = this._scriptPromises || {};
+    if (this._scriptPromises[src]) return this._scriptPromises[src];
+    this._scriptPromises[src] = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src;
+      el.onload = () => resolve();
+      el.onerror = () => { delete this._scriptPromises[src]; reject(new Error('Failed to load ' + src)); };
+      document.head.appendChild(el);
+    });
+    return this._scriptPromises[src];
+  }
+
+  ensurePdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    return this.loadScriptOnce('assets/pdf.min.js');
+  }
+
+  ensureMammoth() {
+    if (window.mammoth) return Promise.resolve();
+    return this.loadScriptOnce('assets/mammoth.browser.js');
+  }
+
   async onDropPDF(pageId, file) {
+    try {
+      await this.ensurePdfJs();
+    } catch (err) {
+      alert('Could not load PDF support — check your connection and try again.');
+      return;
+    }
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
@@ -4623,7 +4657,12 @@ class Component extends DCLogic {
   }
 
   async onDropDocx(pageId, file) {
-    if (!window.mammoth) { alert('Word document support is still loading — try again in a moment.'); return; }
+    try {
+      await this.ensureMammoth();
+    } catch (err) {
+      alert('Could not load Word document support — check your connection and try again.');
+      return;
+    }
     try {
       const buf = await file.arrayBuffer();
       const result = await window.mammoth.convertToHtml({ arrayBuffer: buf });
