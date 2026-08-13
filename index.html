@@ -488,6 +488,36 @@ textarea.input { min-height: 90px; resize: vertical; }
       <button class="btn btn-secondary" sc-camel-on-click="{{ onDocTitleDoubleClick }}" title="Return to the size/type selection screen" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;">⌂</button>
     </div>
   </div>
+  <!-- A compact version of the Aa panel's own controls, reusing every one
+       of its handlers unchanged (pickFont, onFontSizeChange, the B/I/U
+       clicks, applyPendingFontChanges) — same staged-then-Apply behavior,
+       just inline instead of behind a modal. Desktop only: there's no room
+       for this next to D-Z/title at phone widths. -->
+  <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;gap:4px;align-items:center;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:110px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+      <option value="">Font…</option>
+      <sc-for list="{{ topBarFontOptions }}" as="fn" hint-placeholder-count="5">
+        <option value="{{ fn.name }}">{{ fn.name }}</option>
+      </sc-for>
+    </sc-raw-select>
+    <sc-raw-select sc-camel-on-change="{{ onFontSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:64px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+      <option value="">Size…</option>
+      <option value="10">10</option>
+      <option value="12">12</option>
+      <option value="14">14</option>
+      <option value="16">16</option>
+      <option value="18">18</option>
+      <option value="24">24</option>
+      <option value="32">32</option>
+      <option value="48">48</option>
+    </sc-raw-select>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
+    <button class="btn btn-primary" sc-camel-on-click="{{ onApplyFontChanges }}" disabled="{{ fontApplyDisabled }}" title="{{ fontPendingSummary }}" style="height:32px;padding:0 12px;background:var(--color-accent,#5980a6);color:#fff;">APPLY</button>
+  </div>
+  </sc-if>
 
 </div>
 </sc-if>
@@ -562,6 +592,9 @@ textarea.input { min-height: 90px; resize: vertical; }
      only reads from the page. Documents only for now. -->
 <sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;pointer-events:none;">
+  <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
+    <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
+  </sc-if>
   <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
@@ -907,7 +940,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             <div style="font-size:12px;color:#b4433a;margin-top:8px;">{{ emailSendError }}</div>
           </sc-if>
           <sc-if value="{{ emailSent }}" hint-placeholder-val="{{ false }}">
-            <div style="font-size:12px;color:#3f8f52;margin-top:8px;">Sent — check your inbox.</div>
+            <div style="font-size:12px;color:#3f8f52;margin-top:8px;">Sent — check your inbox (and your spam folder — mark it "Not Spam" so future emails land in the main inbox).</div>
           </sc-if>
         </sc-if>
       </div>
@@ -940,6 +973,15 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         </sc-raw-select>
         <button class="btn btn-secondary" style="flex:1;" sc-camel-on-click="{{ onOpenCharPicker }}" title="Insert a special character">Characters…</button>
       </div>
+      <!-- Bold/Italic/Underline are instant toggles (there's nothing to
+           stage — either the selection is bold or it isn't), but font and
+           size are "set to this value" choices, so they wait here for a
+           deliberate Apply instead of silently landing (or failing to) the
+           moment something is picked. -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;min-height:20px;">
+        <div style="flex:1;font-size:12px;color:#666;">{{ fontPendingSummary }}</div>
+        <button class="btn btn-primary" sc-camel-on-click="{{ onApplyFontChanges }}" disabled="{{ fontApplyDisabled }}" style="background:var(--color-accent,#5980a6);color:#fff;padding:6px 16px;">APPLY</button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" value="{{ fontSearchValue }}" sc-camel-on-change="{{ onFontSearchChange }}" placeholder="Search fonts…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
         <input type="text" value="{{ fontPreviewValue }}" sc-camel-on-change="{{ onFontPreviewChange }}" placeholder="Preview text…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);outline:none;font-family:'Arial Narrow', Arial, sans-serif;font-size:15px;background:#ffffff;color:var(--color-text,#1d1f20);">
@@ -948,7 +990,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <div style="font-size:12px;color:#666;margin-bottom:4px;">Your added fonts</div>
         <div style="display:flex;flex-direction:column;margin-bottom:10px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;overflow:hidden;">
           <sc-for list="{{ addedFonts }}" as="f" hint-placeholder-count="2">
-            <div sc-camel-on-click="{{ f.onPick }}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--color-neutral-200,#e6e6e6);" style-hover="background:var(--color-neutral-100,#f2f2f2);">
+            <div sc-camel-on-click="{{ f.onPick }}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--color-neutral-200,#e6e6e6);{{ f.rowStyle }}" style-hover="background:var(--color-neutral-100,#f2f2f2);">
               <span style="font-size:16px;color:var(--color-text,#1d1f20);{{ f.previewStyle }}">{{ f.name }}</span>
               <sc-if value="{{ f.hasPreview }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:16px;color:#666;margin-left:10px;{{ f.previewStyle }}">{{ f.previewText }}</span>
@@ -959,7 +1001,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       </sc-if>
       <div style="max-height:260px;overflow-y:auto;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;">
         <sc-for list="{{ filteredFonts }}" as="f" hint-placeholder-count="6">
-          <div sc-camel-on-click="{{ f.onPick }}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--color-neutral-200,#e6e6e6);" style-hover="background:var(--color-neutral-100,#f2f2f2);">
+          <div sc-camel-on-click="{{ f.onPick }}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--color-neutral-200,#e6e6e6);{{ f.rowStyle }}" style-hover="background:var(--color-neutral-100,#f2f2f2);">
             <span style="font-size:16px;color:var(--color-text,#1d1f20);{{ f.previewStyle }}">{{ f.name }}</span>
             <sc-if value="{{ f.hasPreview }}" hint-placeholder-val="{{ false }}">
               <span style="font-size:16px;color:#666;margin-left:10px;{{ f.previewStyle }}">{{ f.previewText }}</span>
@@ -1173,7 +1215,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 3 };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 3, fontPendingFamily: null, fontPendingSize: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1283,19 +1325,15 @@ class Component extends DCLogic {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
       const range = sel.getRangeAt(0);
-      let node = range.commonAncestorContainer;
-      if (node.nodeType !== 1) node = node.parentElement;
-      const id = Object.keys(this.editableEls).find(k => this.editableEls[k] && node && this.editableEls[k].contains(node));
-      if (id) { this.savedRange = range.cloneRange(); this.savedPageId = id; }
+      const target = this.findSavedEditableTarget(range.commonAncestorContainer);
+      if (target) { this.savedRange = range.cloneRange(); this.savedEl = target.el; this.savedPageId = target.pageId; }
     };
     this._onSelectionChangeAny = () => {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       const range = sel.getRangeAt(0);
-      let node = range.commonAncestorContainer;
-      if (node.nodeType !== 1) node = node.parentElement;
-      const id = Object.keys(this.editableEls).find(k => this.editableEls[k] && node && this.editableEls[k].contains(node));
-      if (id) { this.savedRangeAny = range.cloneRange(); this.savedPageIdAny = id; }
+      const target = this.findSavedEditableTarget(range.commonAncestorContainer);
+      if (target) { this.savedRangeAny = range.cloneRange(); this.savedElAny = target.el; this.savedPageIdAny = target.pageId; }
     };
     document.addEventListener('selectionchange', this._onSelectionChange);
     document.addEventListener('selectionchange', this._onSelectionChangeAny);
@@ -3639,23 +3677,63 @@ class Component extends DCLogic {
     this.setState({ fontPickerOpen: true, fontSearch: '' });
   }
 
+  // Picking a font or a size only stages it (fontPendingFamily/Size) —
+  // it used to apply the instant it was clicked, which silently did nothing
+  // whenever the saved selection was stale or (before findSavedEditableTarget)
+  // missing entirely, with no way to tell success from failure. An explicit
+  // Apply commits both at once, to the one saved range, so there's a visible
+  // action a user can point to and a moment they can trust actually worked.
   pickFont(name) {
     this.injectGoogleFont(name);
-    this.setState(s => ({ customFonts: s.customFonts.includes(name) ? s.customFonts : [...s.customFonts, name] }), () => {
-      this.saveDebounced();
-      this.restoreSelectionAndApply('fontFamily', "'" + name + "', sans-serif");
-    });
+    this.setState(s => ({
+      customFonts: s.customFonts.includes(name) ? s.customFonts : [...s.customFonts, name],
+      fontPendingFamily: name,
+    }), () => this.saveDebounced());
+  }
+
+  applyPendingFontChanges() {
+    const { fontPendingFamily, fontPendingSize } = this.state;
+    if (!fontPendingFamily && !fontPendingSize) return;
+    if (fontPendingFamily) this.restoreSelectionAndApply('fontFamily', "'" + fontPendingFamily + "', sans-serif");
+    if (fontPendingSize) this.restoreSelectionAndApply('fontSize', fontPendingSize + 'px');
+    this.setState({ fontPendingFamily: null, fontPendingSize: null });
+  }
+
+  // The Aa panel and character picker apply to whatever was last selected,
+  // captured by componentDidMount's selectionchange listeners before the
+  // modal steals focus. A selection can start inside a plain page, inside a
+  // box (its own separate contentEditable, tracked in boxEditableEls, not
+  // editableEls), or inside the box-stream "EDIT TEXT" editor — this is the
+  // one place that checks all three, so a saved target always resolves to a
+  // real element regardless of which kind of editable it came from. pageId
+  // is null for a box/stream target: checkpoint/updateEmptyState are a
+  // page-level undo concept boxes don't participate in yet, so callers skip
+  // them rather than passing a meaningless id.
+  findSavedEditableTarget(node) {
+    if (!node) return null;
+    if (node.nodeType !== 1) node = node.parentElement;
+    if (!node) return null;
+    for (const id of Object.keys(this.editableEls)) {
+      const el = this.editableEls[id];
+      if (el && el.contains(node)) return { el, pageId: id };
+    }
+    for (const id of Object.keys(this.boxEditableEls)) {
+      const el = this.boxEditableEls[id];
+      if (el && el.contains(node)) return { el, pageId: null };
+    }
+    if (this.boxStreamEl && this.boxStreamEl.contains(node)) return { el: this.boxStreamEl, pageId: null };
+    return null;
   }
 
   insertCharacter(ch) {
-    if (!this.savedRangeAny || !this.savedPageIdAny || !this.editableEls[this.savedPageIdAny]) return;
-    const id = this.savedPageIdAny;
-    const el = this.editableEls[id];
+    if (!this.savedRangeAny || !this.savedElAny || !document.body.contains(this.savedElAny)) return;
+    const el = this.savedElAny;
+    const pageId = this.savedPageIdAny;
     el.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(this.savedRangeAny);
-    this.checkpoint(id);
+    if (pageId) this.checkpoint(pageId);
     const range = sel.getRangeAt(0);
     range.deleteContents();
     const textNode = document.createTextNode(ch);
@@ -3666,33 +3744,33 @@ class Component extends DCLogic {
     sel.addRange(range);
     this.savedRangeAny = range.cloneRange();
     this.saveDebounced();
-    this.updateEmptyState(id);
+    if (pageId) this.updateEmptyState(pageId);
   }
 
   applyExecCommandRestore(cmd) {
-    if (!this.savedRange || !this.savedPageId || !this.editableEls[this.savedPageId]) return;
-    const id = this.savedPageId;
-    const el = this.editableEls[id];
+    if (!this.savedRange || !this.savedEl || !document.body.contains(this.savedEl)) return;
+    const el = this.savedEl;
+    const pageId = this.savedPageId;
     el.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(this.savedRange);
-    this.checkpoint(id);
+    if (pageId) this.checkpoint(pageId);
     document.execCommand(cmd);
     this.saveDebounced();
-    this.updateEmptyState(id);
+    if (pageId) this.updateEmptyState(pageId);
   }
 
   restoreSelectionAndApply(prop, value) {
-    if (!this.savedRange || !this.savedPageId || !this.editableEls[this.savedPageId]) return;
-    const id = this.savedPageId;
-    const el = this.editableEls[id];
+    if (!this.savedRange || !this.savedEl || !document.body.contains(this.savedEl)) return;
+    const el = this.savedEl;
+    const pageId = this.savedPageId;
     el.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(this.savedRange);
     if (sel.isCollapsed) return;
-    this.checkpoint(id);
+    if (pageId) this.checkpoint(pageId);
     const range = sel.getRangeAt(0);
     const span = document.createElement('span');
     span.style[prop] = value;
@@ -3708,7 +3786,7 @@ class Component extends DCLogic {
     newRange.selectNodeContents(span);
     sel.addRange(newRange);
     this.saveDebounced();
-    this.updateEmptyState(id);
+    if (pageId) this.updateEmptyState(pageId);
   }
 
   checkpoint(id) {
@@ -5089,7 +5167,10 @@ class Component extends DCLogic {
       filteredChars: Component.CHAR_LIST
         .filter(([, name]) => name.toLowerCase().includes((this.state.charSearch || '').toLowerCase()))
         .map(([ch, name]) => ({ ch, name, onInsert: () => this.insertCharacter(ch) })),
-      onFontPickerClose: () => this.setState({ fontPickerOpen: false }),
+      // Closing discards whatever was staged but not applied — reopening
+      // starts clean rather than silently carrying a stale pending change
+      // forward onto whatever gets selected next time.
+      onFontPickerClose: () => this.setState({ fontPickerOpen: false, fontPendingFamily: null, fontPendingSize: null }),
       charPickerOpen: this.state.charPickerOpen,
       onOpenCharPicker: () => this.setState({ charPickerOpen: true }),
       onCharPickerClose: () => this.setState({ charPickerOpen: false }),
@@ -5098,6 +5179,7 @@ class Component extends DCLogic {
       addedFonts: this.state.customFonts.map(n => ({
         name: n,
         previewStyle: "font-family:'" + n + "', sans-serif;",
+        rowStyle: n === this.state.fontPendingFamily ? 'background:var(--color-neutral-100,#f2f2f2);font-weight:700;' : '',
         hasPreview: !!this.state.fontPreviewText,
         previewText: this.state.fontPreviewText,
         onPick: () => this.pickFont(n),
@@ -5107,11 +5189,29 @@ class Component extends DCLogic {
         .map(n => ({
           name: n,
           previewStyle: this._popularFontsInjected ? "font-family:'" + n + "', sans-serif;" : '',
+          rowStyle: n === this.state.fontPendingFamily ? 'background:var(--color-neutral-100,#f2f2f2);font-weight:700;' : '',
           hasPreview: !!this.state.fontPreviewText,
           previewText: this.state.fontPreviewText,
           onPick: () => this.pickFont(n),
         })),
-      onFontSizeChange: (e) => { const val = e.target.value; e.target.value = ''; if (val) this.restoreSelectionAndApply('fontSize', val + 'px'); },
+      onFontSizeChange: (e) => { const val = e.target.value; e.target.value = ''; if (val) this.setState({ fontPendingSize: val }); },
+      // A visible summary of what Apply is about to do, since the size
+      // dropdown resets itself right after picking (so its own value can't
+      // serve as that feedback) and nothing else on screen shows it.
+      fontPendingSummary: (() => {
+        const { fontPendingFamily, fontPendingSize } = this.state;
+        if (!fontPendingFamily && !fontPendingSize) return '';
+        return 'Will apply: ' + [fontPendingFamily, fontPendingSize ? fontPendingSize + 'px' : null].filter(Boolean).join(' · ');
+      })(),
+      fontApplyDisabled: !this.state.fontPendingFamily && !this.state.fontPendingSize,
+      onApplyFontChanges: () => this.applyPendingFontChanges(),
+      // The top-bar mini toolbar's own font dropdown — same picker logic as
+      // the Aa panel's list (pickFont), just a flat <select> instead of a
+      // searchable list, so it can fit next to D-Z/title.
+      topBarFontBarVisible: !this.state.narrowScreen,
+      topBarFontOptions: [...new Set([...Component.SYSTEM_FONTS, ...Component.POPULAR_FONTS, ...this.state.customFonts])]
+        .map(n => ({ name: n })),
+      onTopBarFontChange: (e) => { const val = e.target.value; e.target.value = ''; if (val) this.pickFont(val); },
       fileInputRef: (el) => { if (el) this.fileInputEl = el; },
       onFileChosen: (e) => this.onFileChosen(e),
       boxFileInputRef: (el) => { if (el) this.boxFileInputEl = el; },
