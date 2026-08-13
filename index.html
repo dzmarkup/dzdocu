@@ -619,6 +619,18 @@ textarea.input { min-height: 90px; resize: vertical; }
 <div class="no-print" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:200;max-width:80vw;padding:8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);pointer-events:none;">{{ vertAlignNoticeMsg }}</div>
 </sc-if>
 
+<!-- Tells someone their work wasn't lost after a reload mid-edit — see
+     findAutoResumeData. Stays up (no auto-hide) until dismissed or they
+     use Start New, since unlike the align-grid toast this is answering a
+     real "did I lose it?" worry, not a quick correction. -->
+<sc-if value="{{ autoResumeBannerVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);">
+  <span>Resumed your last document.</span>
+  <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 10px;" sc-camel-on-click="{{ onStartNewFromResumeBanner }}">Start New</button>
+  <button class="no-print" style="width:20px;height:20px;line-height:18px;text-align:center;padding:0;box-sizing:border-box;border:1px solid #445;border-radius:3px;background:transparent;color:#9dc6f0;font-size:13px;cursor:pointer;" sc-camel-on-click="{{ onDismissResumeBanner }}" title="Dismiss">×</button>
+</div>
+</sc-if>
+
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px) calc(6px + env(safe-area-inset-bottom, 0px)) var(--space-4,16px);">
     <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
@@ -1278,7 +1290,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1313,6 +1325,31 @@ class Component extends DCLogic {
     this.redoStacks = {};
     this.typingBurst = {};
     this.typingTimers = {};
+    // Silent auto-resume: checked here, before the first render, so a reload
+    // mid-edit never shows the setup screen at all — see findAutoResumeData.
+    // Only pageIds/basic state land synchronously; the actual page/box HTML
+    // still needs real DOM refs, so that part waits for componentDidMount.
+    const autoResume = this.findAutoResumeData();
+    if (autoResume) {
+      this._autoResumeData = autoResume;
+      this.pageCounter = autoResume.pageCounter || autoResume.pageIds.length;
+      Object.assign(this.state, {
+        pageIds: autoResume.pageIds,
+        docTitle: autoResume.docTitle || '',
+        defaultSize: autoResume.defaultSize || 'letter',
+        defaultOrientation: autoResume.defaultOrientation || 'portrait',
+        headerGlobalOn: !!autoResume.headerGlobalOn,
+        magnifierOn: autoResume.magnifierOn !== false,
+        pageHeaderTitles: autoResume.pageHeaderTitles || {},
+        pageKinds: autoResume.pageKinds || {},
+        pageAddresses: autoResume.pageAddresses || {},
+        labelLayouts: autoResume.labelLayouts || {},
+        pageBoxTrees: autoResume.pageBoxTrees || {},
+        customFonts: autoResume.customFonts || [],
+        docCreated: true,
+        autoResumeBannerOpen: true,
+      });
+    }
     this._onKeydown = (e) => {
       const isZ = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
       const isRedoKey = isZ && e.shiftKey;
@@ -1345,6 +1382,12 @@ class Component extends DCLogic {
 
   componentDidMount() {
     if (super.componentDidMount) super.componentDidMount();
+    if (this._autoResumeData) {
+      const data = this._autoResumeData;
+      this._autoResumeData = null;
+      (data.customFonts || []).forEach(n => this.injectGoogleFont(n));
+      setTimeout(() => this.pourSavedContent(data), 30);
+    }
     this.loadEmailPref();
     // The toolbar's real height depends on the toggle button's rendered
     // size and the phone's safe-area inset, neither of which necessarily
@@ -3593,6 +3636,11 @@ class Component extends DCLogic {
     const patch = {
       setupStep: nextStep, pageIds: ['p1'], pageKinds: {}, pageHeaderTitles: {},
       pageEmptyMap: {}, docTitle: '', headerGlobalOn: false, customFonts: [], pageBoxTrees: {},
+      // Needed for the auto-resume banner's "Start New" button: that path
+      // calls this with docCreated already true (a document is genuinely
+      // open), which the old resume-prompt flow this was written for never
+      // had to undo — it always ran before docCreated was ever set.
+      docCreated: false, autoResumeBannerOpen: false,
     };
     if (this.pendingResumeSizeValue) patch.defaultSize = this.pendingResumeSizeValue;
     if (nextStep === 'labelAddress') patch.labelAddressRaw = '';
@@ -3626,6 +3674,12 @@ class Component extends DCLogic {
       customFonts: this.state.customFonts,
       pageHtml,
       boxHtml,
+      // Set only while an actual document is open (not the setup screen),
+      // and read back at boot by findAutoResumeData() — a reload mid-edit
+      // drops the user straight back into this document instead of the
+      // setup screen, which otherwise reads as the save having failed.
+      docWasOpen: this.state.docCreated,
+      savedAt: Date.now(),
     };
   }
 
@@ -3663,25 +3717,52 @@ class Component extends DCLogic {
       layoutMode: false,
     }, () => {
       (data.customFonts || []).forEach(n => this.injectGoogleFont(n));
-      setTimeout(() => {
-        if (data.boxHtml) {
-          Object.keys(data.boxHtml).forEach(boxId => {
-            const el = this.boxEditableEls[boxId];
-            if (el) el.innerHTML = data.boxHtml[boxId];
-          });
-        }
-        const pageEmptyMap = {};
-        data.pageIds.forEach(id => {
-          const el = this.editableEls[id];
-          if (el && data.pageHtml && data.pageHtml[id] != null) el.innerHTML = data.pageHtml[id];
-          if (el) pageEmptyMap[id] = !el.textContent.trim() && !el.querySelector('img, .img-wrap');
-        });
-        this.setState({ pageEmptyMap });
-        this.saveDebounced();
-        this.updateColsLayout();
-        this.applyFitScale();
-      }, 30);
+      setTimeout(() => this.pourSavedContent(data), 30);
     });
+  }
+
+  // Shared by applySavedData (Open .docu / the setup screen's "In browser
+  // memory" list) and the constructor's silent auto-resume: once the page/box
+  // refs exist, this is what actually pours the saved HTML into them.
+  pourSavedContent(data) {
+    if (data.boxHtml) {
+      Object.keys(data.boxHtml).forEach(boxId => {
+        const el = this.boxEditableEls[boxId];
+        if (el) el.innerHTML = data.boxHtml[boxId];
+      });
+    }
+    const pageEmptyMap = {};
+    data.pageIds.forEach(id => {
+      const el = this.editableEls[id];
+      if (el && data.pageHtml && data.pageHtml[id] != null) el.innerHTML = data.pageHtml[id];
+      if (el) pageEmptyMap[id] = !el.textContent.trim() && !el.querySelector('img, .img-wrap');
+    });
+    this.setState({ pageEmptyMap });
+    this.saveDebounced();
+    this.updateColsLayout();
+    this.applyFitScale();
+  }
+
+  // A reload/crash mid-edit used to always land back on a blank setup
+  // screen — the save itself was fine, but nothing read it back at boot,
+  // so it read as lost work. Only a save written while docWasOpen (i.e. an
+  // actual document, not the setup screen) counts, and only the most
+  // recent one across the three size buckets — the "always start clean"
+  // buttons and the visible "In browser memory" list still work exactly as
+  // before for anything not flagged this way.
+  findAutoResumeData() {
+    const keys = ['paste-to-page-doc-v1-letter', 'paste-to-page-doc-v1-tabloid', 'paste-to-page-doc-v1-label'];
+    let best = null;
+    keys.forEach(key => {
+      let raw;
+      try { raw = localStorage.getItem(key); } catch (e) { return; }
+      if (!raw) return;
+      let data;
+      try { data = JSON.parse(raw); } catch (e) { return; }
+      if (!data || !Array.isArray(data.pageIds) || !data.pageIds.length || !data.docWasOpen) return;
+      if (!best || (data.savedAt || 0) > (best.savedAt || 0)) best = data;
+    });
+    return best;
   }
 
   onSaveEzdoc() {
@@ -5400,6 +5481,9 @@ class Component extends DCLogic {
       magnifierBottom: '42px',
       vertAlignNoticeVisible: !!this.state.vertAlignNoticeMsg,
       vertAlignNoticeMsg: this.state.vertAlignNoticeMsg || '',
+      autoResumeBannerVisible: this.state.autoResumeBannerOpen,
+      onStartNewFromResumeBanner: () => this.onResumeStartNew(),
+      onDismissResumeBanner: () => this.setState({ autoResumeBannerOpen: false }),
       magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),
       magnifierTextHeight: this.state.magnifierLines === 1 ? '1.1em' : '3.3em',
       magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
