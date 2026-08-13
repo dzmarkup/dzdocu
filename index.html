@@ -496,13 +496,13 @@ textarea.input { min-height: 90px; resize: vertical; }
        next to D-Z/title at phone widths. -->
   <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
   <div style="display:flex;gap:4px;align-items:center;">
-    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:110px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Font…</option>
       <sc-for list="{{ topBarFontOptions }}" as="fn" hint-placeholder-count="5">
         <option value="{{ fn.name }}">{{ fn.name }}</option>
       </sc-for>
     </sc-raw-select>
-    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:64px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Size…</option>
       <option value="10">10</option>
       <option value="12">12</option>
@@ -4942,7 +4942,11 @@ class Component extends DCLogic {
       emailSendError: this.state.emailSendStatus === 'error' ? this.state.emailSendError : null,
       emailSent: this.state.emailSendStatus === 'sent',
       uniformBtnStyle: 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
-      printPdfBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;color:#fff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);' : 'background:#ffffff;border:2px solid #000000;color:var(--color-text,#1d1f20);box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
+      // Print is a one-shot action, not a toggle — it has no "on" state of
+      // its own, so this stays the plain white look always (previously
+      // wired to headerGlobalOn by copy-paste from headerGlobalBtnStyle,
+      // which turned it blue whenever Header was toggled on).
+      printPdfBtnStyle: 'background:#ffffff;border:2px solid #000000;color:var(--color-text,#1d1f20);box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
       headerGlobalBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:#fff;' : 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:var(--color-text,#1d1f20);',
       onToggleHeaderGlobal: () => this.setState(s => ({ headerGlobalOn: !s.headerGlobalOn }), () => {
         this.saveDebounced();
