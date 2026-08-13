@@ -192,6 +192,57 @@ just applies that name directly (`'<name>', sans-serif`), no substitution.
 Google-hosted picks (`POPULAR_FONTS`) are fetched live from Google Fonts on
 first use, independent of anything bundled locally.
 
+## A dropped file on the entry screen is queued, not imported
+
+`handleFile()` deliberately holds a file in `pendingDropFiles` when
+`docCreated` is false — importing before a page size is picked used to flow
+the content at whatever size happened to be current. The catch: for a long
+time nothing on screen changed when this happened, because
+`pendingDropFiles` is an instance field, not state. A drop that worked
+perfectly looked identical to one that did nothing, and got reported as
+"drag and drop is broken" more than once. `queuedDropNames` mirrors the
+queued filenames into state purely so the entry screen can show a
+"Ready to import" confirmation; `importPendingDrops()` clears it.
+
+If you ever chase a "drop doesn't work" report again: verify with a **real**
+drag (CDP `Input.dispatchDragEvent`, which does genuine hit-testing), not a
+synthetic `new DragEvent('drop')` dispatched at an element. The synthetic
+kind bypasses hit-testing entirely and will happily pass while real drags
+fail — that exact blind spot hid this for a while.
+
+## PDF import: pages first, text only if asked
+
+A dropped PDF comes in as **rendered page images** (`renderPdfAsPages`), so
+it looks like the original. It used to prefer text extraction whenever the
+PDF had a text layer, which silently discarded the document's actual
+appearance. Extraction is still there but is now an offer, not the default:
+`pdfHasTextLayer()` probes the first few pages, and only if there's real
+text does a banner appear offering "Extract Text"
+(`onExtractPdfText` → `extractPdfTextInto`). Taking that offer collapses the
+document back to one page and re-imports as flowing text, so it needs the
+original `File` kept around (`_pdfExtractFile`) — re-read it rather than
+reusing the first `ArrayBuffer`, since pdf.js takes ownership of the buffer
+it's handed and can detach it.
+
+**The pdf.js worker is bundled** (`assets/pdf.worker.min.js`), not fetched
+from a CDN, so PDF import works with no network at all like the rest of the
+app. pdf.js refuses to run a worker whose version doesn't match the main
+library exactly, so that file is the 3.11.174 worker from the same
+`pdfjs-dist` build as `assets/pdf.min.js` (verified byte-identical against
+the npm tarball). **If `pdf.min.js` is ever upgraded, replace the worker
+from the matching build in the same commit** or PDF import dies with a
+version-mismatch error. cdnjs is blocked by this box's proxy; npm
+(`registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-<version>.tgz`) is reachable
+and is where that file came from.
+
+**A PDF page gets its own document page, filling it edge to edge** —
+`renderPdfAsPages` writes the image straight into each page's editable
+rather than going through `insertImage()`. `insertImage` builds a resizable
+inline figure (border, margin, drag-to-resize badge) meant for pictures
+dropped into flowing text, and one of those is fractionally taller than the
+page, so a one-page PDF used to flow onto three document pages. Don't
+"simplify" this back into `insertImage`.
+
 ## PDF/DOCX import is lazy-loaded
 
 `pdf.min.js` and `mammoth.browser.js` (~940 KB together) are not `<script
