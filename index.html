@@ -2330,7 +2330,7 @@ class Component extends DCLogic {
         return 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
       })(),
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
-      onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.forceUpdate(); },
+      onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.updatePairFocus(); this.forceUpdate(); },
       onInput: () => {
         this.saveDebounced();
         if (isImage) return;
