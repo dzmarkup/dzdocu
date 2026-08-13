@@ -1,8 +1,8 @@
 # DZDocu — working notes for Claude
 
-This repo serves **dzdocu.com**: `CNAME`, `index.html`, and the `assets/` and
-`fonts/` folders it loads from. `index.html` is the application. Work here and
-nowhere else.
+This repo serves **dzdocu.com**: `CNAME`, `index.html`, and the `assets/`
+folder it loads from. `index.html` is the application. Work here and nowhere
+else.
 
 ## There is an older copy of this app elsewhere — ignore it
 
@@ -31,9 +31,9 @@ find notes describing that, they are out of date.
 
 Layout:
 
-- `assets/*.js` and `fonts/*.woff2` load through ordinary `<script src>` and
-  `@font-face` — React and react-dom among them, as real script tags. Nothing
-  is fetched from `unpkg.com` any more.
+- `assets/*.js` loads through ordinary `<script src>` tags — React and
+  react-dom among them. Nothing is fetched from `unpkg.com` any more. There's
+  no `fonts/` folder or `@font-face` any more either — see "Fonts" below.
 - The application logic is one `<script type="text/x-dc">` block near the end,
   a single `class Component extends DCLogic`. dc-runtime (`assets/support.js`)
   evaluates it.
@@ -128,46 +128,112 @@ overflowing, with a floor at 35% of base.
 re-rendered, or a box is nudged. Typing directly into a label does not re-fit
 it; `handleInput` does not call it.
 
+## Custom properties don't fall back the way ordinary properties do
+
+The classic progressive-enhancement trick —
+
+```css
+--setup-panel-bg: #182738;
+--setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%);
+```
+
+— redeclare a token, trusting an old browser to reject the second line and
+silently keep the first — **does not work for custom (`--x`) properties.**
+Ordinary properties are validated when declared, so an old browser really
+does drop an unparseable second line and keep the first. Custom properties
+are not: their grammar accepts almost any token stream, so the `color-mix()`
+line always wins the cascade regardless of whether the browser understands
+`color-mix()` — it only breaks once something actually consumes the token via
+`var()`, at which point *that* property (not the custom property) fails and
+computes to nothing. This silently broke the setup screen's dark panels
+(transparent background/border/glow) on browsers old enough to lack
+`color-mix()` — a real bug, filed and fixed as a Windows 7 report. The fix:
+gate the `color-mix()` versions behind a real feature query,
+
+```css
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :root { --setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%); }
+}
+```
+
+leaving the hex line as the sole, unconditional `:root` declaration. If more
+`color-mix()` tokens get added later, they need the same `@supports` gate —
+the redeclare trick will look correct on every browser this box can test on
+and still be silently broken on anything old.
+
+## Fonts
+
+The document's font stack (`.editable`, box content, most UI chrome) is
+`Arial, sans-serif` — a deliberate choice, not an oversight. There's no
+`fonts/` folder any more; nothing is bundled. Two things are worth knowing
+before "fixing" this again:
+
+- **This went through a Barlow Condensed detour and back.** Arial Narrow was
+  the original default; it isn't installed on Linux, so the browser fell
+  through to a regular-width Arial substitute there, throwing off label
+  auto-fit and box-overflow math relative to Windows/Mac. That got fixed by
+  bundling Barlow Condensed as a guaranteed-consistent webfont — but the
+  user preferred the plainer, wider look of ordinary Arial over either
+  condensed option, so the stack was simplified to plain `Arial` instead of
+  reintroducing Arial Narrow. If bundling a webfont ever comes back up,
+  check git history for the Barlow Condensed commits rather than redoing
+  that research from scratch.
+- **Plain `Arial` is a safer default than `Arial Narrow` was, even without a
+  bundled fallback.** Linux doesn't ship real Arial either, but it does ship
+  "Liberation Sans," a font expressly built to be metric-compatible with
+  Arial (same character widths) — unlike the regular-width substitute Arial
+  Narrow got, which was never designed to match a condensed face. So the
+  cross-platform width mismatch that motivated the Barlow Condensed detour
+  in the first place doesn't apply here.
+
+The font picker still lists "Arial Narrow" (and everything else in
+`SYSTEM_FONTS`/`POPULAR_FONTS`) as ordinary, literal choices — picking one
+just applies that name directly (`'<name>', sans-serif`), no substitution.
+Google-hosted picks (`POPULAR_FONTS`) are fetched live from Google Fonts on
+first use, independent of anything bundled locally.
+
+## PDF/DOCX import is lazy-loaded
+
+`pdf.min.js` and `mammoth.browser.js` (~940 KB together) are not `<script
+src>` tags — they're fetched on first use via `loadScriptOnce()`, called from
+`ensurePdfJs()`/`ensureMammoth()` at the top of `onDropPDF`/`onDropDocx`. Every
+drop entry point (a page, the DROP-ZONE button, a pasted PDF URL) already
+funnels through those two methods, so nothing else needs to know about the
+lazy-load. Don't add a static `<script src="assets/pdf.min.js">` back for
+convenience — that's the exact ~940 KB this was written to avoid paying on
+every visit.
+
 ## Known and unfinished
 
-- **~85 KB of the bundled fonts never render.** The design-system stylesheet
-  sets Barlow on body/buttons/inputs, then the document overrides it all with
-  `font-family:'Arial Narrow', Arial, sans-serif !important`. Measured live: of
-  the 6 woff2 files the browser fetches exactly one,
-  `barlow-condensed-600-latin.woff2` (22 KB), for the "Aa" tab. The plain
-  Barlow faces are already gone; the leftovers are the 400 weight and the
-  latin-ext/vietnamese subsets. Dropping them needs a before/after screenshot
-  diff across the setup screen, font picker and document first.
-- **`Arial Narrow` is not installed on Linux**, so the labels fall back to
-  Arial there — wider than on a machine that has it. Screenshots taken on this
-  box match what a Linux user sees, not a Windows/Mac one.
-- **pdf.js (313 KB) + mammoth (626 KB) load on every visit** but are only used
-  when a PDF or DOCX is dropped. Together they dwarf everything else in
-  `assets/`. Lazy-loading them is the largest single win available.
-- **The ~97 lines of dead code previously noted here (marquee-zoom, the dead
-  resume-prompt render props, `applyExecCommand` / `determineSizeOrientation`)
-  were removed.** One loose end from that pass: `zoomActive`, `revertZoom()`,
-  and the Escape/Ctrl+Z checks that reference them were left in place since
-  they aren't exclusively part of the removed marquee-select button — but
-  `applyZoom()` (deleted, it was the marquee-select drop handler) was the only
-  code that ever set `zoomActive` to `true`, so that whole "Full Screen" zoom
-  toggle is now unreachable too. Worth a follow-up pass if it's not wanted.
-- **There is no way to clear a saved document from the UI.** The resume prompt
-  that offered "Start New (deletes saved doc)" was removed from the markup but
-  its handler remains. Restoring it is a real missing feature, not cleanup.
-- **A reload does not restore the open document.** The save still happens, but
-  nothing reads it back at boot — that was the resume prompt's job. Reopening
-  means dropping the `.docu` in.
+Nothing outstanding right now. The prior items here (unused font subsets,
+Arial Narrow's Linux fallback, unconditional pdf.js/mammoth loading, a
+resume/auto-restore gap, and some leftover dead zoom-toggle code) were all
+resolved — see the sections above for the font/lazy-load/color-mix notes,
+and "Opening a saved .docu" below for how restore now works.
 
 ## Opening a saved .docu
 
-Two routes, and they behave differently, which is worth knowing before
-believing a bug report about either:
+Three routes now, and they behave differently, which is worth knowing before
+believing a bug report about any of them:
 
+- **A reload while a document is open restores it automatically**, with no
+  setup screen shown at all. `buildSaveData()` tags every save with
+  `docWasOpen` (true only while `docCreated` is true — not while sitting on
+  the setup screen) and `savedAt`. The constructor's `findAutoResumeData()`
+  checks the three size buckets for the most recent `docWasOpen` save
+  *before the first render*, so there's no flash of the setup screen before
+  snapping over — only the page/box HTML pour-in (`pourSavedContent()`,
+  shared with the two routes below) waits for real DOM refs in
+  `componentDidMount`. A dismissible banner ("Resumed your last document." /
+  Start New / ×) is the only way back to a clean setup screen once this
+  fires — `onResumeStartNew()` clears the bucket and resets `docCreated`.
 - **From inside an open document**, the "Open .docu" side tab works.
 - **On the setup screen** the same tab is unreachable — that screen's overlay
-  is `z-index:50` over the tab's `18`. The route the setup screen offers is
-  the DROP-ZONE, so that is the one to test on a fresh visit.
+  is `z-index:50` over the tab's `18`. The setup screen offers its own two
+  routes instead: the DROP-ZONE, and (if a save exists but isn't flagged
+  `docWasOpen`, e.g. cleared via Start New from a previous session) the red
+  "In browser memory" list, which still opens a chosen doc via
+  `applySavedData` directly.
 
 `applySavedData` sets `docCreated` itself. It must: restoring *is* creating a
 document, and without it the setup screen stays up, the editables never mount,
