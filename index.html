@@ -919,6 +919,32 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
             </div>
           </div>
         </sc-if>
+        <!-- Same choice the setup screen's LAYOUT DOCUMENT gallery offers,
+             now available for every +COVER/+PAGE too, not just the
+             document's first — plus a third option to stamp out whatever
+             layout is already tuned on the page currently being viewed. -->
+        <sc-if value="{{ addPageStepIsDocChoose }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:20px;margin-bottom:20px;color:#1d1f20;text-transform:uppercase;">{{ addPageKindLabel }}</div>
+          <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+            <button class="btn btn-primary" sc-camel-on-click="{{ onDocChooseBlank }}" style="width:240px;">Blank</button>
+            <button class="btn btn-primary" sc-camel-on-click="{{ onDocChooseLayout }}" style="width:240px;">Choose a Layout</button>
+            <sc-if value="{{ canCopyCurrentLayout }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-secondary" sc-camel-on-click="{{ onDocChooseCopy }}" style="width:240px;">Copy This Page's Layout</button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ addPageStepIsDocLayoutGallery }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1d1f20;margin-bottom:10px;text-align:center;">Choose a Layout</div>
+          <div style="display:grid;grid-template-columns:repeat(3, auto);gap:10px;justify-content:center;">
+            <sc-for list="{{ docLayoutTemplates }}" as="tmpl" hint-placeholder-count="9">
+              <button sc-camel-on-click="{{ tmpl.onPickForAddPage }}" title="{{ tmpl.title }}" style="{{ tmpl.wrapStyle }}">
+                <sc-for list="{{ tmpl.cells }}" as="c" hint-placeholder-count="3">
+                  <div style="{{ c.style }}"></div>
+                </sc-for>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
       </div>
     </div>
   </div>
@@ -1233,7 +1259,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -3229,6 +3255,70 @@ class Component extends DCLogic {
   }
   onBackFromDocLayoutChoice() { this.setState({ setupStep: 'orientation' }); }
 
+  // Same idea as instantiateBoxTemplate, but for "copy this page's layout"
+  // rather than a canned template: fresh ids and numbers (a clone can't
+  // share either with its source), but hAlign/vAlign carry over — someone
+  // who nudged a box's alignment presumably wants that on the copy too,
+  // unlike a template's leaves, which have no prior alignment to keep.
+  // Content is deliberately left behind; this copies structure, not text
+  // or images, so it's still a blank starting point per page.
+  cloneBoxTreeStructure(node) {
+    if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null, hAlign: node.hAlign, vAlign: node.vAlign };
+    return { split: node.split, ratio: node.ratio, a: this.cloneBoxTreeStructure(node.a), b: this.cloneBoxTreeStructure(node.b) };
+  }
+
+  // +COVER and +PAGE on a document (never a label — labels keep their own
+  // address-driven flow) open this same three-way choice instead of
+  // creating the page outright, so the LAYOUT DOCUMENT gallery and "copy
+  // what I already tuned" are both one click away for every page, not
+  // just the document's first.
+  finishAddPage(tree) {
+    const id = this.newId();
+    this.setState(s => ({
+      pageIds: [...s.pageIds, id],
+      pageEmptyMap: tree ? s.pageEmptyMap : { ...s.pageEmptyMap, [id]: true },
+      pageBoxTrees: tree ? { ...s.pageBoxTrees, [id]: tree } : s.pageBoxTrees,
+    }), () => this.saveDebounced());
+  }
+  finishAddCover(tree) {
+    const id = this.newId();
+    this.setState(s => {
+      const firstIsCover = s.pageKinds[s.pageIds[0]] === 'cover';
+      const pageIds = firstIsCover ? [...s.pageIds, id] : [id, ...s.pageIds];
+      return {
+        pageIds,
+        pageKinds: { ...s.pageKinds, [id]: 'cover' },
+        pageBoxTrees: tree ? { ...s.pageBoxTrees, [id]: tree } : s.pageBoxTrees,
+      };
+    }, () => this.saveDebounced());
+  }
+  onDocChooseBlank() {
+    const kind = this.state.addPageKind;
+    this.setState({ addPageStep: null, addPageKind: null }, () => {
+      if (kind === 'cover') this.finishAddCover(null); else this.finishAddPage(null);
+    });
+  }
+  onDocChooseLayout() { this.setState({ addPageStep: 'docLayoutGallery' }); }
+  onDocChooseCopy() {
+    const kind = this.state.addPageKind;
+    const sourceId = this.focusedPageId || this.state.pageIds[0];
+    const sourceTree = this.state.pageBoxTrees[sourceId];
+    if (!sourceTree) return;
+    const tree = this.renumberBoxTree(this.cloneBoxTreeStructure(sourceTree));
+    this.setState({ addPageStep: null, addPageKind: null }, () => {
+      if (kind === 'cover') this.finishAddCover(tree); else this.finishAddPage(tree);
+    });
+  }
+  onPickDocLayoutTemplateForAddPage(templateId) {
+    const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    const tree = this.renumberBoxTree(this.instantiateBoxTemplate(template.tree));
+    const kind = this.state.addPageKind;
+    this.setState({ addPageStep: null, addPageKind: null }, () => {
+      if (kind === 'cover') this.finishAddCover(tree); else this.finishAddPage(tree);
+    });
+  }
+
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
 
   computeFitScale() {
@@ -4906,6 +4996,7 @@ class Component extends DCLogic {
           id: t.id,
           title: t.title,
           onPick: () => this.onPickDocLayoutTemplate(t.id),
+          onPickForAddPage: () => this.onPickDocLayoutTemplateForAddPage(t.id),
           wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:#e9e9ea;border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
           cells: this.flattenBoxTree(t.tree, { x: 0, y: 0, w: 1, h: 1 }).map(({ node, rect }) => ({
             style: 'position:absolute;left:' + (rect.x * 100).toFixed(3) + '%;top:' + (rect.y * 100).toFixed(3) + '%;width:' + (rect.w * 100).toFixed(3) + '%;height:' + (rect.h * 100).toFixed(3) + '%;box-sizing:border-box;border:2px solid #e9e9ea;background:' + DOC_LAYOUT_THUMB_COLORS[node.type] + ';',
@@ -4941,8 +5032,7 @@ class Component extends DCLogic {
       // what goes on it instead of dropping a blank one in.
       addPage: () => {
         if (isLabelDoc) { this.setState({ addPageStep: 'choose', addPageAddressRaw: '' }); return; }
-        const id = this.newId();
-        this.setState(s => ({ pageIds: [...s.pageIds, id], pageEmptyMap: { ...s.pageEmptyMap, [id]: true } }), () => this.saveDebounced());
+        this.setState({ addPageStep: 'docChoose', addPageKind: 'page' });
       },
       addPageStepIsChoose: this.state.addPageStep === 'choose',
       addPageStepIsAddress: this.state.addPageStep === 'address',
@@ -4951,7 +5041,18 @@ class Component extends DCLogic {
       onAddPageChooseAddress: () => this.setState({ addPageStep: 'address', addPageAddressRaw: '' }),
       onAddPageRepeat: () => { this.setState({ addPageStep: null }); this.duplicateLastLabelPage(); },
       onAddPageSkip: () => { this.setState({ addPageStep: null }); this.appendBlankPage(); },
-      onAddPageClose: () => this.setState({ addPageStep: null }),
+      onAddPageClose: () => this.setState({ addPageStep: null, addPageKind: null }),
+      // The same 3-way choice (blank / gallery / copy this page) for
+      // documents — labels keep their own address-driven steps above,
+      // untouched. "Copy" only shows up when there's actually something on
+      // the current page worth copying.
+      addPageStepIsDocChoose: this.state.addPageStep === 'docChoose',
+      addPageStepIsDocLayoutGallery: this.state.addPageStep === 'docLayoutGallery',
+      addPageKindLabel: this.state.addPageKind === 'cover' ? 'New Cover' : 'New Page',
+      canCopyCurrentLayout: !!this.state.pageBoxTrees[this.focusedPageId || this.state.pageIds[0]],
+      onDocChooseBlank: () => this.onDocChooseBlank(),
+      onDocChooseLayout: () => this.onDocChooseLayout(),
+      onDocChooseCopy: () => this.onDocChooseCopy(),
       addPageAddressValue: this.state.addPageAddressRaw || '',
       onAddPageAddressChange: (e) => this.setState({ addPageAddressRaw: e.target.value }),
       addPageAddressBtnLabel: (() => {
@@ -4974,12 +5075,7 @@ class Component extends DCLogic {
       addCoverBtnStyle: isLabelDoc ? 'background:rgba(0,0,0,0.8);color:#4a4a4a;cursor:not-allowed;' : 'background:var(--color-neutral-300,#ccc);',
       addCover: () => {
         if (isLabelDoc) return;
-        const id = this.newId();
-        this.setState(s => {
-          const firstIsCover = s.pageKinds[s.pageIds[0]] === 'cover';
-          const pageIds = firstIsCover ? [...s.pageIds, id] : [id, ...s.pageIds];
-          return { pageIds, pageKinds: { ...s.pageKinds, [id]: 'cover' } };
-        }, () => this.saveDebounced());
+        this.setState({ addPageStep: 'docChoose', addPageKind: 'cover' });
       },
       docTitleValue: this.state.docTitle,
       onDocTitleChange: (e) => this.setState({ docTitle: e.target.value }, () => this.saveDebounced()),
