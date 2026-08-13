@@ -4577,11 +4577,17 @@ class Component extends DCLogic {
     try {
       await this.ensurePdfJs();
     } catch (err) {
-      alert('Could not load PDF support — check your connection and try again.');
+      alert('Could not load PDF support — try again in a moment.');
       return;
     }
+    // Local worker, not a CDN. pdf.js refuses to run a worker whose version
+    // doesn't match the main library exactly, so assets/pdf.worker.min.js is
+    // the 3.11.174 worker taken from the same pdfjs-dist build as
+    // assets/pdf.min.js (verified byte-identical). If pdf.min.js is ever
+    // upgraded, this file has to be replaced from the matching build in the
+    // same commit or PDF import breaks with a version-mismatch error.
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdf.worker.min.js';
     }
     const buf = await file.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
@@ -4607,6 +4613,13 @@ class Component extends DCLogic {
   // Each PDF page rendered to a flattened image at 2x for print sharpness,
   // with the document's page size/orientation matched to the PDF's own first
   // page so the sheets line up with the original.
+  //
+  // Deliberately does NOT go through insertImage(): that builds a resizable
+  // inline figure (border, margin, drag-to-resize badge) meant for pictures
+  // dropped into flowing text, and one of those is fractionally taller than
+  // the page it sits on, so a single PDF page used to flow onto two or three
+  // document pages. A PDF page is not a picture in a document — it IS the
+  // page — so it gets its own page, filling it edge to edge, one for one.
   async renderPdfAsPages(pageId, pdf) {
     const firstPage = await pdf.getPage(1);
     const pv = firstPage.getViewport({ scale: 1 });
@@ -4618,8 +4631,22 @@ class Component extends DCLogic {
       await new Promise(resolve => this.setState({ defaultSize: size, defaultOrientation: orientation }, resolve));
       await new Promise(r => setTimeout(r, 30));
     }
-    const el = this.editableEls[pageId];
-    const targetW = (el ? el.clientWidth : 700) || 700;
+
+    // One document page per PDF page: reuse the page dropped onto for the
+    // first, append the rest up front so every target exists before pouring.
+    const targetIds = [pageId];
+    for (let i = 2; i <= pdf.numPages; i++) {
+      const id = this.newId();
+      targetIds.push(id);
+      await new Promise(resolve => this.setState(s => ({
+        pageIds: [...s.pageIds, id],
+        pageEmptyMap: { ...s.pageEmptyMap, [id]: true },
+      }), resolve));
+    }
+    await new Promise(r => setTimeout(r, 60));
+
+    const firstEl = this.editableEls[pageId];
+    const targetW = (firstEl ? firstEl.clientWidth : 700) || 700;
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale: 1 });
@@ -4630,7 +4657,22 @@ class Component extends DCLogic {
       canvas.height = scaledViewport.height;
       const ctx = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-      this.insertImage(pageId, canvas.toDataURL('image/png'));
+
+      const el = this.editableEls[targetIds[i - 1]];
+      if (!el) continue;
+      let src = canvas.toDataURL('image/png');
+      try {
+        const probe = new Image();
+        await new Promise((res, rej) => { probe.onload = res; probe.onerror = rej; probe.src = src; });
+        src = this.compressImage(probe, canvas.width, canvas.height);
+      } catch (err) { /* keep the uncompressed PNG */ }
+      el.innerHTML = '';
+      const imageEl = document.createElement('img');
+      imageEl.src = src;
+      imageEl.setAttribute('data-pdf-page', String(i));
+      imageEl.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
+      el.appendChild(imageEl);
+      this.updateEmptyState(targetIds[i - 1]);
     }
   }
 
