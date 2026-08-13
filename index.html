@@ -496,13 +496,13 @@ textarea.input { min-height: 90px; resize: vertical; }
        next to D-Z/title at phone widths. -->
   <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
   <div style="display:flex;gap:4px;align-items:center;">
-    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:110px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Font…</option>
       <sc-for list="{{ topBarFontOptions }}" as="fn" hint-placeholder-count="5">
         <option value="{{ fn.name }}">{{ fn.name }}</option>
       </sc-for>
     </sc-raw-select>
-    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:64px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Size…</option>
       <option value="10">10</option>
       <option value="12">12</option>
@@ -516,9 +516,15 @@ textarea.input { min-height: 90px; resize: vertical; }
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyLeftClick }}" title="Align left">L</button>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyCenterClick }}" title="Align center">C</button>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyRightClick }}" title="Align right">R</button>
+    <!-- 3x3 anchor grid: horizontal (column) always justifies the selection;
+         vertical (row) only does anything on the currently-focused box if
+         it's independent or image — see onAlignGridClick. Only the middle
+         row gets an L/C/R label, matching the 3 buttons this replaced. -->
+    <div style="display:grid;grid-template-columns:repeat(3,18px);grid-template-rows:6px 20px 6px;gap:1px;">
+      <sc-for list="{{ alignGridCells }}" as="ag" hint-placeholder-count="9">
+        <button class="btn btn-secondary" style="width:18px;padding:0;font-size:9px;line-height:1;" sc-camel-on-click="{{ ag.onClick }}" title="{{ ag.title }}">{{ ag.label }}</button>
+      </sc-for>
+    </div>
   </div>
   </sc-if>
 
@@ -773,7 +779,7 @@ textarea.input { min-height: 90px; resize: vertical; }
     <div sc-camel-on-click="{{ stopClickBubble }}" style="background:transparent;border-radius:var(--radius-sm,4px);padding:32px 20px;margin:auto;max-width:90vw;box-sizing:border-box;text-align:center;font-family:'Arial Narrow', Arial, sans-serif;position:relative;z-index:10;">
 
       <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
-        <div style="position:absolute;left:50%;top:14px;width:340px;height:130px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
+        <div style="position:absolute;left:50%;top:4px;width:340px;height:300px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
         <img src="assets/dzdocu-logo.png" alt="DZDOCU" style="position:relative;z-index:1;display:block;width:236px;height:auto;margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(90,190,255,0.45));" />
         <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:'Arial Narrow', Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
         <div style="padding:16px 0 4px;display:grid;grid-template-columns:repeat(2,91px);gap:12px 8px;justify-content:center;">
@@ -976,13 +982,14 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         </sc-raw-select>
         <button class="btn btn-secondary" style="flex:1;" sc-camel-on-click="{{ onOpenCharPicker }}" title="Insert a special character">Characters…</button>
       </div>
-      <!-- Justification is also an instant, non-staged action, same reasoning
-           as Bold/Italic/Underline: there's no "value" to stage, just a
-           direct action on the selection's paragraph. -->
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyLeftClick }}" title="Align left">L</button>
-        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyCenterClick }}" title="Align center">C</button>
-        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyRightClick }}" title="Align right">R</button>
+      <!-- Same 3x3 anchor grid as the top bar's own copy — see
+           onAlignGridClick. Horizontal always justifies the selection;
+           vertical only takes effect on the focused box if it's
+           independent or image. -->
+      <div style="display:grid;grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,32px);gap:2px;margin-bottom:14px;">
+        <sc-for list="{{ alignGridCells }}" as="ag" hint-placeholder-count="9">
+          <button class="btn btn-secondary" style="width:32px;height:32px;padding:0;" sc-camel-on-click="{{ ag.onClick }}" title="{{ ag.title }}">{{ ag.label }}</button>
+        </sc-for>
       </div>
       <!-- Bold/Italic/Underline are instant toggles (there's nothing to
            stage — either the selection is bold or it isn't), but font and
@@ -1226,7 +1233,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 3, fontPendingFamily: null, fontPendingSize: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1687,12 +1694,22 @@ class Component extends DCLogic {
     return 'bx' + this._boxIdCounter;
   }
 
+  // Vertical alignment only has real meaning for a box that holds its own
+  // fixed-height content directly (independent text, an image) — a numbered
+  // text box's content flows and reflows across the page, so there's no
+  // fixed height to align "within". Image boxes already centered by default
+  // before this existed (their contentStyle hard-coded flex centering); this
+  // keeps that as the default rather than changing existing boxes' look.
+  defaultBoxAlign(type) {
+    return type === 'image' ? { hAlign: 'center', vAlign: 'middle' } : { hAlign: 'left', vAlign: 'top' };
+  }
+
   // Splits the page (if it has no box tree yet — this is how a plain page
   // enters box mode at all) or splits whichever box is currently focused (if
   // it already has one). Same operation either way, which is the point: no
   // separate "create the first box" mechanism to maintain.
   splitPageIntoBoxes(pageId, direction) {
-    const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null });
+    const makeLeaf = () => ({ box: true, id: this.newBoxId(), type: 'text', number: null, ...this.defaultBoxAlign('text') });
     const existing = this.state.pageBoxTrees[pageId];
     // A plain page's own text lives in the .editable div that noBoxes
     // renders — the instant a box tree exists for this page, that div stops
@@ -1791,7 +1808,7 @@ class Component extends DCLogic {
     const hasContent = !!currentEl && (!!currentEl.textContent.trim() || !!currentEl.querySelector('img'));
     if (hasContent && !window.confirm("Switching this box's type will clear its content. Continue?")) return;
     const flip = (node) => {
-      if (node.box) return node.id === boxId ? { ...node, type: newType } : node;
+      if (node.box) return node.id === boxId ? { ...node, type: newType, ...this.defaultBoxAlign(newType) } : node;
       return { ...node, a: flip(node.a), b: flip(node.b) };
     };
     const tree = flip(existing);
@@ -1810,6 +1827,21 @@ class Component extends DCLogic {
       // simply ready to type into.
       if (newType === 'image') this.openBoxImagePicker(pageId, boxId);
     });
+  }
+
+  // Only independent and image boxes hold their own fixed-height content
+  // directly, so this is the only place vAlign means anything — callers
+  // still call it for a text box's hAlign (horizontal alone still applies
+  // there), they just never get a vAlign change to matter visually.
+  setBoxAlign(pageId, boxId, patch) {
+    const existing = this.state.pageBoxTrees[pageId];
+    if (!existing) return;
+    const flip = (node) => {
+      if (node.box) return node.id === boxId ? { ...node, ...patch } : node;
+      return { ...node, a: flip(node.a), b: flip(node.b) };
+    };
+    const tree = flip(existing);
+    this.setState(s => ({ pageBoxTrees: { ...s.pageBoxTrees, [pageId]: tree } }), () => this.saveDebounced());
   }
 
   // One entry per split node — the shared seam a nudge moves. path is the
@@ -2255,9 +2287,22 @@ class Component extends DCLogic {
       onDontMove: (e) => { e.stopPropagation(); e.preventDefault(); this.clearBoxKeepSlot(pageId, node.id); },
       onCancelDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.cancelDeletePrompt(); },
       contentClass: isImage ? 'box-img-content' : '',
-      contentStyle: isImage
-        ? 'height:100%;box-sizing:border-box;padding:0;display:flex;align-items:center;justify-content:center;outline:none;cursor:' + (locked ? 'default' : 'pointer') + ';'
-        : 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;',
+      // Vertical alignment only ever applies to image/independent boxes —
+      // a numbered text box's content flows across boxes, so there's no
+      // fixed height to align "within" and it always gets the plain block
+      // layout it always has.
+      contentStyle: (() => {
+        const flexPos = { left: 'flex-start', top: 'flex-start', center: 'center', middle: 'center', right: 'flex-end', bottom: 'flex-end' };
+        const hAlign = node.hAlign || 'left';
+        const vAlign = node.vAlign || 'top';
+        if (isImage) {
+          return 'height:100%;box-sizing:border-box;padding:0;display:flex;align-items:' + flexPos[vAlign] + ';justify-content:' + flexPos[hAlign] + ';outline:none;cursor:' + (locked ? 'default' : 'pointer') + ';';
+        }
+        if (isIndependent) {
+          return 'height:100%;box-sizing:border-box;padding:6px 8px;display:flex;flex-direction:column;justify-content:' + flexPos[vAlign] + ';text-align:' + hAlign + ';font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
+        }
+        return 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
+      })(),
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
       onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.forceUpdate(); },
       onInput: () => {
@@ -3169,7 +3214,7 @@ class Component extends DCLogic {
   // used, unmodified, to paint its gallery thumbnail) into a real tree with
   // fresh box ids — the only step that shape is missing to be a live page.
   instantiateBoxTemplate(node) {
-    if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null };
+    if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null, ...this.defaultBoxAlign(node.type) };
     return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
   }
   onPickFullPageDocument() {
@@ -3772,6 +3817,25 @@ class Component extends DCLogic {
     if (pageId) this.updateEmptyState(pageId);
   }
 
+  // Horizontal always goes through the same selection-based justify as
+  // before. Vertical is a box-level property (there's no "select some
+  // pixels of empty box height" the way there's a text selection), so it
+  // targets whichever box currently has focus — focusedBoxId already
+  // tracks that for the type-toggle buttons, reused here rather than
+  // introducing a second way to know what's being edited.
+  onAlignGridClick(hAlign, vAlign) {
+    const justifyCmd = { left: 'justifyLeft', center: 'justifyCenter', right: 'justifyRight' }[hAlign];
+    this.applyExecCommandRestore(justifyCmd);
+    const boxId = this.focusedBoxId;
+    const pageId = this.focusedPageId;
+    const tree = pageId && this.state.pageBoxTrees[pageId];
+    if (!boxId || !tree) return;
+    const leaf = this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).find(l => l.node.id === boxId);
+    if (leaf && (leaf.node.type === 'independent' || leaf.node.type === 'image')) {
+      this.setBoxAlign(pageId, boxId, { hAlign, vAlign });
+    }
+  }
+
   restoreSelectionAndApply(prop, value) {
     if (!this.savedRange || !this.savedEl || !document.body.contains(this.savedEl)) return;
     const el = this.savedEl;
@@ -4203,7 +4267,7 @@ class Component extends DCLogic {
         const tree = this.state.pageBoxTrees[pageId];
         if (!tree) return;
         const flip = (node) => {
-          if (node.box) return node.id === newLeafId ? { ...node, type: 'image', number: null } : node;
+          if (node.box) return node.id === newLeafId ? { ...node, type: 'image', number: null, ...this.defaultBoxAlign('image') } : node;
           return { ...node, a: flip(node.a), b: flip(node.b) };
         };
         const flipped = this.renumberBoxTree(flip(tree));
@@ -4942,7 +5006,11 @@ class Component extends DCLogic {
       emailSendError: this.state.emailSendStatus === 'error' ? this.state.emailSendError : null,
       emailSent: this.state.emailSendStatus === 'sent',
       uniformBtnStyle: 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
-      printPdfBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;color:#fff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);' : 'background:#ffffff;border:2px solid #000000;color:var(--color-text,#1d1f20);box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
+      // Print is a one-shot action, not a toggle — it has no "on" state of
+      // its own, so this stays the plain white look always (previously
+      // wired to headerGlobalOn by copy-paste from headerGlobalBtnStyle,
+      // which turned it blue whenever Header was toggled on).
+      printPdfBtnStyle: 'background:#ffffff;border:2px solid #000000;color:var(--color-text,#1d1f20);box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
       headerGlobalBtnStyle: this.state.headerGlobalOn ? 'background:var(--color-accent,#5980a6);border:2px solid #ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:#fff;' : 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);color:var(--color-text,#1d1f20);',
       onToggleHeaderGlobal: () => this.setState(s => ({ headerGlobalOn: !s.headerGlobalOn }), () => {
         this.saveDebounced();
@@ -5168,12 +5236,25 @@ class Component extends DCLogic {
       onBoldClick: () => this.applyExecCommandRestore('bold'),
       onItalicClick: () => this.applyExecCommandRestore('italic'),
       onUnderlineClick: () => this.applyExecCommandRestore('underline'),
-      // Justify commands apply to the selection's nearest block ancestor,
-      // not the selection itself, but execCommand + applyExecCommandRestore
-      // already handle that — same instant, non-staged mechanism as B/I/U.
-      onJustifyLeftClick: () => this.applyExecCommandRestore('justifyLeft'),
-      onJustifyCenterClick: () => this.applyExecCommandRestore('justifyCenter'),
-      onJustifyRightClick: () => this.applyExecCommandRestore('justifyRight'),
+      // The 3x3 anchor grid shared by the top bar and the Aa modal. Every
+      // cell always runs the horizontal justify command (execCommand,
+      // applies to whatever's selected, same as before) — the column it's
+      // in. Only cells in a box that's independent or image also get their
+      // row's vertical alignment written to that box's own state, since
+      // that's the only box content with a fixed height to align within.
+      alignGridCells: (() => {
+        const cells = [
+          { h: 'left', v: 'top' }, { h: 'center', v: 'top' }, { h: 'right', v: 'top' },
+          { h: 'left', v: 'middle' }, { h: 'center', v: 'middle' }, { h: 'right', v: 'middle' },
+          { h: 'left', v: 'bottom' }, { h: 'center', v: 'bottom' }, { h: 'right', v: 'bottom' },
+        ];
+        const label = { left: 'L', center: 'C', right: 'R' };
+        return cells.map(c => ({
+          label: c.v === 'middle' ? label[c.h] : '',
+          title: c.v === 'middle' ? 'Align ' + c.h : 'Align ' + c.h + ' + ' + c.v + ' (independent/image boxes only)',
+          onClick: () => this.onAlignGridClick(c.h, c.v),
+        }));
+      })(),
       fontPickerOpen: this.state.fontPickerOpen,
       fontSearchValue: this.state.fontSearch,
       onFontSearchChange: (e) => this.setState({ fontSearch: e.target.value }),
