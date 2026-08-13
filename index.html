@@ -880,6 +880,11 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;width:280px;text-align:left;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onCloseEmailPanel }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
         <div style="font-size:20px;margin-bottom:12px;color:#1d1f20;text-transform:uppercase;">Save to Email</div>
+        <!-- Same docTitle the top banner and regular Save use — naming the
+             file here is naming the document, not a separate email-only
+             label, so nothing needs to be kept in sync by hand. -->
+        <div style="font-size:12px;color:#6b7480;margin-bottom:4px;">Document name</div>
+        <input type="text" value="{{ docTitleValue }}" placeholder="DOCU" sc-camel-on-change="{{ onDocTitleChange }}" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Arial Narrow', Arial, sans-serif;font-size:14px;margin-bottom:14px;color:#1d1f20;" />
         <sc-if value="{{ emailWorkerNotConfigured }}" hint-placeholder-val="{{ false }}">
           <div style="font-size:13px;color:#6b7480;margin-bottom:8px;">Not set up yet — this needs a Worker URL filled in before it can send anything.</div>
         </sc-if>
