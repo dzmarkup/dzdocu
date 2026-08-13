@@ -801,6 +801,27 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLandscape }}" style="width:120px;order:{{ landscapeOrder }};">Landscape</button>
         </div>
       </sc-if>
+      <!-- Documents only (labels never reach this step): a choice between
+           today's blank page and a pre-built box arrangement, so the
+           box-tree LAYOUT feature is something people discover by picking a
+           shape rather than a feature they'd only find by reading about it. -->
+      <sc-if value="{{ setupStepIsDocLayoutChoice }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:24px 20px 20px;max-width:420px;">
+          <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromDocLayoutChoice }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
+          <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Layout Document</div>
+          <div style="display:grid;grid-template-columns:repeat(3, auto);gap:10px;justify-content:center;">
+            <sc-for list="{{ docLayoutTemplates }}" as="tmpl" hint-placeholder-count="9">
+              <button sc-camel-on-click="{{ tmpl.onPick }}" title="{{ tmpl.title }}" style="{{ tmpl.wrapStyle }}">
+                <sc-for list="{{ tmpl.cells }}" as="c" hint-placeholder-count="3">
+                  <div style="{{ c.style }}"></div>
+                </sc-for>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
     </div>
   </div>
 </sc-if>
@@ -1097,6 +1118,41 @@ const LAYOUT_EDGE_WARN_IN = 0.1;
 // marker as "<NEWBOX>", just shorter to type — both forms are equivalent
 // everywhere this is matched.
 const NEWBOX_MARKER_RE = /<\s*(?:newbox|n)\s*>/i;
+// Starter box arrangements offered on the setup screen's LAYOUT DOCUMENT
+// step, so the box-tree LAYOUT feature is something a new user discovers by
+// picking a shape rather than something they have to already know exists.
+// Each "tree" here uses the exact same {split,ratio,a,b} / {box:true,type}
+// shape flattenBoxTree already understands — instantiateBoxTemplate() is
+// the only thing that turns one into a real page (assigning ids), so the
+// same shape doubles as both the live thumbnail preview and the template.
+const DOC_LAYOUT_THUMB_COLORS = { text: '#1d3557', image: '#b4433a', independent: '#3f8f52' };
+const DOC_LAYOUT_TEMPLATES = [
+  { id: 'cols2', title: 'Two columns',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } },
+  { id: 'col-photo-stack', title: 'Column beside a stacked photo',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
+  { id: 'header-col-photo', title: 'Header over a column and a photo',
+    tree: { split: 'h', ratio: 0.16, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
+  { id: 'banner-text', title: 'Photo banner over text',
+    tree: { split: 'h', ratio: 0.35, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } },
+  { id: 'header-photo-text', title: 'Header over a photo and text',
+    tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
+  { id: 'header-cols2', title: 'Header over two columns',
+    tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+  { id: 'rows3', title: 'Three rows',
+    tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+  { id: 'rows3-photo-mid', title: 'Three rows, photo in the middle',
+    tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
+  { id: 'banner-header-text', title: 'Photo banner, header, then text',
+    tree: { split: 'h', ratio: 0.4, a: { box: true, type: 'image' },
+      b: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' }, b: { box: true, type: 'text' } } } },
+];
 // The Cloudflare Worker that actually sends the email — this repo is static,
 // no server of its own, so "Save to Email" has nothing to call until this is
 // filled in with a deployed Worker's URL. Left blank, the feature stays
@@ -3016,9 +3072,55 @@ class Component extends DCLogic {
     return true;
   }
 
-  onSetupPickPortrait() { if (this.resumeIfSavedMatches('portrait')) return; this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
-  onSetupPickLandscape() { if (this.resumeIfSavedMatches('landscape')) return; this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
+  // Shared tail of every path that finishes setup and lands in a real
+  // document — labels, FULL PAGE DOCUMENT, and a picked LAYOUT DOCUMENT
+  // template all need the same bookkeeping once docCreated flips on.
+  finishSetupSideEffects() {
+    this.saveDebounced();
+    this.updateColsLayout();
+    this.applyFitScale();
+    this.importPendingDrops();
+    if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60);
   }
+
+  // Labels go straight into the document, same as always. Non-label sizes
+  // stop one step short at the LAYOUT DOCUMENT / FULL PAGE DOCUMENT choice
+  // instead, so the box-tree LAYOUT feature has a chance to be discovered.
+  onSetupPickPortrait() {
+    if (this.resumeIfSavedMatches('portrait')) return;
+    if (this.isLabelSize()) {
+      this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => this.finishSetupSideEffects());
+    } else {
+      this.setState({ defaultOrientation: 'portrait', setupStep: 'docLayoutChoice' });
+    }
+  }
+  onSetupPickLandscape() {
+    if (this.resumeIfSavedMatches('landscape')) return;
+    if (this.isLabelSize()) {
+      this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => this.finishSetupSideEffects());
+    } else {
+      this.setState({ defaultOrientation: 'landscape', setupStep: 'docLayoutChoice' });
+    }
+  }
+
+  // Turns a template's static {split,ratio,a,b}/{box:true,type} shape (also
+  // used, unmodified, to paint its gallery thumbnail) into a real tree with
+  // fresh box ids — the only step that shape is missing to be a live page.
+  instantiateBoxTemplate(node) {
+    if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null };
+    return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
+  }
+  onPickFullPageDocument() {
+    this.setState({ docCreated: true }, () => this.finishSetupSideEffects());
+  }
+  onPickDocLayoutTemplate(templateId) {
+    const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    const tree = this.instantiateBoxTemplate(template.tree);
+    this.renumberBoxTree(tree);
+    this.setState({ docCreated: true, pageBoxTrees: { p1: tree } }, () => this.finishSetupSideEffects());
+  }
+  onBackFromDocLayoutChoice() { this.setState({ setupStep: 'orientation' }); }
 
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
 
@@ -4614,7 +4716,36 @@ class Component extends DCLogic {
         const step = this.state.setupStep;
         if (step === 'labelAddress' || step === 'labelSize') this.setState({ setupStep: 'size' });
         else if (step === 'orientation') this.setState({ setupStep: this.isLabelSize() ? 'labelSize' : 'size' });
+        else if (step === 'docLayoutChoice') this.setState({ setupStep: 'orientation' });
       },
+      // LAYOUT DOCUMENT thumbnails: each one is the exact same shape used to
+      // build the real page (instantiateBoxTemplate), so the preview can
+      // never drift from what picking it actually produces. Sized to the
+      // page proportions the user just picked, so a tabloid landscape gets
+      // a wider thumbnail than a letter portrait.
+      setupStepIsDocLayoutChoice: this.state.setupStep === 'docLayoutChoice',
+      onBackFromDocLayoutChoice: () => this.onBackFromDocLayoutChoice(),
+      fullPageThumb: (() => {
+        const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
+        const h = 108, w = Math.round(h * (dims.w / dims.h));
+        return {
+          onPick: () => this.onPickFullPageDocument(),
+          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
+        };
+      })(),
+      docLayoutTemplates: (() => {
+        const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
+        const h = 108, w = Math.round(h * (dims.w / dims.h));
+        return DOC_LAYOUT_TEMPLATES.map(t => ({
+          id: t.id,
+          title: t.title,
+          onPick: () => this.onPickDocLayoutTemplate(t.id),
+          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:#e9e9ea;border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
+          cells: this.flattenBoxTree(t.tree, { x: 0, y: 0, w: 1, h: 1 }).map(({ node, rect }) => ({
+            style: 'position:absolute;left:' + (rect.x * 100).toFixed(3) + '%;top:' + (rect.y * 100).toFixed(3) + '%;width:' + (rect.w * 100).toFixed(3) + '%;height:' + (rect.h * 100).toFixed(3) + '%;box-sizing:border-box;border:2px solid #e9e9ea;background:' + DOC_LAYOUT_THUMB_COLORS[node.type] + ';',
+          })),
+        }));
+      })(),
       portraitOrder: ['label46', 'label24', 'label1x2', 'tabloid'].includes(this.state.defaultSize) ? 2 : 1,
       landscapeOrder: ['label46', 'label24', 'label1x2', 'tabloid'].includes(this.state.defaultSize) ? 1 : 2,
       onSetupPickLetter: () => this.onSetupPickLetter(),
