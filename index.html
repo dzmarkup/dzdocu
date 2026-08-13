@@ -610,6 +610,15 @@ textarea.input { min-height: 90px; resize: vertical; }
   </sc-if>
 </div>
 </sc-if>
+
+<!-- Toast for the align grid's vertical row: pressed on text that has no
+     fixed box height to align "within" (a plain page, or a numbered text
+     box), so only the horizontal justify it also just did actually landed.
+     See onAlignGridClick. -->
+<sc-if value="{{ vertAlignNoticeVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:200;max-width:80vw;padding:8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);pointer-events:none;">{{ vertAlignNoticeMsg }}</div>
+</sc-if>
+
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
 <div class="no-print bottom-toolbar" ref="{{ toolbarRef2 }}" style="position:fixed;left:0;right:0;bottom:0;z-index:19;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#e6e6e6;border-top:1px solid var(--color-neutral-300,#ccc);padding:6px var(--space-4,16px) calc(6px + env(safe-area-inset-bottom, 0px)) var(--space-4,16px);">
     <sc-if value="{{ mobileDocChrome }}" hint-placeholder-val="{{ true }}">
@@ -1131,6 +1140,16 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
                 <button class="btn btn-secondary" style="{{ b.cancelDeleteBtnStyle }}" sc-camel-on-click="{{ b.onCancelDelete }}">Cancel</button>
               </div>
             </sc-if>
+            <sc-if value="{{ b.showImageDeleteButton }}" hint-placeholder-val="{{ false }}">
+              <span class="no-print" style="{{ b.imageDeleteBtnStyle }}" sc-camel-on-click="{{ b.onImageDeleteClick }}" title="Delete this image">×</span>
+            </sc-if>
+            <sc-if value="{{ b.isImageDeletePending }}" hint-placeholder-val="{{ false }}">
+              <div class="no-print" style="{{ b.pendingOverlayStyle }}">
+                <span style="{{ b.pendingLabelStyle }}">{{ b.imageDeleteLabel }}</span>
+                <button class="btn btn-secondary" style="{{ b.dontMoveBtnStyle }}" sc-camel-on-click="{{ b.onConfirmDeleteImage }}">Delete</button>
+                <button class="btn btn-secondary" style="{{ b.cancelDeleteBtnStyle }}" sc-camel-on-click="{{ b.onCancelDeleteImage }}">Cancel</button>
+              </div>
+            </sc-if>
           </div>
         </sc-for>
         <sc-if value="{{ p.docLayoutActive }}" hint-placeholder-val="{{ false }}">
@@ -1259,7 +1278,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1299,6 +1318,10 @@ class Component extends DCLogic {
       const isRedoKey = isZ && e.shiftKey;
       if (e.key === 'Escape' && (this.state.zoomActive || document.body.style.overflow === 'hidden')) {
         this.forceUnlockScroll();
+        return;
+      }
+      if (e.key === 'Escape' && this.state.selectedImageBoxId) {
+        this.setState({ selectedImageBoxId: null });
         return;
       }
       if (isZ) {
@@ -2263,6 +2286,8 @@ class Component extends DCLogic {
     const isIndependent = node.type === 'independent';
     const isPending = node.id === deletePromptId;
     const isMergeCandidate = !!mergeCandidateIds && mergeCandidateIds.has(node.id);
+    const isSelectedImage = isImage && this.state.selectedImageBoxId === node.id;
+    const isImageDeletePending = isImage && node.id === this.state.imageDeletePromptId;
     // Locked while LAYOUT or Preview is open — same rule labels already use,
     // so a caret can't fight the seam nudges (LAYOUT) or edit text that's
     // only supposed to be edited through the stream (Preview). Image boxes
@@ -2273,9 +2298,10 @@ class Component extends DCLogic {
     const overflowing = !isImage && !isIndependent && node.id === this.state.docBoxOverflowId;
     const borderColor = isMergeCandidate ? '#c9822a' : isImage ? '#b4433a' : isIndependent ? '#3f8f52' : (overflowing ? '#c9822a' : '#5980a6');
     const mergeGlow = isMergeCandidate ? 'box-shadow:inset 0 0 14px 3px rgba(201,130,42,0.65),0 0 0 2px #c9822a;cursor:pointer;' : '';
+    const selectedGlow = isSelectedImage ? 'box-shadow:0 0 0 3px #2f6fb0,0 0 12px 3px rgba(47,111,176,0.55);' : '';
     return {
       id: node.id,
-      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + borderColor + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : isIndependent ? 'rgba(63,143,82,0.08)' : (overflowing ? 'rgba(201,130,42,0.12)' : 'rgba(89,128,166,0.06)')) + ';overflow:hidden;' + (docLayoutActive ? 'box-shadow:0 0 0 1px #2f6fb0;' : '') + (overflowing ? 'box-shadow:inset 0 0 14px 2px rgba(201,130,42,0.55);' : '') + mergeGlow,
+      style: 'position:absolute;left:' + left.toFixed(3) + 'in;top:' + top.toFixed(3) + 'in;width:' + w.toFixed(3) + 'in;height:' + h.toFixed(3) + 'in;box-sizing:border-box;border:2px solid ' + borderColor + ';background:' + (isImage ? 'rgba(196,80,66,0.08)' : isIndependent ? 'rgba(63,143,82,0.08)' : (overflowing ? 'rgba(201,130,42,0.12)' : 'rgba(89,128,166,0.06)')) + ';overflow:hidden;' + (docLayoutActive ? 'box-shadow:0 0 0 1px #2f6fb0;' : '') + (overflowing ? 'box-shadow:inset 0 0 14px 2px rgba(201,130,42,0.55);' : '') + mergeGlow + selectedGlow,
       editable: locked ? 'false' : 'true',
       isImage,
       showNumberInput: docLayoutActive && !isImage && !isIndependent,
@@ -2301,9 +2327,15 @@ class Component extends DCLogic {
       showDeleteButton: docLayoutActive && !isPending,
       deleteBtnStyle: 'position:absolute;bottom:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:12px;font-weight:700;border:1px solid #fff;background:rgba(180,67,58,0.85);color:#fff;cursor:pointer;',
       onDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.requestDeleteBox(pageId, node.id); },
+      // Clicking an empty image box opens the picker (unchanged). Clicking
+      // one that already holds a picture selects it instead — the small ×
+      // that appears is what deletes the picture, with a confirm step, so
+      // a stray click can't discard it. Selecting is also what routes the
+      // top-bar/Aa alignment grid's vertical control at this box, via the
+      // ordinary focus it already gets.
       onBoxClick: isMergeCandidate
         ? (e) => { e.stopPropagation(); e.preventDefault(); this.mergeBoxIntoSibling(pageId, deletePromptId); }
-        : (isImage && !locked ? (e) => { e.stopPropagation(); e.preventDefault(); this.openBoxImagePicker(pageId, node.id); } : () => {}),
+        : (isImage && !locked ? (e) => this.onImageBoxClick(e, pageId, node.id) : () => {}),
       isPending,
       pendingLabel: node.number != null ? ('Delete Box ' + node.number + '?') : 'Delete this box?',
       pendingOverlayStyle: 'position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:4px;text-align:center;background:rgba(255,255,255,0.94);',
@@ -2312,6 +2344,13 @@ class Component extends DCLogic {
       cancelDeleteBtnStyle: 'height:22px;font-size:11px;padding:0 8px;',
       onDontMove: (e) => { e.stopPropagation(); e.preventDefault(); this.clearBoxKeepSlot(pageId, node.id); },
       onCancelDelete: (e) => { e.stopPropagation(); e.preventDefault(); this.cancelDeletePrompt(); },
+      showImageDeleteButton: isSelectedImage && !isImageDeletePending && !docLayoutActive,
+      imageDeleteBtnStyle: 'position:absolute;bottom:2px;right:2px;z-index:1;width:16px;height:16px;line-height:14px;text-align:center;font-size:12px;font-weight:700;border:1px solid #fff;background:rgba(180,67,58,0.85);color:#fff;cursor:pointer;',
+      onImageDeleteClick: (e) => { e.stopPropagation(); e.preventDefault(); this.requestDeleteImageFromBox(node.id); },
+      isImageDeletePending,
+      imageDeleteLabel: 'Delete this image?',
+      onConfirmDeleteImage: (e) => { e.stopPropagation(); e.preventDefault(); this.confirmDeleteImageFromBox(); },
+      onCancelDeleteImage: (e) => { e.stopPropagation(); e.preventDefault(); this.cancelDeleteImagePrompt(); },
       contentClass: isImage ? 'box-img-content' : '',
       // Vertical alignment only ever applies to image/independent boxes —
       // a numbered text box's content flows across boxes, so there's no
@@ -2330,7 +2369,11 @@ class Component extends DCLogic {
         return 'height:100%;box-sizing:border-box;padding:6px 8px;font-family:\'Arial Narrow\', Arial, sans-serif;font-size:14px;line-height:1.5;color:#1d1f20;outline:none;';
       })(),
       ref: (el) => { if (el) this.boxEditableEls[node.id] = el; },
-      onFocus: () => { this.focusedBoxId = node.id; this.focusedPageId = pageId; this.updatePairFocus(); this.forceUpdate(); },
+      onFocus: () => {
+        this.focusedBoxId = node.id; this.focusedPageId = pageId;
+        if (this.state.selectedImageBoxId && this.state.selectedImageBoxId !== node.id) this.setState({ selectedImageBoxId: null, imageDeletePromptId: null });
+        this.updatePairFocus(); this.forceUpdate();
+      },
       onInput: () => {
         this.saveDebounced();
         if (isImage) return;
@@ -3520,6 +3563,7 @@ class Component extends DCLogic {
     }
     if (this._previewScrollGuard) window.removeEventListener('scroll', this._previewScrollGuard);
     if (this._toolbarResizeObserver) this._toolbarResizeObserver.disconnect();
+    clearTimeout(this._vertAlignNoticeTimer);
     if (super.componentWillUnmount) super.componentWillUnmount();
   }
 
@@ -3919,11 +3963,22 @@ class Component extends DCLogic {
     const boxId = this.focusedBoxId;
     const pageId = this.focusedPageId;
     const tree = pageId && this.state.pageBoxTrees[pageId];
-    if (!boxId || !tree) return;
-    const leaf = this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).find(l => l.node.id === boxId);
-    if (leaf && (leaf.node.type === 'independent' || leaf.node.type === 'image')) {
+    const leaf = (boxId && tree) ? this.flattenBoxTree(tree, { x: 0, y: 0, w: 1, h: 1 }).find(l => l.node.id === boxId) : null;
+    const canVertical = !!leaf && (leaf.node.type === 'independent' || leaf.node.type === 'image');
+    if (canVertical) {
       this.setBoxAlign(pageId, boxId, { hAlign, vAlign });
+    } else if (vAlign !== 'middle') {
+      // The middle row is the plain L/C/R this grid replaced, so it stays
+      // silent even here — only the top/bottom rows ask for a vertical
+      // position that flowing text has no fixed box height to honor.
+      this.showVertAlignNotice('This text can only be justified horizontally.');
     }
+  }
+
+  showVertAlignNotice(msg) {
+    clearTimeout(this._vertAlignNoticeTimer);
+    this.setState({ vertAlignNoticeMsg: msg });
+    this._vertAlignNoticeTimer = setTimeout(() => this.setState({ vertAlignNoticeMsg: null }), 2500);
   }
 
   restoreSelectionAndApply(prop, value) {
@@ -4307,6 +4362,34 @@ class Component extends DCLogic {
   openBoxImagePicker(pageId, boxId) {
     this.pendingBoxImageTarget = { pageId, boxId };
     if (this.boxFileInputEl) this.boxFileInputEl.click();
+  }
+
+  // An empty image box still opens the picker on click, same as before. One
+  // that already holds a picture is selected instead — a click there is
+  // someone aiming at the picture, not asking to replace it — which shows
+  // the delete × and lets the alignment grid target it. Drop/paste still
+  // replace the picture in place regardless of selection.
+  onImageBoxClick(e, pageId, boxId) {
+    e.stopPropagation(); e.preventDefault();
+    const el = this.boxEditableEls[boxId];
+    const hasImage = !!(el && el.querySelector('img'));
+    if (!hasImage) { this.openBoxImagePicker(pageId, boxId); return; }
+    this.setState({ selectedImageBoxId: boxId });
+  }
+
+  requestDeleteImageFromBox(boxId) {
+    this.setState({ imageDeletePromptId: boxId });
+  }
+
+  confirmDeleteImageFromBox() {
+    const boxId = this.state.imageDeletePromptId;
+    const el = boxId && this.boxEditableEls[boxId];
+    if (el) el.innerHTML = '';
+    this.setState({ imageDeletePromptId: null, selectedImageBoxId: null }, () => this.saveDebounced());
+  }
+
+  cancelDeleteImagePrompt() {
+    this.setState({ imageDeletePromptId: null });
   }
 
   onBoxFileChosen(e) {
@@ -4859,7 +4942,11 @@ class Component extends DCLogic {
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
         onInput: () => this.handleInput(id),
-        onFocus: () => { this.focusedPageId = id; this.updatePairFocus(); this.forceUpdate(); },
+        onFocus: () => {
+          this.focusedPageId = id;
+          if (this.state.selectedImageBoxId) this.setState({ selectedImageBoxId: null, imageDeletePromptId: null });
+          this.updatePairFocus(); this.forceUpdate();
+        },
         onClick: (e) => this.tapToReflow(e, id),
         onKeyDown: (e) => { if (e.key === 'Tab') { e.preventDefault(); this.indentLine(id, e.shiftKey ? -1 : 1); } },
         onDragOver: (e) => this.onDragOver(e),
@@ -5311,6 +5398,8 @@ class Component extends DCLogic {
       // The magnifier earns its place on desktop; on a phone reflow replaces it.
       magnifierVisible: this.state.docCreated && !isLabelDoc && !this.state.narrowScreen,
       magnifierBottom: '42px',
+      vertAlignNoticeVisible: !!this.state.vertAlignNoticeMsg,
+      vertAlignNoticeMsg: this.state.vertAlignNoticeMsg || '',
       magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),
       magnifierTextHeight: this.state.magnifierLines === 1 ? '1.1em' : '3.3em',
       magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
