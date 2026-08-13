@@ -577,9 +577,6 @@ textarea.input { min-height: 90px; resize: vertical; }
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitVertical }}" title="Split into a left and right box">Split ↔</button>
       </sc-if>
     </sc-if>
-    <sc-if value="{{ showDocLayoutButton }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ docLayoutBtnStyle }}" sc-camel-on-click="{{ onToggleDocLayout }}">{{ docLayoutBtnLabel }}</button>
-    </sc-if>
     <sc-if value="{{ showStreamToggle }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}">{{ streamToggleLabel }}</button>
     </sc-if>
@@ -618,6 +615,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 </button>
 <sc-if value="{{ showLayoutTab }}" hint-placeholder-val="{{ false }}">
 <button class="no-print side-tab" ref="{{ layoutTabRef }}" sc-camel-on-click="{{ onToggleLayoutMode }}" title="Move and resize the label's four areas" style="position:fixed;right:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ layoutBtnStyle }}">
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
+</button>
+</sc-if>
+<!-- Same rail slot as the label Layout tab above — a document is either a
+     label or a box-doc, never both, so the two conditions never overlap. -->
+<sc-if value="{{ showDocLayoutButton }}" hint-placeholder-val="{{ false }}">
+<button class="no-print side-tab" ref="{{ docLayoutTabRef }}" sc-camel-on-click="{{ onToggleDocLayout }}" title="Move and resize this page's text boxes" style="position:fixed;right:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ docLayoutTabStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
 </sc-if>
@@ -3110,7 +3114,7 @@ class Component extends DCLogic {
     // them at the viewport edges for the duration instead.
     const pinned = this.state.layoutMode && this.hasBoxLayout();
     [this.openTabEl, this.saveTabEl, this.printTabEl, this.emailTabEl].forEach(el => { if (el) el.style.left = (pinned ? 0 : tabLeftPos) + 'px'; });
-    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl].forEach(el => { if (el) el.style.right = (pinned ? 0 : tabRightPos) + 'px'; });
+    [this.fontTabEl, this.headerTabEl, this.clearTabEl, this.layoutTabEl, this.docLayoutTabEl].forEach(el => { if (el) el.style.right = (pinned ? 0 : tabRightPos) + 'px'; });
 
   }
 
@@ -4714,9 +4718,9 @@ class Component extends DCLogic {
       fontTabRef: (el) => { if (el) { this.fontTabEl = el; this.positionEdgeTabs(); } },
       headerTabRef: (el) => { if (el) { this.headerTabEl = el; this.positionEdgeTabs(); } },
       clearTabRef: (el) => { if (el) { this.clearTabEl = el; this.positionEdgeTabs(); } },
-      // The label 4-area panel (ret/main/postal/country) — documents now have
-      // their own, separate LAYOUT toolbar button for the box-tree feature,
-      // so this side tab has no business appearing outside label sizes.
+      // The label 4-area panel (ret/main/postal/country). Documents use the
+      // box-tree LAYOUT tab just below in the same rail slot instead — a doc
+      // is either a label or a box-doc, never both, so the two never collide.
       showLayoutTab: this.hasBoxLayout() && isLabelDoc,
       layoutChromeRef: (el) => { this.layoutChromeEl = el; if (el) requestAnimationFrame(() => this.renderLayoutChrome()); },
       layoutTabRef: (el) => { if (el) { this.layoutTabEl = el; this.positionEdgeTabs(); } },
@@ -4847,8 +4851,10 @@ class Component extends DCLogic {
       // different enough (fixed named boxes vs. a split-tree) that sharing
       // the state risked tangling working label code with new, unproven code.
       showDocLayoutButton: !this.state.narrowScreen && !isLabelDoc && !!this.state.pageBoxTrees[this.focusedPageId] && !this.state.docStreamOpen,
-      docLayoutBtnLabel: this.state.docLayoutMode ? 'Done' : 'LAYOUT',
-      docLayoutBtnStyle: this.state.docLayoutMode ? 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;' : '',
+      docLayoutTabRef: (el) => { if (el) { this.docLayoutTabEl = el; this.positionEdgeTabs(); } },
+      docLayoutTabStyle: this.state.docLayoutMode
+        ? 'background:#2f6fb0;color:#fff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);'
+        : 'background:#ffffff;color:var(--color-text,#1d1f20);box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);',
       onToggleDocLayout: () => this.setState(s => ({ docLayoutMode: !s.docLayoutMode, docStreamOpen: false, docPreviewOn: false, boxDeletePromptId: null })),
       // 2+ text boxes only — a single box just gets typed into directly
       // (the whole point of drawing the line there rather than at "any
