@@ -779,7 +779,7 @@ textarea.input { min-height: 90px; resize: vertical; }
       <sc-if value="{{ setupStepIsSize }}" hint-placeholder-val="{{ true }}">
         <div style="position:absolute;left:50%;top:4px;width:340px;height:300px;transform:translate(-50%,0);background:radial-gradient(ellipse 55% 60% at center, rgba(100,195,255,0.65) 0%, rgba(90,190,255,0.35) 45%, rgba(90,190,255,0.12) 70%, transparent 88%);filter:blur(16px);z-index:0;pointer-events:none;"></div>
         <img src="assets/dzdocu-logo.png" alt="DZDOCU" style="position:relative;z-index:1;display:block;width:236px;height:auto;margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(90,190,255,0.45));" />
-        <button class="btn btn-secondary" sc-camel-on-click="{{ onDropButtonClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ onEntryDropZoneClick }}" sc-camel-on-drag-over="{{ onDropButtonDragOver }}" sc-camel-on-drop="{{ onDropButtonDrop }}" style="position:relative;z-index:1;width:100%;height:auto;min-height:72px;padding:14px 8px;font-size:25px;margin-bottom:16px;background:rgba(10,25,45,0.55);border:2px solid rgba(140,205,255,0.85);box-shadow:0 0 14px rgba(90,190,255,0.35),inset 0 0 10px rgba(90,190,255,0.15);color:#cfe9ff;font-family:Arial, sans-serif;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;text-shadow:0 0 8px rgba(120,205,255,0.7);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1.1;white-space:nowrap;"><span>DROP-ZONE</span><span style="font-size:13px;font-weight:400;letter-spacing:0.04em;"><span style="font-size:16px;font-weight:700;">DOCU</span>-PDF-DOCX-TXT-RTF</span></button>
         <div style="padding:16px 0 4px;display:grid;grid-template-columns:repeat(2,91px);gap:12px 8px;justify-content:center;">
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLetter }}" style="width:100%;{{ letterBtnSpan }}">8.5×11</button>
           <sc-if value="{{ offerTabloid }}" hint-placeholder-val="{{ true }}">
@@ -870,22 +870,6 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
           </div>
         </div>
       </sc-if>
-    </div>
-  </div>
-</sc-if>
-
-<sc-if value="{{ dropChooserOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" sc-camel-on-click="{{ onDropChooserClose }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:56;display:flex;align-items:center;justify-content:center;">
-    <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:Arial, sans-serif;">
-      <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;">
-        <button class="btn btn-ghost" sc-camel-on-click="{{ onDropChooserClose }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
-        <div style="font-size:20px;margin-bottom:6px;color:#1d1f20;text-transform:uppercase;">DROP-ZONE</div>
-        <div style="font-size:13px;margin-bottom:20px;color:#666;">IMAGE · PDF · DOCX · TXT · RTF</div>
-        <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-          <button class="btn btn-primary" sc-camel-on-click="{{ onDropChooseUrl }}" style="width:300px;">Enter a URL — Internet Image Address</button>
-          <button class="btn btn-primary" sc-camel-on-click="{{ onDropChooseFile }}" style="width:300px;">Browse — Select a File From Your Device</button>
-        </div>
-      </div>
     </div>
   </div>
 </sc-if>
@@ -1267,7 +1251,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -4774,41 +4758,20 @@ class Component extends DCLogic {
     }
   }
 
-  /* D-Z steps back to the entry DROP-ZONE screen before asking anything, so
-     the choice is never made over the document or a label. Whether the doc
-     was open is remembered, and restored once a way in is picked (or the
-     chooser is cancelled) — a first visit with no document yet stays on the
-     entry screen, where the size buttons are. This is also what a click on
-     either DROP-ZONE (entry screen) or D-Z (top bar, from inside a document)
-     actually does: dropStep was never being set to 'choose' anywhere, so the
-     URL/Browse chooser this opens was fully unreachable by click — only
-     drag-and-drop onto the button itself worked. */
+  // D-Z (top bar, from inside a document) steps back to the entry screen
+  // before asking anything, so the choice is never made over the document
+  // or a label. Nothing else — no chooser, no file picker. Just the plain
+  // entry screen, same as arriving fresh.
   onDropButtonClick() {
-    this.setState(s => ({
-      dropResumeDoc: s.docCreated,
-      docCreated: false,
-      setupStep: 'size',
-      dropStep: 'choose',
-    }));
+    this.setState({ docCreated: false, setupStep: 'size' });
   }
 
-  closeDropChooser(then) {
-    this.setState(s => ({
-      dropStep: null,
-      docCreated: s.dropResumeDoc || s.docCreated,
-      dropResumeDoc: false,
-    }), then);
-  }
-
-  onDropChooseUrl() {
-    this.closeDropChooser(() => {
-      const url = window.prompt('Paste an image or PDF URL:');
-      if (url && url.trim()) this.handleUrl(url.trim());
-    });
-  }
-
-  onDropChooseFile() {
-    this.closeDropChooser(() => { if (this.fileInputEl) this.fileInputEl.click(); });
+  // The entry screen's own DROP-ZONE button, by contrast, goes straight to
+  // the OS file picker on click — no intermediate "URL or file" choice.
+  // Drag-and-drop and paste are the other two ways in; a plain click is the
+  // third, and should be the simplest one, not a modal.
+  onEntryDropZoneClick() {
+    if (this.fileInputEl) this.fileInputEl.click();
   }
 
   onDropButtonDragOver(e) {
@@ -5636,10 +5599,7 @@ class Component extends DCLogic {
       boxFileInputRef: (el) => { if (el) this.boxFileInputEl = el; },
       onBoxFileChosen: (e) => this.onBoxFileChosen(e),
       onDropButtonClick: () => this.onDropButtonClick(),
-      dropChooserOpen: this.state.dropStep === 'choose',
-      onDropChooseUrl: () => this.onDropChooseUrl(),
-      onDropChooseFile: () => this.onDropChooseFile(),
-      onDropChooserClose: () => this.closeDropChooser(),
+      onEntryDropZoneClick: () => this.onEntryDropZoneClick(),
       onDropButtonDragOver: (e) => this.onDropButtonDragOver(e),
       onDropButtonDrop: (e) => this.onDropButtonDrop(e),
       onEntryScreenDragOver: (e) => this.onEntryScreenDragOver(e),

@@ -203,6 +203,44 @@ lazy-load. Don't add a static `<script src="assets/pdf.min.js">` back for
 convenience — that's the exact ~940 KB this was written to avoid paying on
 every visit.
 
+## D-Z vs the entry screen's DROP-ZONE button — two different jobs
+
+These look like the same button (D-Z is the in-document top-bar tab,
+DROP-ZONE is its entry-screen counterpart) but do deliberately different
+things on click, so don't merge their handlers again:
+
+- **D-Z** (`onDropButtonClick`) only steps back to the entry screen
+  (`docCreated: false, setupStep: 'size'`) — nothing else. No file picker,
+  no modal. It used to also try to open a URL/Browse chooser modal; that
+  modal is gone now (see below), and even while it existed this was the
+  wrong button to trigger it from — a user clicking D-Z from inside a
+  document wants to get back to the entry screen, full stop, not have a
+  file dialog shoved in front of them immediately.
+- **DROP-ZONE** (`onEntryDropZoneClick`) is the entry screen's own button,
+  and goes straight to the OS file picker (`fileInputEl.click()`) — no
+  modal, no intermediate choice. Drag-and-drop and paste are the other two
+  ways to bring a file in; a plain click is the third and simplest.
+
+There used to be a `dropStep`/`dropChooserOpen` modal offering "Enter a
+URL" or "Browse" as a choice, reachable by neither button (a bug — see git
+history around the `claude-design-ai-debug-szlzab` branch if curious). Once
+the click-to-open bug was noticed and about to be fixed, the URL option
+turned out to be unwanted entirely, so the whole modal/state
+(`dropStep`, `dropResumeDoc`, `closeDropChooser`, `onDropChooseUrl`,
+`onDropChooseFile`) was removed rather than kept around half-used.
+`handleUrl()` itself is still very much alive — dragging a URL (not a file)
+onto the entry screen or a page still works, that's a separate path.
+
+Drop/paste coverage on the entry screen itself is intentionally wider than
+just the button: `onEntryScreenDragOver`/`Drop` are wired on the screen's
+outer overlay (not the gradient background div — that one closes before the
+logo/button panel even opens in the DOM, so it doesn't cover them), and a
+document-level `paste` listener (`_onEntryScreenPaste`, added in
+`componentDidMount`) catches pasted files anywhere. Both are gated so they
+only act while `setupStep === 'size'` / `docCreated` is false — this is what
+stops them from hijacking the orientation/label-address steps' own text
+fields, which share the same overlay and background.
+
 ## Known and unfinished
 
 Nothing outstanding right now. The prior items here (unused font subsets,
