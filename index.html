@@ -571,14 +571,14 @@ textarea.input { min-height: 90px; resize: vertical; }
       <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
     </sc-if>
     <sc-if value="{{ showBoxButton }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" style="width:66px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onBoxButtonClick }}">+ Box</button>
+      <button class="btn btn-secondary" style="width:66px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onBoxButtonClick }}" title="Split this page into text boxes. Once split, type &lt;N&gt; anywhere in the text to force a new box to start there">+ Box</button>
       <sc-if value="{{ boxSplitPromptOpen }}" hint-placeholder-val="{{ false }}">
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitHorizontal }}" title="Split into a top and bottom box">Split ↕</button>
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitVertical }}" title="Split into a left and right box">Split ↔</button>
       </sc-if>
     </sc-if>
     <sc-if value="{{ showStreamToggle }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}">{{ streamToggleLabel }}</button>
+      <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}" title="Type &lt;N&gt; anywhere in the text to force a new box to start there">{{ streamToggleLabel }}</button>
     </sc-if>
     <sc-if value="{{ showReorgButton }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ reorgBtnStyle }}" sc-camel-on-click="{{ onReorgClick }}" title="Redistribute all box text so it fits again">REORG</button>
@@ -607,7 +607,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      older browsers layer differently. Not rendering them until a document
      exists is version-proof. -->
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
-<button class="no-print side-tab" ref="{{ headerTabRef }}" sc-camel-on-click="{{ onToggleHeaderGlobal }}" title="Header" style="position:fixed;right:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ headerGlobalBtnStyle }}">
+<button class="no-print side-tab" ref="{{ headerTabRef }}" sc-camel-on-click="{{ onToggleHeaderGlobal }}" title="Header" style="position:fixed;right:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ headerGlobalBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Header</span>
 </button>
 <button class="no-print side-tab" ref="{{ fontTabRef }}" sc-camel-on-click="{{ onOpenFontPicker }}" title="Font, size, bold, italic, underline, characters" style="position:fixed;right:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -625,7 +625,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
 </sc-if>
-<button class="no-print side-tab" ref="{{ clearTabRef }}" sc-camel-on-click="{{ onClearActivePage }}" title="Clear this page's content" style="position:fixed;right:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+<button class="no-print side-tab" ref="{{ clearTabRef }}" sc-camel-on-click="{{ onClearActivePage }}" title="Clear this page's content" style="position:fixed;right:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Clear</span>
 </button>
 
@@ -637,11 +637,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 <button class="no-print side-tab" ref="{{ saveTabRef }}" sc-camel-on-click="{{ onSaveEzdoc }}" title="Save .docu" style="position:fixed;left:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save</span>
 </button>
-<button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
+<button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
 </button>
-<button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Email</span>
+<button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">E-SAVE</span>
 </button>
 </sc-if>
 
@@ -1093,6 +1093,10 @@ const LAYOUT_STEPS = [
 const LAYOUT_MIN_BOX_IN = 0.25;
 // Warn when a box comes closer than this to the trim edge.
 const LAYOUT_EDGE_WARN_IN = 0.1;
+// A manual box break, typed straight into the text. "<N>" is the same
+// marker as "<NEWBOX>", just shorter to type — both forms are equivalent
+// everywhere this is matched.
+const NEWBOX_MARKER_RE = /<\s*(?:newbox|n)\s*>/i;
 // The Cloudflare Worker that actually sends the email — this repo is static,
 // no server of its own, so "Save to Email" has nothing to call until this is
 // filled in with a deployed Worker's URL. Left blank, the feature stays
@@ -1875,15 +1879,16 @@ class Component extends DCLogic {
     return wrapper.innerHTML;
   }
 
-  // A user-typed "<NEWBOX>" is a manual break: everything after it starts
-  // the next box outright, rather than waiting for natural overflow to get
-  // there. Splits wrapper's own top-level child nodes, in order, into one
-  // DocumentFragment per marker — only ever splitting a text node itself
-  // (never anything else), so a marker typed mid-image-wrapper or similar
-  // just can't occur in practice. Matched a little loosely (case, stray
-  // spaces) since it's hand-typed, not real markup.
+  // A user-typed "<NEWBOX>" (or its short form "<N>") is a manual break:
+  // everything after it starts the next box outright, rather than waiting
+  // for natural overflow to get there. Splits wrapper's own top-level child
+  // nodes, in order, into one DocumentFragment per marker — only ever
+  // splitting a text node itself (never anything else), so a marker typed
+  // mid-image-wrapper or similar just can't occur in practice. Matched a
+  // little loosely (case, stray spaces) since it's hand-typed, not real
+  // markup.
   splitContentAtMarkers(wrapper) {
-    const MARKER = /<\s*newbox\s*>/i;
+    const MARKER = NEWBOX_MARKER_RE;
     const segments = [document.createDocumentFragment()];
     [...wrapper.childNodes].forEach(node => {
       if (node.nodeType === 3 && MARKER.test(node.textContent)) {
@@ -2032,7 +2037,7 @@ class Component extends DCLogic {
   hasNewboxMarker(pageId) {
     return this.numberedTextBoxes(pageId).some(node => {
       const el = this.boxEditableEls[node.id];
-      return el && /<\s*newbox\s*>/i.test(el.textContent);
+      return el && NEWBOX_MARKER_RE.test(el.textContent);
     });
   }
 
@@ -2159,7 +2164,7 @@ class Component extends DCLogic {
         // of React's own state. Only forces one when that specific fact
         // actually flips (typing the marker's closing ">", or deleting it),
         // not on every keystroke.
-        const hasMarker = /<\s*newbox\s*>/i.test(el.textContent);
+        const hasMarker = NEWBOX_MARKER_RE.test(el.textContent);
         this._boxMarkerFlags = this._boxMarkerFlags || {};
         if (hasMarker !== !!this._boxMarkerFlags[node.id]) {
           this._boxMarkerFlags[node.id] = hasMarker;
