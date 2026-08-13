@@ -44,7 +44,6 @@
   --color-accent: #5980a6;
   --color-accent-2: #728fab;
   --color-divider: rgba(29, 31, 32, 0.16);
-  --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
 
   /* Setup screens — the dark glass look shared by every step after the first
      (orientation, label size, paste-raw-address). All derived from
@@ -53,25 +52,16 @@
      Dark-top-to-lighter-bottom gradient, tinted increasingly toward the
      accent as it goes down: */
   --setup-bg-1: #080e1b;
-  --setup-bg-1: color-mix(in srgb, var(--color-accent) 6%, #030712);
   --setup-bg-2: #17293b;
-  --setup-bg-2: color-mix(in srgb, var(--color-accent) 22%, #04101d);
   --setup-bg-3: #27435e;
-  --setup-bg-3: color-mix(in srgb, var(--color-accent) 40%, #051a2e);
   --setup-bg-4: #365a7d;
-  --setup-bg-4: color-mix(in srgb, var(--color-accent) 58%, #062544);
   /* The glass panel itself — a dark, translucent fill with a bright,
      near-white edge of the accent hue, echoing the DROP-ZONE button. */
   --setup-panel-bg: #182738;
-  --setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%);
   --setup-panel-border: #a4b9ce;
-  --setup-panel-border: color-mix(in srgb, var(--color-accent) 55%, white 45%);
   --setup-glow: #5996c1;
-  --setup-glow: color-mix(in srgb, var(--color-accent) 70%, #5ac8ff 30%);
   --setup-text: #e6ecf2;
-  --setup-text: color-mix(in srgb, var(--color-accent) 15%, white 85%);
   --setup-text-dim: #a5c3dc;
-  --setup-text-dim: color-mix(in srgb, var(--color-accent) 20%, #b8d4ea 80%);
 
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
      same step of any role matches the others in visual value. */
@@ -123,11 +113,43 @@
   /* Elevation — derived from the ground: soft ink-tinted shadows on a
      light theme, a hairline edge + ambient darkness on a dark one. */
   --shadow-sm: 0 1px 2px rgba(43, 43, 45, 0.14);
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
   --shadow-md: 0 3px 10px rgba(43, 43, 45, 0.16);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
   --shadow-lg: 0 12px 32px rgba(43, 43, 45, 0.22);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+}
+
+/* color-mix() versions of the tokens above, gated behind a real feature
+   query. A browser old enough to not know color-mix() (Windows 7's frozen
+   Chrome/Firefox builds, chiefly) still accepts these as raw text for a
+   *custom* property -- custom properties aren't validated until something
+   actually consumes them via var(), unlike ordinary properties -- so
+   simply redeclaring "--x: fallback; --x: color-mix(...);" back in :root
+   like the ordinary hex/rgba pairs elsewhere in this file never falls
+   back to the hex on any browser; the color-mix() line always wins the
+   cascade, and only breaks once some real property tries to use it. That
+   silently turned the setup screen's panels transparent (background,
+   border and glow all invalid) on exactly that class of browser -- the
+   entry step still read as "blue" because its logo glow and falling-text
+   decoration are plain rgba(), unaffected, but the orientation/label/
+   layout panels lost their background and border outright, reading as a
+   black void with content nobody could see against it. @supports is
+   actually gated at parse time, so browsers that fail the feature test
+   never see these overrides and keep the plain hex above instead. */
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :root {
+    --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
+    --setup-bg-1: color-mix(in srgb, var(--color-accent) 6%, #030712);
+    --setup-bg-2: color-mix(in srgb, var(--color-accent) 22%, #04101d);
+    --setup-bg-3: color-mix(in srgb, var(--color-accent) 40%, #051a2e);
+    --setup-bg-4: color-mix(in srgb, var(--color-accent) 58%, #062544);
+    --setup-panel-bg: color-mix(in srgb, var(--color-accent) 18%, #0a1420 82%);
+    --setup-panel-border: color-mix(in srgb, var(--color-accent) 55%, white 45%);
+    --setup-glow: color-mix(in srgb, var(--color-accent) 70%, #5ac8ff 30%);
+    --setup-text: color-mix(in srgb, var(--color-accent) 15%, white 85%);
+    --setup-text-dim: color-mix(in srgb, var(--color-accent) 20%, #b8d4ea 80%);
+    --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
+    --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+    --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+  }
 }
 
 body {
