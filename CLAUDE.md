@@ -203,6 +203,26 @@ lazy-load. Don't add a static `<script src="assets/pdf.min.js">` back for
 convenience — that's the exact ~940 KB this was written to avoid paying on
 every visit.
 
+## The entry screen's DROP-ZONE / D-Z chooser
+
+`onDropButtonClick()` (shared by both the entry screen's DROP-ZONE button and
+the in-document D-Z tab) must set `dropStep: 'choose'` to open the URL/Browse
+modal (`dropChooserOpen`). It didn't for a while — the modal was fully built
+and correctly wired, `dropStep` was just never actually being set to
+`'choose'` anywhere, so clicking either button did nothing and only literal
+drag-and-drop onto the button worked. If that modal ever silently stops
+opening again, check this line first before assuming the markup broke.
+
+Drop/paste coverage on the entry screen itself is intentionally wider than
+just the button: `onEntryScreenDragOver`/`Drop` are wired on the screen's
+outer overlay (not the gradient background div — that one closes before the
+logo/button panel even opens in the DOM, so it doesn't cover them), and a
+document-level `paste` listener (`_onEntryScreenPaste`, added in
+`componentDidMount`) catches pasted files anywhere. Both are gated so they
+only act while `setupStep === 'size'` / `docCreated` is false — this is what
+stops them from hijacking the orientation/label-address steps' own text
+fields, which share the same overlay and background.
+
 ## Known and unfinished
 
 Nothing outstanding right now. The prior items here (unused font subsets,
