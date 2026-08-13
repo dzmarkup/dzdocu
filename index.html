@@ -571,14 +571,14 @@ textarea.input { min-height: 90px; resize: vertical; }
       <button class="btn btn-secondary mobile-narrow-btn" style="width:76px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ addCoverBtnStyle }}" sc-camel-on-click="{{ addCover }}" disabled="{{ isLabelDoc }}"><span class="full-label">+ Cover</span><span class="short-label">+C</span></button>
     </sc-if>
     <sc-if value="{{ showBoxButton }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" style="width:66px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onBoxButtonClick }}">+ Box</button>
+      <button class="btn btn-secondary" style="width:66px;height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onBoxButtonClick }}" title="Split this page into text boxes. Once split, type &lt;N&gt; anywhere in the text to force a new box to start there">+ Box</button>
       <sc-if value="{{ boxSplitPromptOpen }}" hint-placeholder-val="{{ false }}">
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitHorizontal }}" title="Split into a top and bottom box">Split ↕</button>
         <button class="btn btn-secondary" style="height:28px;font-size:13px;{{ uniformBtnStyle }}" sc-camel-on-click="{{ onSplitVertical }}" title="Split into a left and right box">Split ↔</button>
       </sc-if>
     </sc-if>
     <sc-if value="{{ showStreamToggle }}" hint-placeholder-val="{{ false }}">
-      <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}">{{ streamToggleLabel }}</button>
+      <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ streamToggleStyle }}" sc-camel-on-click="{{ onStreamToggle }}" title="Type &lt;N&gt; anywhere in the text to force a new box to start there">{{ streamToggleLabel }}</button>
     </sc-if>
     <sc-if value="{{ showReorgButton }}" hint-placeholder-val="{{ false }}">
       <button class="btn btn-secondary" style="height:28px;font-size:13px;white-space:nowrap;{{ uniformBtnStyle }}{{ reorgBtnStyle }}" sc-camel-on-click="{{ onReorgClick }}" title="Redistribute all box text so it fits again">REORG</button>
@@ -607,7 +607,7 @@ textarea.input { min-height: 90px; resize: vertical; }
      older browsers layer differently. Not rendering them until a document
      exists is version-proof. -->
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
-<button class="no-print side-tab" ref="{{ headerTabRef }}" sc-camel-on-click="{{ onToggleHeaderGlobal }}" title="Header" style="position:fixed;right:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ headerGlobalBtnStyle }}">
+<button class="no-print side-tab" ref="{{ headerTabRef }}" sc-camel-on-click="{{ onToggleHeaderGlobal }}" title="Header" style="position:fixed;right:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ headerGlobalBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Header</span>
 </button>
 <button class="no-print side-tab" ref="{{ fontTabRef }}" sc-camel-on-click="{{ onOpenFontPicker }}" title="Font, size, bold, italic, underline, characters" style="position:fixed;right:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -625,7 +625,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Layout</span>
 </button>
 </sc-if>
-<button class="no-print side-tab" ref="{{ clearTabRef }}" sc-camel-on-click="{{ onClearActivePage }}" title="Clear this page's content" style="position:fixed;right:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+<button class="no-print side-tab" ref="{{ clearTabRef }}" sc-camel-on-click="{{ onClearActivePage }}" title="Clear this page's content" style="position:fixed;right:0;top:calc(25vh - 40px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-right:none;border-radius:6px 0 0 6px;background:#ffffff;box-shadow:-3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Clear</span>
 </button>
 
@@ -637,11 +637,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 <button class="no-print side-tab" ref="{{ saveTabRef }}" sc-camel-on-click="{{ onSaveEzdoc }}" title="Save .docu" style="position:fixed;left:0;top:calc(25vh + 56px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Save</span>
 </button>
-<button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
+<button class="no-print side-tab" ref="{{ printTabRef }}" sc-camel-on-click="{{ print }}" title="Print / PDF" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ printPdfBtnStyle }}">
   <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Print</span>
 </button>
-<button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 248px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">Email</span>
+<button class="no-print side-tab" ref="{{ emailTabRef }}" sc-camel-on-click="{{ onOpenEmailPanel }}" title="Save to Email" style="position:fixed;left:0;top:calc(25vh + 152px);z-index:18;width:34px;height:92px;border:2px solid #000000;border-left:none;border-radius:0 6px 6px 0;background:#ffffff;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset -2px 2px 5px 0 rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+  <span style="font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;font-weight:700;color:var(--color-text,#1d1f20);line-height:1.2;writing-mode:vertical-rl;letter-spacing:0.02em;text-transform:uppercase;">E-SAVE</span>
 </button>
 </sc-if>
 
@@ -799,6 +799,27 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromOrientation }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickPortrait }}" style="width:120px;order:{{ portraitOrder }};">Portrait</button>
           <button class="btn btn-primary btn-classy" sc-camel-on-click="{{ onSetupPickLandscape }}" style="width:120px;order:{{ landscapeOrder }};">Landscape</button>
+        </div>
+      </sc-if>
+      <!-- Documents only (labels never reach this step): a choice between
+           today's blank page and a pre-built box arrangement, so the
+           box-tree LAYOUT feature is something people discover by picking a
+           shape rather than a feature they'd only find by reading about it. -->
+      <sc-if value="{{ setupStepIsDocLayoutChoice }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;background:var(--setup-panel-bg);border:2px solid var(--setup-panel-border);border-radius:var(--radius-sm,4px);box-shadow:0 0 14px var(--setup-glow),inset 0 0 10px rgba(89, 150, 193, 0.4);padding:24px 20px 20px;max-width:420px;">
+          <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromDocLayoutChoice }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
+          <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Layout Document</div>
+          <div style="display:grid;grid-template-columns:repeat(3, auto);gap:10px;justify-content:center;">
+            <sc-for list="{{ docLayoutTemplates }}" as="tmpl" hint-placeholder-count="9">
+              <button sc-camel-on-click="{{ tmpl.onPick }}" title="{{ tmpl.title }}" style="{{ tmpl.wrapStyle }}">
+                <sc-for list="{{ tmpl.cells }}" as="c" hint-placeholder-count="3">
+                  <div style="{{ c.style }}"></div>
+                </sc-for>
+              </button>
+            </sc-for>
+          </div>
         </div>
       </sc-if>
     </div>
@@ -1093,6 +1114,45 @@ const LAYOUT_STEPS = [
 const LAYOUT_MIN_BOX_IN = 0.25;
 // Warn when a box comes closer than this to the trim edge.
 const LAYOUT_EDGE_WARN_IN = 0.1;
+// A manual box break, typed straight into the text. "<N>" is the same
+// marker as "<NEWBOX>", just shorter to type — both forms are equivalent
+// everywhere this is matched.
+const NEWBOX_MARKER_RE = /<\s*(?:newbox|n)\s*>/i;
+// Starter box arrangements offered on the setup screen's LAYOUT DOCUMENT
+// step, so the box-tree LAYOUT feature is something a new user discovers by
+// picking a shape rather than something they have to already know exists.
+// Each "tree" here uses the exact same {split,ratio,a,b} / {box:true,type}
+// shape flattenBoxTree already understands — instantiateBoxTemplate() is
+// the only thing that turns one into a real page (assigning ids), so the
+// same shape doubles as both the live thumbnail preview and the template.
+const DOC_LAYOUT_THUMB_COLORS = { text: '#1d3557', image: '#b4433a', independent: '#3f8f52' };
+const DOC_LAYOUT_TEMPLATES = [
+  { id: 'cols2', title: 'Two columns',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } },
+  { id: 'col-photo-stack', title: 'Column beside a stacked photo',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
+  { id: 'header-col-photo', title: 'Header over a column and a photo',
+    tree: { split: 'h', ratio: 0.16, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
+  { id: 'banner-text', title: 'Photo banner over text',
+    tree: { split: 'h', ratio: 0.35, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } },
+  { id: 'header-photo-text', title: 'Header over a photo and text',
+    tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
+  { id: 'header-cols2', title: 'Header over two columns',
+    tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+  { id: 'rows3', title: 'Three rows',
+    tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+  { id: 'rows3-photo-mid', title: 'Three rows, photo in the middle',
+    tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
+  { id: 'banner-header-text', title: 'Photo banner, header, then text',
+    tree: { split: 'h', ratio: 0.4, a: { box: true, type: 'image' },
+      b: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' }, b: { box: true, type: 'text' } } } },
+];
 // The Cloudflare Worker that actually sends the email — this repo is static,
 // no server of its own, so "Save to Email" has nothing to call until this is
 // filled in with a deployed Worker's URL. Left blank, the feature stays
@@ -1875,15 +1935,16 @@ class Component extends DCLogic {
     return wrapper.innerHTML;
   }
 
-  // A user-typed "<NEWBOX>" is a manual break: everything after it starts
-  // the next box outright, rather than waiting for natural overflow to get
-  // there. Splits wrapper's own top-level child nodes, in order, into one
-  // DocumentFragment per marker — only ever splitting a text node itself
-  // (never anything else), so a marker typed mid-image-wrapper or similar
-  // just can't occur in practice. Matched a little loosely (case, stray
-  // spaces) since it's hand-typed, not real markup.
+  // A user-typed "<NEWBOX>" (or its short form "<N>") is a manual break:
+  // everything after it starts the next box outright, rather than waiting
+  // for natural overflow to get there. Splits wrapper's own top-level child
+  // nodes, in order, into one DocumentFragment per marker — only ever
+  // splitting a text node itself (never anything else), so a marker typed
+  // mid-image-wrapper or similar just can't occur in practice. Matched a
+  // little loosely (case, stray spaces) since it's hand-typed, not real
+  // markup.
   splitContentAtMarkers(wrapper) {
-    const MARKER = /<\s*newbox\s*>/i;
+    const MARKER = NEWBOX_MARKER_RE;
     const segments = [document.createDocumentFragment()];
     [...wrapper.childNodes].forEach(node => {
       if (node.nodeType === 3 && MARKER.test(node.textContent)) {
@@ -2032,7 +2093,7 @@ class Component extends DCLogic {
   hasNewboxMarker(pageId) {
     return this.numberedTextBoxes(pageId).some(node => {
       const el = this.boxEditableEls[node.id];
-      return el && /<\s*newbox\s*>/i.test(el.textContent);
+      return el && NEWBOX_MARKER_RE.test(el.textContent);
     });
   }
 
@@ -2159,7 +2220,7 @@ class Component extends DCLogic {
         // of React's own state. Only forces one when that specific fact
         // actually flips (typing the marker's closing ">", or deleting it),
         // not on every keystroke.
-        const hasMarker = /<\s*newbox\s*>/i.test(el.textContent);
+        const hasMarker = NEWBOX_MARKER_RE.test(el.textContent);
         this._boxMarkerFlags = this._boxMarkerFlags || {};
         if (hasMarker !== !!this._boxMarkerFlags[node.id]) {
           this._boxMarkerFlags[node.id] = hasMarker;
@@ -3011,9 +3072,55 @@ class Component extends DCLogic {
     return true;
   }
 
-  onSetupPickPortrait() { if (this.resumeIfSavedMatches('portrait')) return; this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); }); }
-  onSetupPickLandscape() { if (this.resumeIfSavedMatches('landscape')) return; this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => { this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops(); if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60); });
+  // Shared tail of every path that finishes setup and lands in a real
+  // document — labels, FULL PAGE DOCUMENT, and a picked LAYOUT DOCUMENT
+  // template all need the same bookkeeping once docCreated flips on.
+  finishSetupSideEffects() {
+    this.saveDebounced();
+    this.updateColsLayout();
+    this.applyFitScale();
+    this.importPendingDrops();
+    if (this.isLabelSize()) setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60);
   }
+
+  // Labels go straight into the document, same as always. Non-label sizes
+  // stop one step short at the LAYOUT DOCUMENT / FULL PAGE DOCUMENT choice
+  // instead, so the box-tree LAYOUT feature has a chance to be discovered.
+  onSetupPickPortrait() {
+    if (this.resumeIfSavedMatches('portrait')) return;
+    if (this.isLabelSize()) {
+      this.setState({ defaultOrientation: 'portrait', docCreated: true }, () => this.finishSetupSideEffects());
+    } else {
+      this.setState({ defaultOrientation: 'portrait', setupStep: 'docLayoutChoice' });
+    }
+  }
+  onSetupPickLandscape() {
+    if (this.resumeIfSavedMatches('landscape')) return;
+    if (this.isLabelSize()) {
+      this.setState({ defaultOrientation: 'landscape', docCreated: true }, () => this.finishSetupSideEffects());
+    } else {
+      this.setState({ defaultOrientation: 'landscape', setupStep: 'docLayoutChoice' });
+    }
+  }
+
+  // Turns a template's static {split,ratio,a,b}/{box:true,type} shape (also
+  // used, unmodified, to paint its gallery thumbnail) into a real tree with
+  // fresh box ids — the only step that shape is missing to be a live page.
+  instantiateBoxTemplate(node) {
+    if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null };
+    return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
+  }
+  onPickFullPageDocument() {
+    this.setState({ docCreated: true }, () => this.finishSetupSideEffects());
+  }
+  onPickDocLayoutTemplate(templateId) {
+    const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    const tree = this.instantiateBoxTemplate(template.tree);
+    this.renumberBoxTree(tree);
+    this.setState({ docCreated: true, pageBoxTrees: { p1: tree } }, () => this.finishSetupSideEffects());
+  }
+  onBackFromDocLayoutChoice() { this.setState({ setupStep: 'orientation' }); }
 
   isLabelSize() { return ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize); }
 
@@ -4609,7 +4716,36 @@ class Component extends DCLogic {
         const step = this.state.setupStep;
         if (step === 'labelAddress' || step === 'labelSize') this.setState({ setupStep: 'size' });
         else if (step === 'orientation') this.setState({ setupStep: this.isLabelSize() ? 'labelSize' : 'size' });
+        else if (step === 'docLayoutChoice') this.setState({ setupStep: 'orientation' });
       },
+      // LAYOUT DOCUMENT thumbnails: each one is the exact same shape used to
+      // build the real page (instantiateBoxTemplate), so the preview can
+      // never drift from what picking it actually produces. Sized to the
+      // page proportions the user just picked, so a tabloid landscape gets
+      // a wider thumbnail than a letter portrait.
+      setupStepIsDocLayoutChoice: this.state.setupStep === 'docLayoutChoice',
+      onBackFromDocLayoutChoice: () => this.onBackFromDocLayoutChoice(),
+      fullPageThumb: (() => {
+        const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
+        const h = 108, w = Math.round(h * (dims.w / dims.h));
+        return {
+          onPick: () => this.onPickFullPageDocument(),
+          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
+        };
+      })(),
+      docLayoutTemplates: (() => {
+        const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
+        const h = 108, w = Math.round(h * (dims.w / dims.h));
+        return DOC_LAYOUT_TEMPLATES.map(t => ({
+          id: t.id,
+          title: t.title,
+          onPick: () => this.onPickDocLayoutTemplate(t.id),
+          wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:#e9e9ea;border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:block;',
+          cells: this.flattenBoxTree(t.tree, { x: 0, y: 0, w: 1, h: 1 }).map(({ node, rect }) => ({
+            style: 'position:absolute;left:' + (rect.x * 100).toFixed(3) + '%;top:' + (rect.y * 100).toFixed(3) + '%;width:' + (rect.w * 100).toFixed(3) + '%;height:' + (rect.h * 100).toFixed(3) + '%;box-sizing:border-box;border:2px solid #e9e9ea;background:' + DOC_LAYOUT_THUMB_COLORS[node.type] + ';',
+          })),
+        }));
+      })(),
       portraitOrder: ['label46', 'label24', 'label1x2', 'tabloid'].includes(this.state.defaultSize) ? 2 : 1,
       landscapeOrder: ['label46', 'label24', 'label1x2', 'tabloid'].includes(this.state.defaultSize) ? 1 : 2,
       onSetupPickLetter: () => this.onSetupPickLetter(),
