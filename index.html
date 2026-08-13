@@ -490,9 +490,10 @@ textarea.input { min-height: 90px; resize: vertical; }
   </div>
   <!-- A compact version of the Aa panel's own controls, reusing every one
        of its handlers unchanged (pickFont, onFontSizeChange, the B/I/U
-       clicks, applyPendingFontChanges) — same staged-then-Apply behavior,
-       just inline instead of behind a modal. Desktop only: there's no room
-       for this next to D-Z/title at phone widths. -->
+       clicks) — but unlike the modal, picking a font or size here applies
+       instantly, no Apply needed; the modal keeps the staged version since
+       it may still be wanted there. Desktop only: there's no room for this
+       next to D-Z/title at phone widths. -->
   <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
   <div style="display:flex;gap:4px;align-items:center;">
     <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:110px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
@@ -501,7 +502,7 @@ textarea.input { min-height: 90px; resize: vertical; }
         <option value="{{ fn.name }}">{{ fn.name }}</option>
       </sc-for>
     </sc-raw-select>
-    <sc-raw-select sc-camel-on-change="{{ onFontSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:64px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:64px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:'Arial Narrow', Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Size…</option>
       <option value="10">10</option>
       <option value="12">12</option>
@@ -515,7 +516,9 @@ textarea.input { min-height: 90px; resize: vertical; }
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
     <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
-    <button class="btn btn-primary" sc-camel-on-click="{{ onApplyFontChanges }}" disabled="{{ fontApplyDisabled }}" title="{{ fontPendingSummary }}" style="height:32px;padding:0 12px;background:var(--color-accent,#5980a6);color:#fff;">APPLY</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyLeftClick }}" title="Align left">L</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyCenterClick }}" title="Align center">C</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;" sc-camel-on-click="{{ onJustifyRightClick }}" title="Align right">R</button>
   </div>
   </sc-if>
 
@@ -595,7 +598,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:center;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
@@ -972,6 +975,14 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
           <option value="48">48</option>
         </sc-raw-select>
         <button class="btn btn-secondary" style="flex:1;" sc-camel-on-click="{{ onOpenCharPicker }}" title="Insert a special character">Characters…</button>
+      </div>
+      <!-- Justification is also an instant, non-staged action, same reasoning
+           as Bold/Italic/Underline: there's no "value" to stage, just a
+           direct action on the selection's paragraph. -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyLeftClick }}" title="Align left">L</button>
+        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyCenterClick }}" title="Align center">C</button>
+        <button class="btn btn-secondary" style="width:36px;" sc-camel-on-click="{{ onJustifyRightClick }}" title="Align right">R</button>
       </div>
       <!-- Bold/Italic/Underline are instant toggles (there's nothing to
            stage — either the selection is bold or it isn't), but font and
@@ -5157,6 +5168,12 @@ class Component extends DCLogic {
       onBoldClick: () => this.applyExecCommandRestore('bold'),
       onItalicClick: () => this.applyExecCommandRestore('italic'),
       onUnderlineClick: () => this.applyExecCommandRestore('underline'),
+      // Justify commands apply to the selection's nearest block ancestor,
+      // not the selection itself, but execCommand + applyExecCommandRestore
+      // already handle that — same instant, non-staged mechanism as B/I/U.
+      onJustifyLeftClick: () => this.applyExecCommandRestore('justifyLeft'),
+      onJustifyCenterClick: () => this.applyExecCommandRestore('justifyCenter'),
+      onJustifyRightClick: () => this.applyExecCommandRestore('justifyRight'),
       fontPickerOpen: this.state.fontPickerOpen,
       fontSearchValue: this.state.fontSearch,
       onFontSearchChange: (e) => this.setState({ fontSearch: e.target.value }),
@@ -5205,13 +5222,28 @@ class Component extends DCLogic {
       })(),
       fontApplyDisabled: !this.state.fontPendingFamily && !this.state.fontPendingSize,
       onApplyFontChanges: () => this.applyPendingFontChanges(),
-      // The top-bar mini toolbar's own font dropdown — same picker logic as
-      // the Aa panel's list (pickFont), just a flat <select> instead of a
-      // searchable list, so it can fit next to D-Z/title.
+      // The top-bar mini toolbar's own font/size dropdowns — unlike the Aa
+      // panel's pickFont/onFontSizeChange, these apply the instant something
+      // is picked rather than staging for an Apply click. Duplicated rather
+      // than shared so the modal's staged behavior isn't disturbed.
       topBarFontBarVisible: !this.state.narrowScreen,
       topBarFontOptions: [...new Set([...Component.SYSTEM_FONTS, ...Component.POPULAR_FONTS, ...this.state.customFonts])]
         .map(n => ({ name: n })),
-      onTopBarFontChange: (e) => { const val = e.target.value; e.target.value = ''; if (val) this.pickFont(val); },
+      onTopBarFontChange: (e) => {
+        const val = e.target.value;
+        e.target.value = '';
+        if (!val) return;
+        this.injectGoogleFont(val);
+        this.setState(s => ({ customFonts: s.customFonts.includes(val) ? s.customFonts : [...s.customFonts, val] }), () => {
+          this.saveDebounced();
+          this.restoreSelectionAndApply('fontFamily', "'" + val + "', sans-serif");
+        });
+      },
+      onTopBarSizeChange: (e) => {
+        const val = e.target.value;
+        e.target.value = '';
+        if (val) this.restoreSelectionAndApply('fontSize', val + 'px');
+      },
       fileInputRef: (el) => { if (el) this.fileInputEl = el; },
       onFileChosen: (e) => this.onFileChosen(e),
       boxFileInputRef: (el) => { if (el) this.boxFileInputEl = el; },
