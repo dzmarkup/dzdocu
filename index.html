@@ -562,7 +562,10 @@ textarea.input { min-height: 90px; resize: vertical; }
      only reads from the page. Documents only for now. -->
 <sc-if value="{{ magnifierVisible }}" hint-placeholder-val="{{ false }}">
 <div class="no-print" ref="{{ magnifierRef }}" style="position:fixed;left:44px;right:44px;bottom:{{ magnifierBottom }};z-index:19;height:{{ magnifierHeight }};box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111418;border-top:2px solid #2f6fb0;border-bottom:1px solid #000;pointer-events:none;">
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:3.3em;overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:left;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:'Arial Narrow', Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
+    <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
+  </sc-if>
 </div>
 </sc-if>
 <sc-if value="{{ docCreated }}" hint-placeholder-val="{{ false }}">
@@ -1165,7 +1168,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, zoomActive: false, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', dropStep: null, dropResumeDoc: false, showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 3 };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -5050,8 +5053,19 @@ class Component extends DCLogic {
       // The magnifier earns its place on desktop; on a phone reflow replaces it.
       magnifierVisible: this.state.docCreated && !isLabelDoc && !this.state.narrowScreen,
       magnifierBottom: '42px',
-      magnifierHeight: this.state.narrowScreen ? '15vh' : '192px',
+      magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),
+      magnifierTextHeight: this.state.magnifierLines === 1 ? '1.1em' : '3.3em',
       magnifierFontSize: this.state.narrowScreen ? '36px' : '28px',
+      // Desktop only, matching magnifierVisible itself — a single tab that
+      // flips between shrinking to 1 line and expanding back to 3, rather
+      // than two always-shown buttons.
+      magnifierSizeToggleVisible: !this.state.narrowScreen,
+      magnifierSizeToggleArrow: this.state.magnifierLines === 1 ? '▲' : '▼',
+      magnifierSizeToggleTitle: this.state.magnifierLines === 1 ? 'Expand to 3 lines' : 'Shrink to 1 line',
+      onToggleMagnifierLines: () => this.setState(
+        s => ({ magnifierLines: s.magnifierLines === 1 ? 3 : 1 }),
+        () => this.paintMagnifier()
+      ),
       magnifierToggleLabel: this.state.magnifierOn === false ? 'Magnifier: Off' : 'Magnifier: On',
       magnifierToggleStyle: this.state.magnifierOn === false ? '' : 'background:#2f6fb0;color:#fff;border-color:#2f6fb0;',
       onToggleMagnifier: () => this.setState(s => ({ magnifierOn: s.magnifierOn === false }), () => this.saveDebounced()),
