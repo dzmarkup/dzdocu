@@ -575,7 +575,10 @@ textarea.input { min-height: 90px; resize: vertical; }
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
-  <div ref="{{ magnifierTextRef }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:center;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
+  <!-- pointer-events comes back on for the text itself (the strip around it
+       stays transparent to clicks) so a click or drag in here can place the
+       document's caret — see onMagnifierMouseDown. -->
+  <div ref="{{ magnifierTextRef }}" sc-camel-on-mouse-down="{{ onMagnifierMouseDown }}" style="flex:1;min-width:0;height:{{ magnifierTextHeight }};overflow-y:hidden;white-space:normal;overflow-wrap:break-word;text-align:center;direction:ltr;padding-bottom:3px;color:#eaf2ff;font-family:Arial, sans-serif;font-size:{{ magnifierFontSize }};line-height:1.1;letter-spacing:0.01em;pointer-events:auto;cursor:text;"><span data-mag-line="1" style="display:inline-block;white-space:pre;"></span></div>
   <sc-if value="{{ magnifierSizeToggleVisible }}" hint-placeholder-val="{{ false }}">
     <button class="no-print" sc-camel-on-click="{{ onToggleMagnifierLines }}" title="{{ magnifierSizeToggleTitle }}" style="pointer-events:auto;flex:0 0 auto;width:26px;height:26px;box-sizing:border-box;padding:0;border:1px solid #2f6fb0;border-radius:4px;background:#1b2733;color:#7fc0ff;font-size:13px;line-height:1;cursor:pointer;">{{ magnifierSizeToggleArrow }}</button>
   </sc-if>
@@ -5259,11 +5262,38 @@ class Component extends DCLogic {
     this.saveDebounced();
   }
 
-  // The words immediately before the caret, as a plain string. The strip is
-  // right-aligned and clipped, so how many of them fit is decided by the type
-  // size rather than by a word count — long words simply yield fewer.
-  // The line split at the caret, so the strip can show what comes after it too.
-  magnifierTextNow() {
+  // The bar shows runs of whitespace collapsed to a single space, which throws
+  // away the 1:1 relationship between a character on screen and a character in
+  // the document — so a click in the bar cannot be turned back into a caret
+  // position without a record of where each shown character came from. Builds
+  // the collapsed string and that record together.
+  //
+  // map[i] is the source index the i-th shown character came from, with one
+  // extra entry past the end so a click after the last letter is addressable.
+  collapseWithMap(src) {
+    let out = '', i = 0;
+    const map = [];
+    while (i < src.length && /\s/.test(src[i])) i++;   // a leading run is never shown
+    while (i < src.length) {
+      const start = i;
+      if (/\s/.test(src[i])) { while (i < src.length && /\s/.test(src[i])) i++; out += ' '; }
+      else { out += src[i]; i++; }
+      map.push(start);
+    }
+    map.push(src.length);
+    return { text: out, map };
+  }
+
+  // Everything needed to translate between the bar and the block it mirrors:
+  // the shown string, both directions of the offset map, and a flat list of
+  // document positions.
+  //
+  // Deliberately independent of where the caret is. The old version split the
+  // text at the caret and collapsed each half separately, which meant the shown
+  // string changed shape whenever the selection moved — fine for a read-only
+  // mirror, impossible to drag on, because the coordinates would shift under
+  // the mouse mid-drag.
+  magnifierModel() {
     const sel = window.getSelection && window.getSelection();
     if (!sel || !sel.rangeCount) return null;
     const node = sel.focusNode;
@@ -5271,46 +5301,155 @@ class Component extends DCLogic {
     const host = node.nodeType === 1 ? node : node.parentElement;
     if (!host || !host.closest || !host.closest('[contenteditable]')) return null;
     const block = host.closest('div,p,li,h1,h2,h3,h4,td,th,[data-lbl-box]') || host;
-    const before = document.createRange();
-    before.selectNodeContents(block);
-    const after = document.createRange();
-    after.selectNodeContents(block);
-    try {
-      before.setEnd(sel.focusNode, sel.focusOffset);
-      after.setStart(sel.focusNode, sel.focusOffset);
-    } catch (e) { return null; }
-    return {
-      before: before.toString().replace(/\s+/g, ' ').replace(/^\s+/, ''),
-      after: after.toString().replace(/\s+/g, ' ')
-    };
+
+    const positions = [];
+    let src = '', tn;
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    while ((tn = walker.nextNode())) {
+      for (let k = 0; k < tn.nodeValue.length; k++) positions.push({ node: tn, offset: k });
+      src += tn.nodeValue;
+    }
+    const tail = positions[positions.length - 1];
+    positions.push(tail ? { node: tail.node, offset: tail.offset + 1 } : { node: block, offset: 0 });
+
+    const { text, map } = this.collapseWithMap(src);
+    // The other direction, for painting: source index -> the shown character
+    // covering it. Walks both cursors once rather than searching per lookup.
+    const shownAt = new Array(src.length + 1).fill(0);
+    let j = 0;
+    for (let i = 0; i <= src.length; i++) {
+      while (j + 1 < map.length && map[j + 1] <= i) j++;
+      shownAt[i] = j;
+    }
+    return { block, positions, text, map, shownAt, srcLen: src.length };
+  }
+
+  // Where a document position falls in the block's source text.
+  magnifierSrcIndex(m, node, offset) {
+    if (!node) return 0;
+    const r = document.createRange();
+    r.selectNodeContents(m.block);
+    try { r.setEnd(node, offset); } catch (e) { return 0; }
+    return Math.min(r.toString().length, m.srcLen);
   }
 
   paintMagnifier() {
     const el = this.magnifierTextEl;
     if (!el) return;
-    const t = this.magnifierTextNow();
-    if (!t) {
+    // Frozen mid-drag on purpose: this rebuilds the spans from the selection,
+    // and a drag changes the selection on every mousemove, so repainting would
+    // destroy the very elements the pointer coordinates are being read from.
+    if (this._magDragging) return;
+    const m = this.magnifierModel();
+    if (!m) {
       el.textContent = '';
+      this._magModel = null;
       return;
     }
+    const sel = window.getSelection();
+    const focusIdx = m.shownAt[this.magnifierSrcIndex(m, sel.focusNode, sel.focusOffset)];
+    const anchorIdx = m.shownAt[this.magnifierSrcIndex(m, sel.anchorNode, sel.anchorOffset)];
+    const lo = Math.min(anchorIdx, focusIdx), hi = Math.max(anchorIdx, focusIdx);
+
     el.style.opacity = '1';
     el.innerHTML = '';
-    const span = (txt, dim) => {
+    this._magModel = m;
+    // _magStart is what makes a click reversible: the shown index this span's
+    // first character sits at, so index = span._magStart + offset-within-span.
+    const seg = (from, to, css) => {
+      if (to <= from) return;
       const s = document.createElement('span');
-      s.textContent = txt;
-      if (dim) s.style.opacity = '0.5';
-      return s;
+      s.textContent = m.text.slice(from, to);
+      s._magStart = from;
+      if (css) s.style.cssText = css;
+      el.appendChild(s);
     };
     const caret = document.createElement('span');
     caret.style.cssText = 'display:inline-block;width:2px;height:0.95em;vertical-align:-0.1em;background:#7fc0ff;margin:0 1px;';
-    el.appendChild(span(t.before, false));
-    el.appendChild(caret);
-    el.appendChild(span(t.after, true));
-    // Text now wraps across up to 3 visible lines (capped by the container's
-    // fixed height) instead of running out along one long horizontally
-    // panned line — so keeping the caret in view means scrolling vertically
-    // to its own line, the same "pan to the caret" idea just turned sideways.
+
+    // With a collapsed caret lo === hi and this is exactly the old rendering:
+    // text, caret, dimmed text. With a selection the middle run is highlighted
+    // and the caret sits on whichever end the selection is growing from.
+    seg(0, lo, '');
+    if (focusIdx === lo) el.appendChild(caret);
+    seg(lo, hi, 'background:#2f6fb0;color:#ffffff;border-radius:2px;');
+    if (hi > lo && focusIdx === hi) el.appendChild(caret);
+    seg(hi, m.text.length, 'opacity:0.5;');
+    // Text wraps across up to 3 visible lines (capped by the container's fixed
+    // height) instead of running out along one long horizontally panned line —
+    // so keeping the caret in view means scrolling vertically to its own line,
+    // the same "pan to the caret" idea just turned sideways.
     el.scrollTop = caret.offsetTop - el.clientHeight / 2;
+  }
+
+  // Which shown character a point in the bar lands on.
+  magnifierIndexFromPoint(x, y) {
+    const el = this.magnifierTextEl;
+    if (!el) return null;
+    let node = null, offset = 0;
+    // Chrome/Safari spell this one way, Firefox the other.
+    if (document.caretRangeFromPoint) {
+      const r = document.caretRangeFromPoint(x, y);
+      if (r) { node = r.startContainer; offset = r.startOffset; }
+    } else if (document.caretPositionFromPoint) {
+      const p = document.caretPositionFromPoint(x, y);
+      if (p) { node = p.offsetNode; offset = p.offset; }
+    }
+    if (!node) return null;
+    let span = node.nodeType === 3 ? node.parentElement : node;
+    if (!span || !el.contains(span)) return null;
+    if (typeof span._magStart !== 'number') {
+      // The caret marker carries no text, and the container itself answers for
+      // the padding around the line — snap to the end of the last span that
+      // starts left of the pointer.
+      const segs = [].slice.call(el.children).filter(c => typeof c._magStart === 'number');
+      if (!segs.length) return null;
+      const prev = segs.filter(c => c.getBoundingClientRect().left <= x).pop();
+      if (!prev) return segs[0]._magStart;
+      return prev._magStart + (prev.textContent || '').length;
+    }
+    return span._magStart + offset;
+  }
+
+  // Click to place the caret, drag to select a run — in the document, not in
+  // the bar. The bar stays a mirror; everything the toolbar and the keyboard
+  // already do to a selection then works, with nothing new to keep in sync.
+  onMagnifierMouseDown(e) {
+    const m = this._magModel;
+    if (!m) return;
+    const startIdx = this.magnifierIndexFromPoint(e.clientX, e.clientY);
+    if (startIdx == null) return;
+    // The bar is a mirror, not a text field: preventing the default stops the
+    // browser starting its own selection in here and, more to the point, stops
+    // the editable losing focus — the document's selection is the one that has
+    // to move, and a document only gets one.
+    e.preventDefault();
+    const sel = window.getSelection();
+    const posFor = (idx) => {
+      const clamped = Math.max(0, Math.min(idx, m.map.length - 1));
+      return m.positions[Math.min(m.map[clamped], m.positions.length - 1)];
+    };
+    const anchor = posFor(startIdx);
+    if (!anchor) return;
+    this._magDragging = true;
+    const apply = (focus) => {
+      try { sel.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset); } catch (err) {}
+    };
+    apply(anchor);
+    const move = (ev) => {
+      const idx = this.magnifierIndexFromPoint(ev.clientX, ev.clientY);
+      if (idx == null) return;
+      const f = posFor(idx);
+      if (f) apply(f);
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      this._magDragging = false;
+      this.paintMagnifier();
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
   }
 
   // The mobile keyboard changes how much of the window is actually visible.
@@ -5875,6 +6014,7 @@ class Component extends DCLogic {
         if (el) { this.syncMagnifierPosition(); setTimeout(() => this.paintMagnifier(), 20); }
       },
       magnifierTextRef: (el) => { this.magnifierTextEl = el; if (el) setTimeout(() => this.paintMagnifier(), 20); },
+      onMagnifierMouseDown: (e) => this.onMagnifierMouseDown(e),
       // The magnifier earns its place on desktop; on a phone reflow replaces it.
       magnifierVisible: this.state.docCreated && !isLabelDoc && !this.state.narrowScreen,
       magnifierBottom: '42px',
