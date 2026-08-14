@@ -210,6 +210,19 @@ synthetic `new DragEvent('drop')` dispatched at an element. The synthetic
 kind bypasses hit-testing entirely and will happily pass while real drags
 fail — that exact blind spot hid this for a while.
 
+## PDF import works but is deliberately not advertised
+
+The DROP-ZONE button says `DOCU-DOCX-TXT-RTF` — no PDF, on purpose. PDF
+import is fully built and working (everything in the next section); it just
+isn't offered, because importing PDFs isn't what this app is for. Saving
+*to* PDF via print is the PDF story users are meant to know about.
+
+Dropping a PDF still imports it, and the file picker still accepts one, so
+someone who tries it anyway gets something sensible instead of nothing.
+**Don't "fix" the button label by adding PDF back**, and don't strip the
+import code as dead — it's reachable, tested, and costs nothing when
+unused (pdf.js is lazy-loaded).
+
 ## PDF import: pages first, text only if asked
 
 A dropped PDF comes in as **rendered page images** (`renderPdfAsPages`), so
