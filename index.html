@@ -466,26 +466,24 @@ textarea.input { min-height: 90px; resize: vertical; }
        next to D-Z/title at phone widths. -->
   <sc-if value="{{ topBarFontBarVisible }}" hint-placeholder-val="{{ false }}">
   <div style="display:flex;gap:4px;align-items:center;">
-    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" sc-camel-default-value="" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <!-- These two show the font and size of whatever the caret is in (the
+         first character's, where a selection spans several) rather than a
+         fixed placeholder — see readSelectionFormat. -->
+    <sc-raw-select sc-camel-on-change="{{ onTopBarFontChange }}" value="{{ topBarFontValue }}" title="Font" style="height:32px;max-width:80px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Font…</option>
       <sc-for list="{{ topBarFontOptions }}" as="fn" hint-placeholder-count="5">
         <option value="{{ fn.name }}">{{ fn.name }}</option>
       </sc-for>
     </sc-raw-select>
-    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" sc-camel-default-value="" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:Arial, sans-serif;font-size:13px;padding:2px 4px;">
+    <sc-raw-select sc-camel-on-change="{{ onTopBarSizeChange }}" value="{{ topBarSizeValue }}" title="Size" style="height:32px;width:48px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:Arial, sans-serif;font-size:13px;padding:2px 4px;">
       <option value="">Size…</option>
-      <option value="10">10</option>
-      <option value="12">12</option>
-      <option value="14">14</option>
-      <option value="16">16</option>
-      <option value="18">18</option>
-      <option value="24">24</option>
-      <option value="32">32</option>
-      <option value="48">48</option>
+      <sc-for list="{{ topBarSizeOptions }}" as="sz" hint-placeholder-count="8">
+        <option value="{{ sz.name }}">{{ sz.name }}</option>
+      </sc-for>
     </sc-raw-select>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
-    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-weight:700;{{ boldBtnStyle }}" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;font-style:italic;{{ italicBtnStyle }}" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
+    <button class="btn btn-secondary" style="width:28px;height:32px;padding:0;text-decoration:underline;{{ underlineBtnStyle }}" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
     <!-- 3x3 anchor grid: horizontal (column) always justifies the selection;
          vertical (row) only does anything on the currently-focused box if
          it's independent or image — see onAlignGridClick. Only the middle
@@ -1005,9 +1003,9 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <button class="btn btn-icon" sc-camel-on-click="{{ onFontPickerClose }}" title="Close">×</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-secondary" style="width:36px;font-weight:700;" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
-        <button class="btn btn-secondary" style="width:36px;font-style:italic;" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
-        <button class="btn btn-secondary" style="width:36px;text-decoration:underline;" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
+        <button class="btn btn-secondary" style="width:36px;font-weight:700;{{ boldBtnStyle }}" sc-camel-on-click="{{ onBoldClick }}" title="Bold">B</button>
+        <button class="btn btn-secondary" style="width:36px;font-style:italic;{{ italicBtnStyle }}" sc-camel-on-click="{{ onItalicClick }}" title="Italic">I</button>
+        <button class="btn btn-secondary" style="width:36px;text-decoration:underline;{{ underlineBtnStyle }}" sc-camel-on-click="{{ onUnderlineClick }}" title="Underline">U</button>
         <sc-raw-select sc-camel-on-change="{{ onFontSizeChange }}" sc-camel-default-value="" style="width:76px;height:36px;border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);background:#ffffff;color:var(--color-text,#1d1f20);font-family:Arial, sans-serif;font-size:14px;padding:2px 6px;">
           <option value="">Size…</option>
           <option value="10">10</option>
@@ -1294,7 +1292,7 @@ const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 const MAX_PDF_PAGES = 40;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1452,6 +1450,16 @@ class Component extends DCLogic {
     };
     document.addEventListener('selectionchange', this._onSelectionChange);
     document.addEventListener('selectionchange', this._onSelectionChangeAny);
+    // Keeps the top bar showing what the caret is actually sitting in —
+    // font, size, and which of B/I/U are on. selectionchange fires very
+    // freely (every caret move, every keystroke), so it's coalesced to one
+    // read per frame and only re-renders when something really changed.
+    this._onSelectionFormatSync = () => {
+      if (this._fmtRaf) cancelAnimationFrame(this._fmtRaf);
+      this._fmtRaf = requestAnimationFrame(() => this.syncSelectionFormat());
+    };
+    document.addEventListener('selectionchange', this._onSelectionFormatSync);
+    document.addEventListener('input', this._onSelectionFormatSync, true);
     // Files pasted (Ctrl+V, or right-click Paste) anywhere on the entry
     // screen — same import path as a drop. Gated on docWasOpen being false
     // (i.e. the setup screen is actually showing) and on clipboardData
@@ -3663,6 +3671,8 @@ class Component extends DCLogic {
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
     document.removeEventListener('selectionchange', this._onMagnifierSync);
     document.removeEventListener('input', this._onMagnifierSync, true);
+    document.removeEventListener('selectionchange', this._onSelectionFormatSync);
+    document.removeEventListener('input', this._onSelectionFormatSync, true);
     document.removeEventListener('paste', this._onEntryScreenPaste);
     if (window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this._onVV);
@@ -4044,6 +4054,49 @@ class Component extends DCLogic {
   // is null for a box/stream target: checkpoint/updateEmptyState are a
   // page-level undo concept boxes don't participate in yet, so callers skip
   // them rather than passing a meaningless id.
+  // Reads the formatting the caret/selection is sitting in, so the top bar
+  // can show it rather than always reading "Font…/Size…". Where a selection
+  // spans more than one format, this reports the one at its *start* — the
+  // first character wins, which is both predictable and what a toolbar
+  // conventionally shows.
+  readSelectionFormat() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    let node = range.startContainer;
+    if (node && node.nodeType === 3) node = node.parentElement;
+    if (!node || node.nodeType !== 1) return null;
+    // Only report on text the app actually owns — a click in a toolbar
+    // input shouldn't repaint the document's font readout.
+    if (!this.findSavedEditableTarget(node)) return null;
+    const cs = window.getComputedStyle(node);
+    const family = (cs.fontFamily || '').split(',')[0].replace(/^\s*['"]?|['"]?\s*$/g, '').trim();
+    const size = String(Math.round(parseFloat(cs.fontSize) || 0));
+    // queryCommandState knows about <b>/<strong> and the browser's own
+    // markup; the computed style catches formatting applied as a plain
+    // inline style, which is how the Aa panel writes it.
+    const q = (cmd) => { try { return document.queryCommandState(cmd); } catch (e) { return false; } };
+    return {
+      family,
+      size,
+      bold: q('bold') || (parseInt(cs.fontWeight, 10) || 400) >= 600,
+      italic: q('italic') || cs.fontStyle === 'italic',
+      underline: q('underline') || (cs.textDecorationLine || cs.textDecoration || '').includes('underline'),
+    };
+  }
+
+  syncSelectionFormat() {
+    const f = this.readSelectionFormat();
+    if (!f) return;   // leave the last known state up rather than flickering
+    const s = this.state;
+    if (f.family === s.selFontFamily && f.size === s.selFontSize
+      && f.bold === s.selBold && f.italic === s.selItalic && f.underline === s.selUnderline) return;
+    this.setState({
+      selFontFamily: f.family, selFontSize: f.size,
+      selBold: f.bold, selItalic: f.italic, selUnderline: f.underline,
+    });
+  }
+
   findSavedEditableTarget(node) {
     if (!node) return null;
     if (node.nodeType !== 1) node = node.parentElement;
@@ -5901,23 +5954,49 @@ class Component extends DCLogic {
       // is picked rather than staging for an Apply click. Duplicated rather
       // than shared so the modal's staged behavior isn't disturbed.
       topBarFontBarVisible: !this.state.narrowScreen,
-      topBarFontOptions: [...new Set([...Component.SYSTEM_FONTS, ...Component.POPULAR_FONTS, ...this.state.customFonts])]
-        .map(n => ({ name: n })),
+      // Both dropdowns show what the caret is sitting in rather than a
+      // permanent placeholder. The current value is folded into the option
+      // list when it isn't already one of the presets — a select can't
+      // display a value it has no option for, and the document's own font
+      // or an odd size like 15px would otherwise show as blank.
+      topBarFontOptions: (() => {
+        const names = [...new Set([...Component.SYSTEM_FONTS, ...Component.POPULAR_FONTS, ...this.state.customFonts])];
+        const cur = this.state.selFontFamily;
+        if (cur && !names.includes(cur)) names.unshift(cur);
+        return names.map(n => ({ name: n }));
+      })(),
+      topBarFontValue: this.state.selFontFamily || '',
+      topBarSizeOptions: (() => {
+        const sizes = ['10', '12', '14', '16', '18', '24', '32', '48'];
+        const cur = this.state.selFontSize;
+        if (cur && cur !== '0' && !sizes.includes(cur)) sizes.push(cur);
+        return sizes.sort((a, b) => Number(a) - Number(b)).map(n => ({ name: n }));
+      })(),
+      topBarSizeValue: this.state.selFontSize || '',
       onTopBarFontChange: (e) => {
         const val = e.target.value;
-        e.target.value = '';
         if (!val) return;
         this.injectGoogleFont(val);
-        this.setState(s => ({ customFonts: s.customFonts.includes(val) ? s.customFonts : [...s.customFonts, val] }), () => {
+        this.setState(s => ({
+          customFonts: s.customFonts.includes(val) ? s.customFonts : [...s.customFonts, val],
+          // Shown immediately; the selectionchange read that follows will
+          // confirm it from the document itself.
+          selFontFamily: val,
+        }), () => {
           this.saveDebounced();
           this.restoreSelectionAndApply('fontFamily', "'" + val + "', sans-serif");
         });
       },
       onTopBarSizeChange: (e) => {
         const val = e.target.value;
-        e.target.value = '';
-        if (val) this.restoreSelectionAndApply('fontSize', val + 'px');
+        if (!val) return;
+        this.setState({ selFontSize: val }, () => this.restoreSelectionAndApply('fontSize', val + 'px'));
       },
+      // A blue inner glow while the selection already carries that
+      // formatting, so B/I/U read as state rather than just three buttons.
+      boldBtnStyle: this.state.selBold ? 'background:#dbe9f7;box-shadow:inset 0 0 7px 2px rgba(47,111,176,0.55);border-color:#2f6fb0;' : '',
+      italicBtnStyle: this.state.selItalic ? 'background:#dbe9f7;box-shadow:inset 0 0 7px 2px rgba(47,111,176,0.55);border-color:#2f6fb0;' : '',
+      underlineBtnStyle: this.state.selUnderline ? 'background:#dbe9f7;box-shadow:inset 0 0 7px 2px rgba(47,111,176,0.55);border-color:#2f6fb0;' : '',
       fileInputRef: (el) => { if (el) this.fileInputEl = el; },
       onFileChosen: (e) => this.onFileChosen(e),
       boxFileInputRef: (el) => { if (el) this.boxFileInputEl = el; },

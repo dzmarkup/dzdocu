@@ -243,6 +243,27 @@ someone who tries it anyway gets something sensible instead of nothing.
 import code as dead — it's reachable, tested, and costs nothing when
 unused (pdf.js is lazy-loaded).
 
+## The top bar reflects the selection, it doesn't just command it
+
+The Font/Size dropdowns show what the caret is actually sitting in, and
+B/I/U glow blue when the selection already carries that formatting.
+`readSelectionFormat()` reads it from the DOM (computed style at the
+selection's *start* — the first character wins where a selection spans
+several formats, which is the usual toolbar convention), and
+`syncSelectionFormat()` writes it to state from a `selectionchange`
+listener coalesced to one read per frame, only setting state when a value
+really changed. `selectionchange` fires on every caret move and keystroke,
+so neither of those guards is optional.
+
+Two things that look like bugs but aren't:
+
+- **A select can't display a value it has no `<option>` for.** The current
+  font or an odd size (15px, say) is folded into the option list when it
+  isn't already a preset, otherwise the box would just render blank.
+- **Typing after formatted text keeps showing that formatting.** The caret
+  really is inside the formatted run and the new text really does inherit
+  it — the readout is correct, not stale.
+
 ## Walking the setup flow must build a genuinely new document
 
 `onPickFullPageDocument` / `onPickDocLayoutTemplate` both go through
