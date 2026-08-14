@@ -403,6 +403,22 @@ only act while `setupStep === 'size'` / `docCreated` is false — this is what
 stops them from hijacking the orientation/label-address steps' own text
 fields, which share the same overlay and background.
 
+## Click-away dismissal must check where the press STARTED
+
+A modal backdrop that closes on `click` closes when a user drag-selects text
+inside the panel and releases a few pixels outside it. The `click` event's
+target is the nearest common ancestor of mousedown and mouseup, so an
+overshooting selection lands its click on the backdrop — the inner panel's
+`stopClickBubble` is no help, because the click really did happen on the
+backdrop, it just didn't *start* there. Reported as the Save to Email box
+"closing randomly" and refusing to let several letters be selected and
+retyped; the address field is narrow, so overshooting it is the normal case.
+
+All four modal backdrops (add-page, email, font picker, char picker) now pair
+`sc-camel-on-mouse-down="{{ onBackdropMouseDown }}"` with a `backdropClose(...)`
+wrapper that only fires when the press began on the backdrop itself. Any new
+click-away panel needs both halves, not just the click handler.
+
 ## Known and unfinished
 
 Nothing outstanding right now. The prior items here (unused font subsets,
