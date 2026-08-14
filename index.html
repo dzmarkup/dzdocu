@@ -907,7 +907,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
 </sc-if>
 
 <sc-if value="{{ addPageOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" sc-camel-on-click="{{ onAddPageClose }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
+  <div class="no-print" sc-camel-on-mouse-down="{{ onBackdropMouseDown }}" sc-camel-on-click="{{ onAddPageBackdropClick }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
     <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:Arial, sans-serif;">
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onAddPageClose }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
@@ -965,7 +965,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 </sc-if>
 
 <sc-if value="{{ emailPromptOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" sc-camel-on-click="{{ onCloseEmailPanel }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
+  <div class="no-print" sc-camel-on-mouse-down="{{ onBackdropMouseDown }}" sc-camel-on-click="{{ onEmailBackdropClick }}" style="position:fixed;inset:0;background:rgba(29,31,32,0.6);z-index:55;display:flex;align-items:center;justify-content:center;">
     <div sc-camel-on-click="{{ stopClickBubble }}" style="background:#3a3a3a;border-radius:var(--radius-sm,4px);padding:14px;font-family:Arial, sans-serif;">
       <div style="position:relative;background:var(--color-neutral-100,#e8e8e9);border:1px solid var(--color-neutral-300,#ccc);border-radius:var(--radius-sm,4px);padding:24px 32px;width:280px;text-align:left;">
         <button class="btn btn-ghost" sc-camel-on-click="{{ onCloseEmailPanel }}" title="Close" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">×</button>
@@ -999,7 +999,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
 
 <div style="display:flex;justify-content:center;">
 <sc-if value="{{ fontPickerOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:60;display:flex;align-items:center;justify-content:center;" sc-camel-on-click="{{ onFontPickerClose }}">
+  <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:60;display:flex;align-items:center;justify-content:center;" sc-camel-on-mouse-down="{{ onBackdropMouseDown }}" sc-camel-on-click="{{ onFontPickerBackdropClick }}">
     <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:420px;max-height:70vh;display:flex;flex-direction:column;font-family:Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:18px;color:#1d1f20;">Font &amp; format</div>
@@ -1071,7 +1071,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
   </div>
 </sc-if>
 <sc-if value="{{ charPickerOpen }}" hint-placeholder-val="{{ false }}">
-  <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:61;display:flex;align-items:center;justify-content:center;" sc-camel-on-click="{{ onCharPickerClose }}">
+  <div class="no-print" style="position:fixed;inset:0;background:rgba(29,31,32,0.5);z-index:61;display:flex;align-items:center;justify-content:center;" sc-camel-on-mouse-down="{{ onBackdropMouseDown }}" sc-camel-on-click="{{ onCharPickerBackdropClick }}">
     <div style="background:#e6e6e6;border-radius:var(--radius-sm,4px);padding:24px;width:400px;max-height:70vh;display:flex;flex-direction:column;font-family:Arial, sans-serif;" sc-camel-on-click="{{ stopClickBubble }}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:18px;color:#1d1f20;">Special characters</div>
@@ -3886,6 +3886,24 @@ class Component extends DCLogic {
     } catch (e) {}
   }
 
+  // A click event's target is the nearest common ancestor of where the mouse
+  // went DOWN and where it came UP — so drag-selecting text inside a panel and
+  // releasing a few pixels past its edge fires `click` on the backdrop, not on
+  // the input. Closing on that killed the panel mid-selection: reported as the
+  // Save to Email box "closing randomly" and refusing to let several letters be
+  // selected and retyped. The address field is narrow, so overshooting it is
+  // the normal case, not an unlucky one.
+  //
+  // The inner panel's stopClickBubble can't help here — the click genuinely
+  // happens on the backdrop, it just didn't START there. So record where the
+  // press began and only treat it as a backdrop click if that was the backdrop
+  // too. Every mousedown inside the panel bubbles out to the backdrop (only
+  // `click` is stopped, not `mousedown`), so this flag is always current.
+  onBackdropMouseDown(e) { this._backdropPressedSelf = e.target === e.currentTarget; }
+  backdropClose(handler) {
+    return () => { if (this._backdropPressedSelf) handler(); };
+  }
+
   onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
   onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
   onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
@@ -5928,6 +5946,14 @@ class Component extends DCLogic {
       onOpenCharPicker: () => this.setState({ charPickerOpen: true }),
       onCharPickerClose: () => this.setState({ charPickerOpen: false }),
       stopClickBubble: (e) => e.stopPropagation(),
+      // Backdrop dismissal, guarded so a drag-select that ends outside the
+      // panel doesn't count as "clicked away" — see onBackdropMouseDown.
+      onBackdropMouseDown: (e) => this.onBackdropMouseDown(e),
+      onAddPageBackdropClick: this.backdropClose(() => this.onAddPageClose()),
+      onEmailBackdropClick: this.backdropClose(() => this.onCloseEmailPanel()),
+      onFontPickerBackdropClick: this.backdropClose(
+        () => this.setState({ fontPickerOpen: false, fontPendingFamily: null, fontPendingSize: null })),
+      onCharPickerBackdropClick: this.backdropClose(() => this.setState({ charPickerOpen: false })),
       hasAddedFonts: this.state.customFonts.length > 0,
       addedFonts: this.state.customFonts.map(n => ({
         name: n,
