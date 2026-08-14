@@ -192,17 +192,37 @@ just applies that name directly (`'<name>', sans-serif`), no substitution.
 Google-hosted picks (`POPULAR_FONTS`) are fetched live from Google Fonts on
 first use, independent of anything bundled locally.
 
-## A dropped file on the entry screen is queued, not imported
+## A file dropped on the entry screen answers setup by itself
 
-`handleFile()` deliberately holds a file in `pendingDropFiles` when
-`docCreated` is false — importing before a page size is picked used to flow
-the content at whatever size happened to be current. The catch: for a long
-time nothing on screen changed when this happened, because
-`pendingDropFiles` is an instance field, not state. A drop that worked
-perfectly looked identical to one that did nothing, and got reported as
-"drag and drop is broken" more than once. `queuedDropNames` mirrors the
-queued filenames into state purely so the entry screen can show a
-"Ready to import" confirmation; `importPendingDrops()` clears it.
+Dropping onto the entry screen no longer asks for a page size, orientation
+or layout — `autoStartFromFile()` works out the answer from the file and
+goes straight into the document. Only there: dropping into a document
+that's already open keeps the old per-type behavior, since silently
+re-sizing something being worked in would be destructive.
+
+- **PDF** — the page size is read from the PDF itself
+  (`detectSetupForFile` → `pdfSetupFromViewport`, shared with
+  `renderPdfAsPages` so the page created and the page poured into can't
+  disagree). Letter if it fits, otherwise tabloid; orientation follows the
+  PDF. Bigger than 11×17 sets `pdfWasResized`, which adds a line to the
+  notice rather than silently shrinking it.
+- **Everything else** — letter portrait. Not a shortcut: TXT and RTF carry
+  no page size at all, and the one inside DOCX's XML isn't exposed by
+  mammoth, so there is genuinely nothing to read.
+
+PDF pages are marked in `pdfPageIds` (persisted with the document), which
+is what drops their margin box to zero and suppresses the header — they
+print edge to edge at the PDF's own scale. The render is wrapped in a
+`contentEditable="false"` holder with `pointer-events:none`: "locked"
+means the artwork can't be dragged or resized out of scale, while the page
+underneath still takes a caret and can be typed on. Extracting text clears
+`pdfPageIds`, so margins and headers come back with the editable text.
+
+## Verifying drag-and-drop
+
+`pendingDropFiles`/`queuedDropNames` still exist and still show a
+"Ready to import" confirmation, but the entry screen now imports straight
+away (above), so that queue is only reached on paths that don't auto-start.
 
 If you ever chase a "drop doesn't work" report again: verify with a **real**
 drag (CDP `Input.dispatchDragEvent`, which does genuine hit-testing), not a

@@ -601,14 +601,24 @@ textarea.input { min-height: 90px; resize: vertical; }
 </div>
 </sc-if>
 
-<!-- A PDF imports as its rendered pages (see onDropPDF). Text extraction is
-     offered here afterward rather than being done automatically, and only
-     when the PDF actually has a text layer worth pulling. -->
-<sc-if value="{{ pdfExtractOfferVisible }}" hint-placeholder-val="{{ false }}">
-<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);max-width:92vw;">
-  <span>Imported as pages. Want the text instead?</span>
-  <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 10px;white-space:nowrap;" sc-camel-on-click="{{ onExtractPdfText }}">Extract Text</button>
-  <button class="no-print" style="width:20px;height:20px;line-height:18px;text-align:center;padding:0;box-sizing:border-box;border:1px solid #445;border-radius:3px;background:transparent;color:#9dc6f0;font-size:13px;cursor:pointer;" sc-camel-on-click="{{ onDismissPdfExtractOffer }}" title="Dismiss">×</button>
+<!-- A PDF imports as its rendered pages (see onDropPDF), locked to scale and
+     not editable — which is worth saying plainly, since this is otherwise an
+     editor and the pages look like ordinary content. The resize line only
+     appears when the PDF was actually bigger than 11×17 and got scaled.
+     Text extraction is offered here rather than done automatically, and only
+     when the PDF really has a text layer worth pulling. -->
+<sc-if value="{{ pdfNoticeVisible }}" hint-placeholder-val="{{ false }}">
+<div class="no-print" style="position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:6px;background:#111418;color:#eaf2ff;font-family:Arial, sans-serif;font-size:12px;font-weight:700;letter-spacing:0.01em;box-shadow:0 2px 10px rgba(0,0,0,0.4);max-width:92vw;">
+  <span style="line-height:1.4;">
+    PDF pages can't be edited here — they're placed to scale and locked.
+    <sc-if value="{{ pdfResizedVisible }}" hint-placeholder-val="{{ false }}">
+      <span style="display:block;font-weight:400;color:#ffd9a8;">This PDF is larger than 11×17, so it was scaled down to fit.</span>
+    </sc-if>
+  </span>
+  <sc-if value="{{ pdfExtractOfferVisible }}" hint-placeholder-val="{{ false }}">
+    <button class="btn btn-secondary" style="height:24px;font-size:11px;padding:0 10px;white-space:nowrap;" sc-camel-on-click="{{ onExtractPdfText }}">Extract Text</button>
+  </sc-if>
+  <button class="no-print" style="width:20px;height:20px;line-height:18px;text-align:center;padding:0;box-sizing:border-box;border:1px solid #445;border-radius:3px;background:transparent;color:#9dc6f0;font-size:13px;cursor:pointer;flex:0 0 auto;" sc-camel-on-click="{{ onDismissPdfExtractOffer }}" title="Dismiss">×</button>
 </div>
 </sc-if>
 
@@ -1272,7 +1282,7 @@ const DOC_LAYOUT_TEMPLATES = [
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfExtractOfferName: null };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfExtractOfferName: null, pdfPageIds: {}, pdfNoticeOpen: false, pdfWasResized: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -3661,6 +3671,7 @@ class Component extends DCLogic {
       pageAddresses: this.state.pageAddresses,
       labelLayouts: this.state.labelLayouts,
       pageBoxTrees: this.state.pageBoxTrees,
+      pdfPageIds: this.state.pdfPageIds,
       pageCounter: this.pageCounter,
       customFonts: this.state.customFonts,
       pageHtml,
@@ -3699,6 +3710,8 @@ class Component extends DCLogic {
       labelLayouts: data.labelLayouts || {},
       // Same story for documents saved before box layouts existed.
       pageBoxTrees: data.pageBoxTrees || {},
+      // Documents saved before PDF pages existed simply have none.
+      pdfPageIds: data.pdfPageIds || {},
       customFonts: data.customFonts || [],
       // Restoring a document *is* creating one. Without this the setup screen
       // stays up and the editables never mount, so the restored pageHtml has
@@ -4622,13 +4635,9 @@ class Component extends DCLogic {
   // page — so it gets its own page, filling it edge to edge, one for one.
   async renderPdfAsPages(pageId, pdf) {
     const firstPage = await pdf.getPage(1);
-    const pv = firstPage.getViewport({ scale: 1 });
-    const wIn = pv.width / 72, hIn = pv.height / 72;
-    const longIn = Math.max(wIn, hIn);
-    const size = Math.abs(longIn - 17) < Math.abs(longIn - 11) ? 'tabloid' : 'letter';
-    const orientation = wIn > hIn ? 'landscape' : 'portrait';
-    if (size !== this.state.defaultSize || orientation !== this.state.defaultOrientation) {
-      await new Promise(resolve => this.setState({ defaultSize: size, defaultOrientation: orientation }, resolve));
+    const setup = this.pdfSetupFromViewport(firstPage.getViewport({ scale: 1 }));
+    if (setup.size !== this.state.defaultSize || setup.orientation !== this.state.defaultOrientation) {
+      await new Promise(resolve => this.setState({ defaultSize: setup.size, defaultOrientation: setup.orientation }, resolve));
       await new Promise(r => setTimeout(r, 30));
     }
 
@@ -4667,13 +4676,33 @@ class Component extends DCLogic {
         src = this.compressImage(probe, canvas.width, canvas.height);
       } catch (err) { /* keep the uncompressed PNG */ }
       el.innerHTML = '';
+      // contentEditable=false on the wrapper is what "locked" means here:
+      // the page itself still takes a caret and can be typed on, but the
+      // rendered PDF underneath can't be dragged, resized, or nudged out of
+      // scale by a stray click. object-fit:contain over a sheet the same
+      // size as the PDF page keeps it at true scale.
+      const holder = document.createElement('div');
+      holder.contentEditable = 'false';
+      holder.setAttribute('data-pdf-page', String(i));
+      holder.style.cssText = 'display:block;width:100%;height:100%;user-select:none;-webkit-user-select:none;pointer-events:none;';
       const imageEl = document.createElement('img');
       imageEl.src = src;
-      imageEl.setAttribute('data-pdf-page', String(i));
+      imageEl.draggable = false;
       imageEl.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
-      el.appendChild(imageEl);
+      holder.appendChild(imageEl);
+      el.appendChild(holder);
       this.updateEmptyState(targetIds[i - 1]);
     }
+
+    // Marks these pages as PDF sheets: no margin box (they print edge to
+    // edge at the PDF's own scale) and no header, which would otherwise
+    // stamp itself over the artwork.
+    const pdfMap = {};
+    targetIds.forEach(id => { pdfMap[id] = true; });
+    this.setState(s => ({
+      pdfPageIds: { ...s.pdfPageIds, ...pdfMap },
+      pdfNoticeOpen: true,
+    }), () => this.saveDebounced());
   }
 
   // Cheap probe: a born-digital PDF gives up text immediately, a scan gives
@@ -4724,6 +4753,9 @@ class Component extends DCLogic {
     await new Promise(res => this.setState({
       pageIds: [id], pageKinds: {}, pageHeaderTitles: {}, pageEmptyMap: {},
       pdfExtractOfferName: null,
+      // Back to a normal document: margins and headers return, and the
+      // "can't be edited" notice no longer applies to what's on screen.
+      pdfPageIds: {}, pdfNoticeOpen: false, pdfWasResized: false,
     }, res));
     await new Promise(r => setTimeout(r, 40));
     try {
@@ -4812,6 +4844,60 @@ class Component extends DCLogic {
     return this.state.pageIds[this.state.pageIds.length - 1];
   }
 
+  // Which document page a file wants, worked out from the file itself.
+  // Everything that isn't a PDF lands on letter portrait: a PDF states its
+  // page size outright, but TXT and RTF carry none at all and the one buried
+  // in DOCX's XML isn't exposed by mammoth, so there's nothing to detect and
+  // letter portrait is the answer for practically all of them anyway.
+  async detectSetupForFile(file) {
+    if (file.type !== 'application/pdf') return { size: 'letter', orientation: 'portrait', oversize: false };
+    try {
+      await this.ensurePdfJs();
+      if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdf.worker.min.js';
+      }
+      const buf = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+      const page = await pdf.getPage(1);
+      return this.pdfSetupFromViewport(page.getViewport({ scale: 1 }));
+    } catch (err) {
+      return { size: 'letter', orientation: 'portrait', oversize: false };
+    }
+  }
+
+  // Shared by the entry-screen detection above and renderPdfAsPages, so the
+  // page the document is created at and the page the PDF is poured into can
+  // never disagree. A hair of tolerance because real-world PDFs miss their
+  // nominal size by fractions of a point.
+  pdfSetupFromViewport(pv) {
+    const TOL = 0.06;
+    const wIn = pv.width / 72, hIn = pv.height / 72;
+    const shortIn = Math.min(wIn, hIn), longIn = Math.max(wIn, hIn);
+    const fitsLetter = shortIn <= 8.5 + TOL && longIn <= 11 + TOL;
+    const fitsTabloid = shortIn <= 11 + TOL && longIn <= 17 + TOL;
+    return {
+      size: fitsLetter ? 'letter' : 'tabloid',
+      orientation: wIn > hIn ? 'landscape' : 'portrait',
+      // Bigger than tabloid: it still comes in, scaled down to fit, but the
+      // user is told rather than left to wonder why it doesn't measure right.
+      oversize: !fitsTabloid,
+    };
+  }
+
+  // Straight from a dropped file into a document, no setup questions.
+  async autoStartFromFile(file) {
+    this.setState({ queuedDropNames: [file.name || 'file'] });
+    const setup = await this.detectSetupForFile(file);
+    this.pendingDropFiles = [file];
+    this.setState({
+      defaultSize: setup.size,
+      defaultOrientation: setup.orientation,
+      docCreated: true,
+      queuedDropNames: [],
+      pdfWasResized: setup.oversize,
+    }, () => this.finishSetupSideEffects());
+  }
+
   // Files held while the setup screen asked for a page size.
   importPendingDrops() {
     const files = this.pendingDropFiles || [];
@@ -4846,18 +4932,13 @@ class Component extends DCLogic {
     // Importing first flowed the content at whatever size happened to be
     // current and left the setup screen up over the top of it, so the pages
     // were already made — and made wrongly — before the user chose anything.
+    // Dropping a file onto the entry screen answers the setup questions by
+    // itself — the file already knows what shape it is, so asking for a page
+    // size and layout is asking the user to re-state something we can just
+    // look at. (Only on the entry screen: silently re-sizing a document
+    // that's already open and being worked in would be destructive.)
     if (!this.state.docCreated) {
-      this.pendingDropFiles = (this.pendingDropFiles || []).concat(file);
-      // pendingDropFiles is an instance field, so queuing alone re-renders
-      // nothing — a drop on the entry screen used to change absolutely
-      // nothing on screen, which reads as "dropping is broken" even though
-      // the file was received fine and imports correctly once a size is
-      // picked. Mirroring the names into state is what makes the queue
-      // visible (see queuedDropNames in the markup).
-      this.setState({
-        setupStep: 'size',
-        queuedDropNames: (this.pendingDropFiles || []).map(f => f.name || 'file'),
-      });
+      this.autoStartFromFile(file);
       return;
     }
     const pageId = this.targetPageId();
@@ -5111,7 +5192,8 @@ class Component extends DCLogic {
       if (!isCover) posCounter++;
       const num = posCounter;
       const isLabel = ['label46', 'label24', 'label1x2'].includes(this.state.defaultSize);
-      const headerOn = this.state.headerGlobalOn && !isCover && !isLabel;
+      const isPdfPage = !!this.state.pdfPageIds[id];
+      const headerOn = this.state.headerGlobalOn && !isCover && !isLabel && !isPdfPage;
       const headerOff = !headerOn && !isCover && !isLabel;
       const canDrag = isCover || !!adjacentCoverId[id];
       // Box mode is desktop-document-only — labels keep their own box model,
@@ -5190,11 +5272,14 @@ class Component extends DCLogic {
         // A document's padding is its margin box. A header or a cover still
         // claims the top of the page, so those set a floor the box cannot
         // cross — otherwise the text would slide underneath them.
-        editablePaddingTop: isLabel ? labelPadIn
-          : (headerOn ? Math.max(docMargin.t, 1.9) : (isCover ? Math.max(docMargin.t, 1.6) : docMargin.t)) + 'in',
-        editablePaddingX: isLabel ? labelPadXIn : docMargin.l + 'in',
-        editablePaddingRight: isLabel ? labelPadXIn : (dims.w - docMargin.r).toFixed(3) + 'in',
-        editablePaddingBottom: isLabel ? (this.labelPadBottomInches() + 'in') : (dims.h - docMargin.b).toFixed(3) + 'in',
+        // A PDF page is the sheet, not something sitting on it — it prints
+        // edge to edge at the PDF's own scale, so it gets no margin box at
+        // all. Everything else keeps the document's normal margins.
+        editablePaddingTop: isPdfPage ? '0in' : (isLabel ? labelPadIn
+          : (headerOn ? Math.max(docMargin.t, 1.9) : (isCover ? Math.max(docMargin.t, 1.6) : docMargin.t)) + 'in'),
+        editablePaddingX: isPdfPage ? '0in' : (isLabel ? labelPadXIn : docMargin.l + 'in'),
+        editablePaddingRight: isPdfPage ? '0in' : (isLabel ? labelPadXIn : (dims.w - docMargin.r).toFixed(3) + 'in'),
+        editablePaddingBottom: isPdfPage ? '0in' : (isLabel ? (this.labelPadBottomInches() + 'in') : (dims.h - docMargin.b).toFixed(3) + 'in'),
         editableDisplay: isLabel ? 'flex' : 'block',
         editableJustify: isLabel ? 'center' : 'flex-start',
         titleRef: (el) => { if (el) { this.titleEls[id] = el; this.autoGrowTitle(id); } },
@@ -5618,9 +5703,11 @@ class Component extends DCLogic {
       vertAlignNoticeVisible: !!this.state.vertAlignNoticeMsg,
       vertAlignNoticeMsg: this.state.vertAlignNoticeMsg || '',
       autoResumeBannerVisible: this.state.autoResumeBannerOpen,
+      pdfNoticeVisible: this.state.pdfNoticeOpen,
+      pdfResizedVisible: this.state.pdfWasResized,
       pdfExtractOfferVisible: !!this.state.pdfExtractOfferName,
       onExtractPdfText: () => this.onExtractPdfText(),
-      onDismissPdfExtractOffer: () => { this._pdfExtractFile = null; this.setState({ pdfExtractOfferName: null }); },
+      onDismissPdfExtractOffer: () => { this._pdfExtractFile = null; this.setState({ pdfExtractOfferName: null, pdfNoticeOpen: false }); },
       onStartNewFromResumeBanner: () => this.onResumeStartNew(),
       onDismissResumeBanner: () => this.setState({ autoResumeBannerOpen: false }),
       magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),
