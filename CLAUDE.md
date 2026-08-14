@@ -58,9 +58,14 @@ exists — before trusting any page count.
 Two screen-only affordances used to reach the printer and cost a whole extra
 sheet:
 
-- `.doc-stage-wrap` carries a 60px top gutter so the sheet clears the fixed
-  toolbar. A label page is *exactly* one sheet tall, so 60px of offset pushed
-  the whole page onto sheet 2.
+- `.doc-stage-wrap` carries a 90px top gutter (60px on screens under 700px) so
+  the sheet clears the fixed toolbar. A label page is *exactly* one sheet tall,
+  so any of that offset pushed the whole page onto sheet 2. The gutter is
+  deliberately larger than the bar needs — the bar ends at 47px, and the
+  remaining ~33px is desk showing above the stage, so the page doesn't look
+  welded to the bottom of the toolbar. Both values are **inline** styles, which
+  is why the print reset and the narrow-screen override both need
+  `!important`.
 - The `doc-page` host's desk colour (`#2b2b2b`) is set as an **inline** style —
   and re-applied in JS by `updateColsLayout()` — so it outranks the component's
   own `:host { background: none }` print rule. The component forces
