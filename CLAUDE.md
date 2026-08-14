@@ -243,6 +243,22 @@ someone who tries it anyway gets something sensible instead of nothing.
 import code as dead — it's reachable, tested, and costs nothing when
 unused (pdf.js is lazy-loaded).
 
+## Walking the setup flow must build a genuinely new document
+
+`onPickFullPageDocument` / `onPickDocLayoutTemplate` both go through
+`freshDocumentState()`, which resets pages, content, box trees, PDF flags,
+title and header. They used to only flip `docCreated: true`, which meant the
+setup flow handed back whatever the *previous* document had left in state:
+choosing a boxed layout, pressing D-Z, then choosing FULL PAGE the second
+time still produced the first run's boxes, its extra pages, and its typed
+text. Anything new that belongs to "a document" rather than "the app"
+should be cleared there too.
+
+Deliberately not applied to the reopen paths — `applySavedData` and the
+constructor's auto-resume set their own state wholesale, and
+`resumeIfSavedMatches` short-circuits at the orientation step, so a document
+being reopened never reaches the layout choice.
+
 ## Inserting a page mid-document shifts everyone's content
 
 Page content lives in the DOM, written imperatively (`el.innerHTML`), while

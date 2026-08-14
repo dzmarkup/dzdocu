@@ -3349,14 +3349,59 @@ class Component extends DCLogic {
     return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
   }
   onPickFullPageDocument() {
-    this.setState({ docCreated: true }, () => this.finishSetupSideEffects());
+    this.setState(this.freshDocumentState(), () => this.finishSetupSideEffects());
   }
   onPickDocLayoutTemplate(templateId) {
     const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
     const tree = this.instantiateBoxTemplate(template.tree);
     this.renumberBoxTree(tree);
-    this.setState({ docCreated: true, pageBoxTrees: { p1: tree } }, () => this.finishSetupSideEffects());
+    this.setState(this.freshDocumentState({ pageBoxTrees: { p1: tree } }), () => this.finishSetupSideEffects());
+  }
+
+  // Reaching the layout choice means the user walked the setup flow to make
+  // a *new* document, so it must start from a clean slate. Nothing here used
+  // to be reset: stepping back to the entry screen with D-Z and picking
+  // FULL PAGE the second time round still produced the boxes chosen the
+  // first time, because pageBoxTrees was never cleared — and likewise the
+  // old document's extra pages, its typed content, and any PDF page flags
+  // all carried over into the "new" document.
+  //
+  // Not on the reopen paths: applySavedData and the auto-resume set their
+  // own state wholesale, and resumeIfSavedMatches short-circuits at the
+  // orientation step, so a document being reopened never reaches here.
+  freshDocumentState(extra) {
+    Object.values(this.editableEls).forEach(el => { if (el) el.innerHTML = ''; });
+    this.editableEls = {};
+    this.boxEditableEls = {};
+    this.sectionEls = {};
+    this.titleEls = {};
+    this.undoStacks = {};
+    this.redoStacks = {};
+    this.pageCounter = 1;
+    this.focusedPageId = null;
+    this.focusedBoxId = null;
+    return {
+      docCreated: true,
+      pageIds: ['p1'],
+      pageKinds: {},
+      pageHeaderTitles: {},
+      pageEmptyMap: {},
+      pageAddresses: {},
+      pageBoxTrees: {},
+      pdfPageIds: {},
+      pdfPageText: {},
+      pdfNoticeOpen: false,
+      pdfWasResized: false,
+      docTitle: '',
+      headerGlobalOn: false,
+      docLayoutMode: false,
+      docStreamOpen: false,
+      docPreviewOn: false,
+      docBoxOverflowId: null,
+      boxDeletePromptId: null,
+      ...extra,
+    };
   }
   onBackFromDocLayoutChoice() { this.setState({ setupStep: 'orientation' }); }
 
