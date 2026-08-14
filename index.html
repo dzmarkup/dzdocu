@@ -1102,6 +1102,12 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
       <sc-if value="{{ p.showRemove }}" hint-placeholder-val="{{ false }}">
         <button class="btn btn-icon no-print" style="position:absolute;top:8px;right:8px;z-index:5;" sc-camel-on-click="{{ p.onRemove }}" title="Remove page">×</button>
       </sc-if>
+      <!-- Only on a PDF page that still has text waiting to be pulled: a
+           scanned page has none, and a page already extracted has had its
+           text cleared, so the button is gone in both cases. -->
+      <sc-if value="{{ p.showPdfExtract }}" hint-placeholder-val="{{ false }}">
+        <button class="btn no-print" sc-camel-on-click="{{ p.onPdfExtract }}" title="Add this page's text as a new sheet right after it" style="position:absolute;top:8px;left:8px;z-index:5;height:26px;padding:0 10px;font-family:Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:#111418;color:#eaf2ff;border:1px solid #2f6fb0;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.45);cursor:pointer;">Extract Text</button>
+      </sc-if>
       <sc-if value="{{ p.headerOn }}" hint-placeholder-val="{{ false }}">
         <div style="position:absolute;top:0.2in;left:1in;right:1in;font-family:Arial, sans-serif;font-size:14px;color:#1d1f20;">
           <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;">
@@ -1281,8 +1287,14 @@ const DOC_LAYOUT_TEMPLATES = [
 // visibly "not set up yet" rather than silently failing.
 const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 
+// Every PDF page becomes a full-sheet image held in the saved document, and
+// the browser only gives localStorage a few MB — a long PDF blows that budget
+// and the save silently starts failing. Refused up front with a plain message
+// rather than importing something that can't be kept.
+const MAX_PDF_PAGES = 40;
+
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfExtractOfferName: null, pdfPageIds: {}, pdfNoticeOpen: false, pdfWasResized: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1337,6 +1349,12 @@ class Component extends DCLogic {
         pageAddresses: autoResume.pageAddresses || {},
         labelLayouts: autoResume.labelLayouts || {},
         pageBoxTrees: autoResume.pageBoxTrees || {},
+        // Without these a resumed PDF lost its full-bleed pages and its
+        // per-page Extract Text buttons — this list is explicit, so anything
+        // new that's persisted has to be added here too or it silently
+        // survives a save and reopen but not a reload.
+        pdfPageIds: autoResume.pdfPageIds || {},
+        pdfPageText: autoResume.pdfPageText || {},
         customFonts: autoResume.customFonts || [],
         docCreated: true,
         autoResumeBannerOpen: true,
@@ -3672,6 +3690,7 @@ class Component extends DCLogic {
       labelLayouts: this.state.labelLayouts,
       pageBoxTrees: this.state.pageBoxTrees,
       pdfPageIds: this.state.pdfPageIds,
+      pdfPageText: this.state.pdfPageText,
       pageCounter: this.pageCounter,
       customFonts: this.state.customFonts,
       pageHtml,
@@ -3712,6 +3731,7 @@ class Component extends DCLogic {
       pageBoxTrees: data.pageBoxTrees || {},
       // Documents saved before PDF pages existed simply have none.
       pdfPageIds: data.pdfPageIds || {},
+      pdfPageText: data.pdfPageText || {},
       customFonts: data.customFonts || [],
       // Restoring a document *is* creating one. Without this the setup screen
       // stays up and the editables never mount, so the restored pageHtml has
@@ -4604,23 +4624,20 @@ class Component extends DCLogic {
     }
     const buf = await file.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    if (pdf.numPages > MAX_PDF_PAGES) {
+      alert(this.tooManyPdfPagesMessage(pdf.numPages));
+      return;
+    }
 
     // A PDF comes in as it looks on paper — each page rendered to an image,
     // layout/fonts/graphics intact. This used to silently prefer pulling the
     // text layer out into flowing paragraphs whenever there was one, which
     // threw away the document's actual appearance without asking. Text
-    // extraction is still available, but as a deliberate follow-up choice
-    // (the banner offered below) rather than the default.
+    // extraction is still available, but per page and on request — see
+    // extractOnePdfPage.
     this.checkpoint(pageId);
     await this.renderPdfAsPages(pageId, pdf);
     this.saveDebounced();
-
-    // Only worth offering on a PDF that actually has a text layer to pull —
-    // a scanned/photographed one has nothing to extract, so don't advertise it.
-    if (await this.pdfHasTextLayer(pdf)) {
-      this._pdfExtractFile = file;
-      this.setState({ pdfExtractOfferName: file.name || 'this PDF' });
-    }
   }
 
   // Each PDF page rendered to a flattened image at 2x for print sharpness,
@@ -4656,8 +4673,22 @@ class Component extends DCLogic {
 
     const firstEl = this.editableEls[pageId];
     const targetW = (firstEl ? firstEl.clientWidth : 700) || 700;
+    // Each page's text is pulled out now and kept with the document, so the
+    // per-page Extract Text button still works tomorrow — after a reload, a
+    // save and reopen, a browser restart. Holding the dropped File instead
+    // would mean the button quietly stopped working the moment the tab was
+    // refreshed. Text is nothing next to the page images already being
+    // stored, so it costs effectively nothing.
+    const textMap = {};
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
+      try {
+        const content = await page.getTextContent();
+        const t = content.items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+        // Flat/scanned pages yield nothing (or a stray ligature); those get
+        // no button at all rather than one that produces an empty sheet.
+        if (t.replace(/\s/g, '').length > 10) textMap[targetIds[i - 1]] = t;
+      } catch (err) { /* no text layer on this page */ }
       const viewport = page.getViewport({ scale: 1 });
       const scale = (targetW * 2) / viewport.width; // 2x for print sharpness
       const scaledViewport = page.getViewport({ scale });
@@ -4701,74 +4732,67 @@ class Component extends DCLogic {
     targetIds.forEach(id => { pdfMap[id] = true; });
     this.setState(s => ({
       pdfPageIds: { ...s.pdfPageIds, ...pdfMap },
+      pdfPageText: { ...s.pdfPageText, ...textMap },
       pdfNoticeOpen: true,
     }), () => this.saveDebounced());
   }
 
-  // Cheap probe: a born-digital PDF gives up text immediately, a scan gives
-  // up nothing. Samples the first few pages rather than walking a 200-page
-  // document just to answer yes/no.
-  async pdfHasTextLayer(pdf) {
-    try {
-      const probe = Math.min(pdf.numPages, 3);
-      let total = '';
-      for (let i = 1; i <= probe; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        total += content.items.map(it => it.str).join(' ');
-        if (total.replace(/\s+/g, '').length > 20) return true;
-      }
-      return total.replace(/\s+/g, '').length > 20;
-    } catch (err) {
-      return false;
-    }
+  // One PDF page's text, on request, onto a fresh sheet placed directly
+  // after the page it came from — so it's obvious which text belongs to
+  // which page. Nothing is destroyed: the PDF page stays exactly as it was,
+  // this only adds a page beside it.
+  extractOnePdfPage(pageId) {
+    const text = this.state.pdfPageText[pageId];
+    if (!text) return;
+    const newId = this.newId();
+    const html = text.split(/\n{2,}/).map(t => '<p>' + this.escapeHtml(t) + '</p>').join('') || '<p></p>';
+
+    // Page content lives in the DOM, written imperatively, while the page
+    // list renders positionally — so inserting a page in the middle hands
+    // each existing DOM node to the *next* page along and the last page's
+    // content falls off the end. (Seen for real: extracting page 1 of a
+    // 3-page PDF wiped page 2's render.) Snapshotting by page id here and
+    // pouring it back after the re-render is the same fix pourSavedContent
+    // uses for restoring a saved document.
+    const snapshot = {};
+    this.state.pageIds.forEach(id => {
+      const el = this.editableEls[id];
+      if (el) snapshot[id] = el.innerHTML;
+    });
+    snapshot[newId] = html;
+
+    this.setState(s => {
+      const pageIds = [...s.pageIds];
+      const at = pageIds.indexOf(pageId);
+      pageIds.splice(at < 0 ? pageIds.length : at + 1, 0, newId);
+      // The button disappears once its page has been extracted, so the same
+      // sheet can't be added five times over.
+      const pdfPageText = { ...s.pdfPageText };
+      delete pdfPageText[pageId];
+      // newId is deliberately NOT added to pdfPageIds: the text sheet is an
+      // ordinary editable page and wants the document's normal margins.
+      return { pageIds, pdfPageText };
+    }, () => {
+      setTimeout(() => {
+        Object.keys(snapshot).forEach(id => {
+          const el = this.editableEls[id];
+          if (el && el.innerHTML !== snapshot[id]) el.innerHTML = snapshot[id];
+        });
+        this.flowFrom(newId);
+        this.updateEmptyState(newId);
+        this.saveDebounced();
+        this.scrollToPage(newId);
+      }, 40);
+    });
   }
 
-  async extractPdfTextInto(pageId, pdf) {
-    const extractedPages = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      extractedPages.push(content.items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim());
-    }
-    const html = extractedPages.filter(t => t).map(t => '<p>' + this.escapeHtml(t) + '</p>').join('');
-    this.insertHTML(pageId, html);
-    setTimeout(() => { this.flowFrom(pageId); this.updateEmptyState(pageId); }, 50);
-    this.saveDebounced();
-  }
-
-  // "Extract Text Instead" on the post-import banner: throws away the
-  // rendered page images and re-imports the same PDF as editable text.
-  // Collapses back to a single page first — the image import will have
-  // created one page per PDF page, and those all have to go.
-  async onExtractPdfText() {
-    const file = this._pdfExtractFile;
-    if (!file) { this.setState({ pdfExtractOfferName: null }); return; }
-    if (!window.confirm('Replace the imported pages with editable text? The page images will be discarded.')) return;
-    const id = this.state.pageIds[0];
-    Object.keys(this.editableEls).forEach(pid => { if (pid !== id) delete this.editableEls[pid]; });
-    Object.keys(this.sectionEls || {}).forEach(pid => { if (pid !== id) delete this.sectionEls[pid]; });
-    const el = this.editableEls[id];
-    if (el) el.innerHTML = '';
-    await new Promise(res => this.setState({
-      pageIds: [id], pageKinds: {}, pageHeaderTitles: {}, pageEmptyMap: {},
-      pdfExtractOfferName: null,
-      // Back to a normal document: margins and headers return, and the
-      // "can't be edited" notice no longer applies to what's on screen.
-      pdfPageIds: {}, pdfNoticeOpen: false, pdfWasResized: false,
-    }, res));
-    await new Promise(r => setTimeout(r, 40));
-    try {
-      // Re-read from the File rather than reusing the first ArrayBuffer —
-      // pdf.js takes ownership of the buffer it's handed and can detach it.
-      const buf = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-      this.checkpoint(id);
-      await this.extractPdfTextInto(id, pdf);
-    } catch (err) {
-      alert('Could not extract text from that PDF.');
-    }
-    this._pdfExtractFile = null;
+  // The banner's button: same thing for every page that still has text,
+  // each sheet landing after its own source page. Walks a snapshot of the
+  // ids because each insert shifts the ones after it.
+  extractAllPdfPages() {
+    const ids = this.state.pageIds.filter(id => this.state.pdfPageText[id]);
+    ids.forEach((id, i) => setTimeout(() => this.extractOnePdfPage(id), i * 120));
+    this.setState({ pdfNoticeOpen: false });
   }
 
   async onDropDocx(pageId, file) {
@@ -4858,11 +4882,17 @@ class Component extends DCLogic {
       }
       const buf = await file.arrayBuffer();
       const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+      if (pdf.numPages > MAX_PDF_PAGES) return { tooManyPages: pdf.numPages };
       const page = await pdf.getPage(1);
       return this.pdfSetupFromViewport(page.getViewport({ scale: 1 }));
     } catch (err) {
       return { size: 'letter', orientation: 'portrait', oversize: false };
     }
+  }
+
+  tooManyPdfPagesMessage(n) {
+    return 'That PDF has ' + n + ' pages — too many to hold in this browser.\n\n'
+      + 'Please load a smaller file (' + MAX_PDF_PAGES + ' pages or fewer).';
   }
 
   // Shared by the entry-screen detection above and renderPdfAsPages, so the
@@ -4888,6 +4918,14 @@ class Component extends DCLogic {
   async autoStartFromFile(file) {
     this.setState({ queuedDropNames: [file.name || 'file'] });
     const setup = await this.detectSetupForFile(file);
+    // Refused before a document is created, so the entry screen is simply
+    // still there to try another file rather than an empty document nobody
+    // asked for.
+    if (setup.tooManyPages) {
+      this.setState({ queuedDropNames: [] });
+      alert(this.tooManyPdfPagesMessage(setup.tooManyPages));
+      return;
+    }
     this.pendingDropFiles = [file];
     this.setState({
       defaultSize: setup.size,
@@ -5251,6 +5289,8 @@ class Component extends DCLogic {
         onRemove: () => this.removePage(id),
         onScrollTo: () => this.scrollToPage(id),
         showRemove: this.state.pageIds.length > 1 && !!this.state.pageEmptyMap[id],
+        showPdfExtract: isPdfPage && !!this.state.pdfPageText[id],
+        onPdfExtract: (e) => { e.stopPropagation(); this.extractOnePdfPage(id); },
         num: isCover ? (idx === 0 ? 'C' : this.toRoman(++extraCoverCount)) : num,
         hasTitle: !!this.state.pageHeaderTitles[id],
         headerOn,
@@ -5705,9 +5745,9 @@ class Component extends DCLogic {
       autoResumeBannerVisible: this.state.autoResumeBannerOpen,
       pdfNoticeVisible: this.state.pdfNoticeOpen,
       pdfResizedVisible: this.state.pdfWasResized,
-      pdfExtractOfferVisible: !!this.state.pdfExtractOfferName,
-      onExtractPdfText: () => this.onExtractPdfText(),
-      onDismissPdfExtractOffer: () => { this._pdfExtractFile = null; this.setState({ pdfExtractOfferName: null, pdfNoticeOpen: false }); },
+      pdfExtractOfferVisible: Object.keys(this.state.pdfPageText).length > 0,
+      onExtractPdfText: () => this.extractAllPdfPages(),
+      onDismissPdfExtractOffer: () => this.setState({ pdfNoticeOpen: false }),
       onStartNewFromResumeBanner: () => this.onResumeStartNew(),
       onDismissResumeBanner: () => this.setState({ autoResumeBannerOpen: false }),
       magnifierHeight: this.state.narrowScreen ? '15vh' : (this.state.magnifierLines === 1 ? '64px' : '192px'),

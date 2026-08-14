@@ -243,19 +243,55 @@ someone who tries it anyway gets something sensible instead of nothing.
 import code as dead — it's reachable, tested, and costs nothing when
 unused (pdf.js is lazy-loaded).
 
+## Inserting a page mid-document shifts everyone's content
+
+Page content lives in the DOM, written imperatively (`el.innerHTML`), while
+the page list renders positionally — so splicing a page into the middle of
+`pageIds` hands each existing DOM node to the *next* page along, and the
+last page's content falls off the end entirely. This is not theoretical: it
+wiped page 2's render the first time `extractOnePdfPage` inserted a sheet
+after page 1.
+
+Anything that inserts a page anywhere but the end must snapshot every
+page's `innerHTML` **by page id** before the `setState`, then pour it back
+after the re-render — `extractOnePdfPage` shows the pattern, and it's the
+same one `pourSavedContent()` uses. Appending to the end is safe and needs
+none of this.
+
+## Anything persisted needs adding to findAutoResumeData's list, too
+
+`buildSaveData`/`applySavedData` and the constructor's auto-resume are
+**two separate explicit field lists**. A new persisted field added to the
+first two but not the third survives a save-and-reopen but silently
+vanishes on a reload — which is exactly how resumed PDFs briefly lost their
+full-bleed pages and their Extract Text buttons.
+
 ## PDF import: pages first, text only if asked
 
 A dropped PDF comes in as **rendered page images** (`renderPdfAsPages`), so
-it looks like the original. It used to prefer text extraction whenever the
-PDF had a text layer, which silently discarded the document's actual
-appearance. Extraction is still there but is now an offer, not the default:
-`pdfHasTextLayer()` probes the first few pages, and only if there's real
-text does a banner appear offering "Extract Text"
-(`onExtractPdfText` → `extractPdfTextInto`). Taking that offer collapses the
-document back to one page and re-imports as flowing text, so it needs the
-original `File` kept around (`_pdfExtractFile`) — re-read it rather than
-reusing the first `ArrayBuffer`, since pdf.js takes ownership of the buffer
-it's handed and can detach it.
+it looks like the original — it used to prefer text extraction whenever the
+PDF had a text layer, silently discarding the document's appearance.
+
+Extraction is now **per page and non-destructive**. Each page's text is
+pulled out at import and kept in `pdfPageText` (persisted), so the feature
+still works after a reload, a save and reopen, or a browser restart —
+deliberately not by holding the dropped `File`, which wouldn't survive any
+of those. A page with real text shows its own screen-only **Extract Text**
+button; pressing it inserts a normal letter sheet *directly after* that PDF
+page (`extractOnePdfPage`), so it's obvious which text belongs to which
+page, and clears that page's entry so the button disappears and the same
+sheet can't be added twice. The banner's button does the same for every
+remaining page. Nothing is ever destroyed — the PDF pages stay as they are.
+
+Flat/scanned pages produce no text and so get no button at all, rather than
+one that yields an empty sheet.
+
+**PDFs over `MAX_PDF_PAGES` (40) are refused outright** with a plain "load a
+smaller file" message, checked before the document is created so the entry
+screen is simply still there. Every page becomes a full-sheet image inside
+the saved document and the browser only gives localStorage a few MB; past
+roughly that many pages the save silently starts failing, which is a much
+worse experience than being told up front.
 
 **The pdf.js worker is bundled** (`assets/pdf.worker.min.js`), not fetched
 from a CDN, so PDF import works with no network at all like the rest of the
