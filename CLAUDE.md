@@ -403,6 +403,48 @@ only act while `setupStep === 'size'` / `docCreated` is false — this is what
 stops them from hijacking the orientation/label-address steps' own text
 fields, which share the same overlay and background.
 
+## The magnifier places the caret; it is not a second editor
+
+Clicking or dragging in the magnifier strip moves the **document's** selection
+— it never becomes editable itself. That was the deliberate choice over making
+the bar a real editable mirror, which would have meant a second editor kept in
+sync with the first (two-way offset mapping, formatting preservation, write-back)
+for no gain: once the selection is right, the toolbar and the keyboard already
+do everything.
+
+Three things make it work, and all three are load-bearing:
+
+- **`collapseWithMap()` records where every shown character came from.** The bar
+  collapses `\s+` to one space, which destroys the 1:1 offset relationship with
+  the document — without the map there is no way back from "character 37 in the
+  bar" to a caret position. `magnifierModel()` also builds the reverse
+  (`shownAt`) for painting.
+- **The painted string no longer depends on the caret.** It used to be split at
+  the caret with each half collapsed separately, so the text changed shape
+  whenever the selection moved. Fine for a read-only mirror, impossible to drag
+  on — the coordinates would shift under the mouse. Collapse the whole block
+  once; paint the splits at arbitrary indices.
+- **`_magDragging` freezes the repaint for the duration of a drag.**
+  `paintMagnifier` rebuilds its spans from the selection, and a drag changes the
+  selection on every `mousemove`, so an unfrozen bar would destroy the very
+  elements the pointer coordinates are read from. Same self-defeating loop that
+  blocked selection in the bar in the first place.
+
+Also: `mousedown` calls `preventDefault()` so the editable keeps focus and the
+browser doesn't start a native selection inside the bar — a document only gets
+one selection, and it has to be the document's. Each painted span carries
+`_magStart` (the shown index of its first character), which is what makes a
+click reversible; any new span added to the paint needs it too.
+
+Only the strip's *text* takes pointer events; the strip around it stays
+`pointer-events:none` so clicks still reach the page behind it.
+
+Scope limit worth knowing before a bug report: the bar only ever mirrors the
+**block the caret is in** (`host.closest('div,p,li,…')`), so it can't reach the
+rest of the page. The whole-document big-text view is Reflow, which is
+phone-only (`reflowVisible` requires `narrowScreen`) and rewrites pagination on
+the way in and out.
+
 ## Click-away dismissal must check where the press STARTED
 
 A modal backdrop that closes on `click` closes when a user drag-selects text
