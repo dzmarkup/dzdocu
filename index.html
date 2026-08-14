@@ -412,6 +412,9 @@ textarea.input { min-height: 90px; resize: vertical; }
       doc-page{background:none !important;padding:0 !important;min-width:0 !important;min-height:0 !important;}
     }
     @media (max-width: 700px) {
+      /* Inline style, so this needs !important to win — same reason the print
+         block above does. Keeps the pre-90px gutter on phones. */
+      .doc-stage-wrap{padding-top:60px !important;}
       .side-tab{width:22px !important;height:70px !important;}
       .side-tab span{font-size:10px !important;}
       .folder-btn{width:130px !important;}
@@ -1089,7 +1092,13 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
      cover it, which older browsers layer differently — the blank sheet showed
      through as a page-sized white rectangle. Nothing can bleed through
      something that is not rendered. -->
-<div class="doc-stage-wrap" style="display:{{ stageDisplay }};justify-content:center;margin-top:-10px;padding-top:60px;">
+<!-- The 90px top gutter is 47px of clearance for the fixed toolbar plus a
+     deliberate ~33px of desk showing above the stage, so the sheet reads as
+     sitting on a desk rather than being welded to the bottom of the bar. At
+     the old 60px the two met with 3px between them. Narrow screens keep the
+     tighter 60px (below) — vertical room is scarcer there than the breathing
+     space is worth. Zeroed at print; see the print block up top. -->
+<div class="doc-stage-wrap" style="display:{{ stageDisplay }};justify-content:center;margin-top:-10px;padding-top:90px;">
 <div class="doc-stage" ref="{{ zoomWrapRef }}" style="position:relative;transform-origin:top center;transition:transform 0.4s ease;">
 <sc-if value="{{ showReturnToggle }}" hint-placeholder-val="{{ false }}">
   <button class="btn btn-secondary" sc-camel-on-click="{{ toggleReturnOnLabel }}" style="position:absolute;top:-34px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 10px;white-space:nowrap;z-index:5;{{ returnToggleStyle }}">{{ returnToggleLabel }}</button>
