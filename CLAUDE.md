@@ -403,6 +403,45 @@ only act while `setupStep === 'size'` / `docCreated` is false — this is what
 stops them from hijacking the orientation/label-address steps' own text
 fields, which share the same overlay and background.
 
+## E-SAVE sends two files, and why the second one isn't a PDF
+
+The email carries the `.docu` **and** a standalone `.html` copy. The `.docu` is
+the editable original that only DZDocu opens; the HTML is so a recipient
+without the app gets something they can actually read — and, because it ships
+with the app's own stylesheet, printing it produces the same pages the app
+would. That is also the PDF story: **the app has no PDF writer.** Every PDF it
+makes comes from `window.print()`, and the browser hands that file straight to
+the save dialog — JavaScript never sees the bytes, so a PDF simply cannot be
+attached without either a rasterising library (loses real text, and none of the
+print CSS) or server-side rendering (Cloudflare Browser Rendering, a paid
+add-on). Neither was worth it; the HTML gets a recipient to a correct PDF in
+one keystroke.
+
+`buildStandaloneHtml()` **clones the live `<section class="page">` elements**
+rather than rebuilding from state — they already render boxes, labels, headers
+and full-bleed PDF pages correctly, and there is no second code path to keep in
+step. Three things it must keep doing:
+
+- **Strip the inline layout `updateColsLayout()` writes onto each section.** In
+  a two-page spread that's `width:calc(50% - 28.8px)` plus an `aspect-ratio`,
+  and being inline it beats the exported sheet geometry — the export came out
+  654px wide and spilled onto a third sheet until this was cleared. The sheet
+  rules also carry `!important` as a second line of defence.
+- **Carry the whole app stylesheet** (every `<style>` in the document), so
+  `.editable`, fonts and the print rules behave identically. Its UI rules match
+  nothing in the export.
+- **Restate the page box in inches**, because doc-page's geometry lives in a
+  shadow root that can't travel with the clone.
+
+The `htmlFilename`/`htmlDataUrl` fields are **additive** — a Worker predating
+them ignores both and sends the `.docu` alone, so app and Worker can be
+deployed in either order. The client drops the HTML (keeping the `.docu`) if
+the pair would exceed the Worker's 15MB cap; a document full of PDF pages can
+be most of that by itself.
+
+The footer link back to dzdocu.com is `.dz-made`, screen-only — deliberate, and
+deliberately never printed.
+
 ## The magnifier places the caret; it is not a second editor
 
 Clicking or dragging in the magnifier strip moves the **document's** selection
