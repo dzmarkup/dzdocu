@@ -3907,6 +3907,80 @@ class Component extends DCLogic {
     return () => { if (this._backdropPressedSelf) handler(); };
   }
 
+  // A standalone copy of the document that opens in any browser, emailed
+  // alongside the .docu. The .docu is the editable original and only DZDocu
+  // can open it; a recipient without the app used to get a file they simply
+  // couldn't read. This is the readable half — and because it carries the
+  // app's own stylesheet, printing it produces the same pages the app would,
+  // which is also how someone gets a PDF out of it (the app has no PDF
+  // writer; every PDF it makes comes from window.print()).
+  //
+  // Built by cloning the live <section class="page"> elements rather than
+  // rebuilding from state: they already render correctly, including boxes,
+  // labels, headers and full-bleed PDF pages, and there is no second code
+  // path to keep in step with the first.
+  buildStandaloneHtml() {
+    const dims = this.getDims();
+    const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
+    const sections = this.state.pageIds.map(id => this.sectionEls[id]).filter(Boolean).map(el => {
+      const c = el.cloneNode(true);
+      // Screen-only chrome (page remove, Extract Text, box handles) is not
+      // part of the document.
+      c.querySelectorAll('.no-print').forEach(n => n.remove());
+      // Nothing in an exported copy should invite typing — it has nowhere to
+      // save to.
+      c.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+      c.removeAttribute('contenteditable');
+      // updateColsLayout() writes the editor's on-screen arrangement onto the
+      // section as INLINE styles — in a two-page spread that's
+      // `width:calc(50% - 28.8px)` plus an aspect-ratio — and inline styles
+      // outrank the sheet geometry below. That's a view of the document, not
+      // the document, so it doesn't travel.
+      ['width', 'height', 'aspect-ratio', 'margin', 'max-width', 'min-width', 'display', 'transform']
+        .forEach(p => c.style.removeProperty(p));
+      return c.outerHTML;
+    }).join('\n');
+
+    // The app's whole stylesheet comes along, so .editable, fonts and the
+    // print rules behave identically. Its UI rules match nothing here.
+    const appCss = [].slice.call(document.querySelectorAll('style'))
+      .map(s => s.textContent || '').join('\n');
+
+    // Page geometry last, so it wins over anything above it. doc-page's own
+    // sizing lives in a shadow root that can't come with us, so the sheet box
+    // is restated here from the same inch values the component was given.
+    const pageCss = [
+      '@page { size: ' + dims.w + 'in ' + dims.h + 'in; margin: 0; }',
+      'html, body { margin:0; padding:0; background:#ffffff; }',
+      // !important as a second line of defence: the section's inline layout is
+      // stripped above, but this geometry is the one thing the export cannot
+      // afford to lose to a stray rule.
+      '.page { width:' + dims.w + 'in !important; height:' + dims.h + 'in !important;',
+      '  aspect-ratio:auto !important; max-width:none !important; box-sizing:border-box;',
+      '  position:relative; overflow:hidden; background:#ffffff; margin:0 auto !important;',
+      '  page-break-after:always; break-after:page; }',
+      '.page:last-of-type { page-break-after:auto; break-after:auto; }',
+      '@media screen {',
+      '  body { background:#555a5f; padding:24px 0; }',
+      '  .page { box-shadow:0 2px 14px rgba(0,0,0,0.45); margin-bottom:24px; }',
+      '}',
+      // Shown when the file is opened, never when it is printed.
+      '.dz-made { text-align:center; font-family:Arial, sans-serif; font-size:12px;',
+      '  color:#c9d4de; padding:6px 0 22px; }',
+      '.dz-made a { color:#9dc6f0; }',
+      '@media print { .dz-made { display:none !important; } }',
+    ].join('\n');
+
+    return '<!doctype html>\n<html>\n<head>\n<meta charset="utf-8">\n'
+      + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      + '<title>' + this.escapeHtml(title) + '</title>\n'
+      + '<style>\n' + appCss + '\n' + pageCss + '\n</style>\n</head>\n<body>\n'
+      + sections + '\n'
+      + '<div class="dz-made">Made with <a href="https://dzdocu.com">DZDocu</a>'
+      + ' &middot; print this page to save it as a PDF</div>\n'
+      + '</body>\n</html>\n';
+  }
+
   onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
   onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
   onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
@@ -3933,11 +4007,30 @@ class Component extends DCLogic {
       const data = this.buildSaveData();
       const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
       const json = JSON.stringify(data);
-      const dataUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(json)));
+      const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
+      const dataUrl = 'data:application/json;base64,' + b64(json);
+      // The readable companion. Built defensively: a document that won't
+      // export is not a reason to fail the send, since the .docu — the thing
+      // actually being saved — is fine either way.
+      let htmlDataUrl = null;
+      try {
+        htmlDataUrl = 'data:text/html;base64,' + b64(this.buildStandaloneHtml());
+      } catch (e) { htmlDataUrl = null; }
+      // The Worker refuses a payload over 15MB, and a document carrying PDF
+      // pages or photos can be most of that on its own. The .docu wins that
+      // contest — dropping the copy still delivers the document, dropping the
+      // .docu would defeat the feature.
+      if (htmlDataUrl && dataUrl.length + htmlDataUrl.length > 14 * 1024 * 1024) htmlDataUrl = null;
       const resp = await fetch(EMAIL_WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, filename: title + '.docu', dataUrl }),
+        // htmlFilename/htmlDataUrl are additive: a Worker that predates them
+        // ignores both and sends the .docu alone, so the app and the Worker
+        // can be deployed in either order.
+        body: JSON.stringify({
+          email, filename: title + '.docu', dataUrl,
+          htmlFilename: title + '.html', htmlDataUrl,
+        }),
       });
       const result = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(result.error || 'Send failed.');
