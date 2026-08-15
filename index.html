@@ -902,7 +902,12 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromDocLayoutChoice }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <div style="text-align:center;">
             <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
-            <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
+            <div style="display:flex;gap:14px;justify-content:center;margin-bottom:20px;">
+              <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}"></button>
+              <button sc-camel-on-click="{{ fullPageThumb.onPickTwoCol }}" title="One plain page in two columns — text flows down the left column and up the right. Set now, not changeable later." style="{{ fullPageThumb.twoColWrapStyle }}">
+                <div style="{{ fullPageThumb.twoColGapStyle }}"></div>
+              </button>
+            </div>
           </div>
           <div style="text-align:center;">
             <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:4px;">Layout Document</div>
@@ -1151,7 +1156,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
       <sc-if value="{{ p.noBoxes }}" hint-placeholder-val="{{ true }}">
-        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
+        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}{{ p.columnStyle }}"></div>
       </sc-if>
       <sc-if value="{{ p.boxesVisible }}" hint-placeholder-val="{{ false }}">
         <sc-for list="{{ p.boxes }}" as="b" hint-placeholder-count="1">
@@ -1286,9 +1291,14 @@ const NEWBOX_MARKER_RE = /<\s*(?:newbox|n)\s*>/i;
 // the only thing that turns one into a real page (assigning ids), so the
 // same shape doubles as both the live thumbnail preview and the template.
 const DOC_LAYOUT_THUMB_COLORS = { text: '#1d3557', image: '#b4433a', independent: '#3f8f52' };
+// Gutter between the two columns of a two-column FULL PAGE document. Chosen
+// at setup and fixed for the life of the document — it is a property of the
+// page, not something to fiddle with per paragraph.
+const DOC_COLUMN_GAP_IN = 0.4;
 const DOC_LAYOUT_TEMPLATES = [
-  { id: 'cols2', title: 'Two columns',
-    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } },
+  { id: 'cols2', title: 'Two columns, photo top right',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
+      b: { split: 'h', ratio: 0.32, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
   { id: 'col-photo-stack', title: 'Column beside a stacked photo',
     tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
       b: { split: 'h', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
@@ -1300,12 +1310,16 @@ const DOC_LAYOUT_TEMPLATES = [
   { id: 'header-photo-text', title: 'Header over a photo and text',
     tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
       b: { split: 'v', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
-  { id: 'header-cols2', title: 'Header over two columns',
+  { id: 'header-cols2', title: 'Header over two columns, photo bottom left',
     tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
-      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
-  { id: 'rows3', title: 'Three rows',
+      b: { split: 'v', ratio: 0.5,
+        a: { split: 'h', ratio: 0.62, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } },
+        b: { box: true, type: 'text' } } } },
+  { id: 'rows3', title: 'Three rows, photo beside the middle',
     tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
-      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+      b: { split: 'h', ratio: 0.5,
+        a: { split: 'v', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } },
+        b: { box: true, type: 'text' } } } },
   { id: 'rows3-photo-mid', title: 'Three rows, photo in the middle',
     tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
       b: { split: 'h', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
@@ -1326,7 +1340,7 @@ const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 const MAX_PDF_PAGES = 40;
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docColumns: 1, docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1374,6 +1388,7 @@ class Component extends DCLogic {
         docTitle: autoResume.docTitle || '',
         defaultSize: autoResume.defaultSize || 'letter',
         defaultOrientation: autoResume.defaultOrientation || 'portrait',
+        docColumns: autoResume.docColumns || 1,
         headerGlobalOn: !!autoResume.headerGlobalOn,
         magnifierOn: autoResume.magnifierOn !== false,
         pageHeaderTitles: autoResume.pageHeaderTitles || {},
@@ -3397,8 +3412,9 @@ class Component extends DCLogic {
     if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null, ...this.defaultBoxAlign(node.type) };
     return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
   }
-  onPickFullPageDocument() {
-    this.setState(this.freshDocumentState(), () => this.finishSetupSideEffects());
+  onPickFullPageDocument(cols) {
+    this.setState(this.freshDocumentState({ docColumns: cols === 2 ? 2 : 1 }),
+      () => this.finishSetupSideEffects());
   }
   onPickDocLayoutTemplate(templateId) {
     const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
@@ -3443,6 +3459,7 @@ class Component extends DCLogic {
       pdfNoticeOpen: false,
       pdfWasResized: false,
       docTitle: '',
+      docColumns: 1,
       headerGlobalOn: false,
       docLayoutMode: false,
       docStreamOpen: false,
@@ -3777,6 +3794,7 @@ class Component extends DCLogic {
       pageIds: this.state.pageIds,
       docTitle: this.state.docTitle,
       defaultSize: this.state.defaultSize,
+      docColumns: this.state.docColumns || 1,
       defaultOrientation: this.state.defaultOrientation,
       headerGlobalOn: this.state.headerGlobalOn,
       magnifierOn: this.state.magnifierOn !== false,
@@ -3813,6 +3831,7 @@ class Component extends DCLogic {
     this.setState({
       pageIds: data.pageIds,
       docTitle: data.docTitle || '',
+      docColumns: data.docColumns || 1,
       defaultSize: data.defaultSize || data.size || 'letter',
       defaultOrientation: data.defaultOrientation || data.orientation || 'portrait',
       headerGlobalOn: !!data.headerGlobalOn,
@@ -5673,6 +5692,12 @@ class Component extends DCLogic {
         onAddBox: (dir) => this.splitPageIntoBoxes(id, dir),
         boxSplitPromptOpenHere: this.state.boxSplitPromptOpen && this.focusedPageId === id,
         previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
+        // A two-column FULL PAGE document is ordinary flowing text in CSS
+        // columns, not boxes — nothing to focus, nothing to resize, and the
+        // caret crosses the gap by itself. Suppressed on a PDF page, whose
+        // artwork fills the sheet edge to edge.
+        columnStyle: (this.state.docColumns === 2 && !this.state.pdfPageIds[id])
+          ? 'column-count:2;column-gap:' + DOC_COLUMN_GAP_IN + 'in;column-fill:auto;' : '',
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
         onInput: () => this.handleInput(id),
@@ -5825,8 +5850,14 @@ class Component extends DCLogic {
         const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
         const h = 108, w = Math.round(h * (dims.w / dims.h));
         return {
-          onPick: () => this.onPickFullPageDocument(),
+          onPick: () => this.onPickFullPageDocument(1),
           wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:inline-block;',
+          // Same sheet, drawn with the gutter down the middle so the two
+          // options read as the same kind of thing — one plain, one in two
+          // columns — rather than as a page next to a diagram.
+          onPickTwoCol: () => this.onPickFullPageDocument(2),
+          twoColWrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:inline-block;',
+          twoColGapStyle: 'position:absolute;top:0;bottom:0;left:50%;width:5px;transform:translateX(-50%);background:var(--setup-panel-bg);',
         };
       })(),
       docLayoutTemplates: (() => {
