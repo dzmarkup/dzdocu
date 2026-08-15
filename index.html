@@ -410,6 +410,13 @@ textarea.input { min-height: 90px; resize: vertical; }
     @media print {
       .doc-stage-wrap{padding-top:0 !important;margin-top:0 !important;}
       doc-page{background:none !important;padding:0 !important;min-width:0 !important;min-height:0 !important;}
+      /* Label print cushion. The host is what flows onto the sheet, so giving
+         IT the reduced size is what keeps the page from overflowing; the
+         section keeps its authored inch geometry and is merely scaled, so
+         every LAYOUT box stays exactly where it was put. overflow:hidden stops
+         the section's full-size layout box from re-expanding the host. */
+      .has-label-cushion doc-page{display:block !important;width:var(--dz-cush-w) !important;height:var(--dz-cush-h) !important;overflow:hidden !important;margin:auto !important;}
+      .has-label-cushion section.page{transform:scale(var(--dz-cush-s));transform-origin:top left;}
     }
     /* `screen and` is load-bearing, not decoration. This block sits AFTER the
        print block above and uses !important at the same specificity, so a bare
@@ -1108,7 +1115,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
      the old 60px the two met with 3px between them. Narrow screens keep the
      tighter 60px (below) — vertical room is scarcer there than the breathing
      space is worth. Zeroed at print; see the print block up top. -->
-<div class="doc-stage-wrap" style="display:{{ stageDisplay }};justify-content:center;margin-top:-10px;padding-top:90px;">
+<div class="doc-stage-wrap {{ labelCushionClass }}" style="display:{{ stageDisplay }};justify-content:center;margin-top:-10px;padding-top:90px;{{ labelCushionVars }}">
 <div class="doc-stage" ref="{{ zoomWrapRef }}" style="position:relative;transform-origin:top center;transition:transform 0.4s ease;">
 <sc-if value="{{ showReturnToggle }}" hint-placeholder-val="{{ false }}">
   <button class="btn btn-secondary" sc-camel-on-click="{{ toggleReturnOnLabel }}" style="position:absolute;top:-34px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 10px;white-space:nowrap;z-index:5;{{ returnToggleStyle }}">{{ returnToggleLabel }}</button>
@@ -1219,6 +1226,14 @@ const LABEL_BOX_NAMES = { ret: 'Return', main: 'Address', postal: 'Postal', coun
 // Each value is the smallest inset that size's own default boxes already use,
 // so turning this on moves nothing that ships with the app.
 const LABEL_SAFE_IN = { label46: 0.08, label24: 0.05, label1x2: 0.03 };
+// Breathing room between a label's artwork and the edge of the stock, at
+// print only. A label page is authored exactly the size of the media, and a
+// printer cannot print to its own edge — so content sized to the paper can
+// overflow the printable area and spill onto a second sheet. Rather than
+// resize the label (which would move every LAYOUT box, since those live in
+// absolute inches from the label's corner), the whole sheet is scaled down by
+// this much and centred, leaving the authored geometry alone.
+const LABEL_PRINT_CUSHION_IN = 0.125;
 // A document's first box is its text area. Unlike a label's boxes it is not
 // drawn — it *is* the editable's padding, so the text inside it keeps flowing
 // across pages exactly as before. Every page size uses 1in on all four sides,
@@ -3313,15 +3328,18 @@ class Component extends DCLogic {
   }
 
 
+  // Always asks for orientation now, addresses pasted or not. It used to force
+  // landscape whenever addresses were waiting, which is the shape an address
+  // label is usually designed in — but label printers feed 4x6 stock portrait,
+  // and a 6x4 page against 4x6 media is a mismatch the printer resolves by
+  // scaling the label down and spilling it onto a second sheet. Portrait has
+  // to be reachable from the flow people actually use.
+  //
+  // The orientation handlers finish the job identically: both set docCreated
+  // and call finishSetupSideEffects, which already inserts parsed addresses
+  // for label sizes.
   finishLabelSizePick(size) {
-    if (this.state.pendingLabelAddresses || Object.keys(this.state.pageAddresses || {}).length) {
-      this.setState({ defaultSize: size, defaultOrientation: 'landscape', docCreated: true }, () => {
-        this.saveDebounced(); this.updateColsLayout(); this.applyFitScale(); this.importPendingDrops();
-        setTimeout(() => { this.insertParsedAddressesIntoPages(); this.applyFitScale(); }, 60);
-      });
-    } else {
-      this.setState({ defaultSize: size, setupStep: 'orientation' });
-    }
+    this.setState({ defaultSize: size, setupStep: 'orientation' });
   }
   onSetupPickLabel46() { this.finishLabelSizePick('label46'); }
   onSetupPickLabel24() { this.finishLabelSizePick('label24'); }
@@ -3331,6 +3349,10 @@ class Component extends DCLogic {
   resumeIfSavedMatches(orientation) {
     const data = this.pendingSavedData;
     this.pendingSavedData = null;
+    // Freshly pasted addresses want a new document as much as a dropped file
+    // does — reopening a saved one here would swallow them without a word.
+    // Reachable only since labels started asking for orientation.
+    if (this.state.pendingLabelAddresses) return false;
     if (!data || (this.pendingDropFiles && this.pendingDropFiles.length)) return false;
     if ((data.defaultOrientation || data.orientation || 'portrait') !== orientation) return false;
     this.applySavedData(data);
@@ -5736,6 +5758,18 @@ class Component extends DCLogic {
       tabPages,
       pageWidthIn: dims.w + 'in',
       pageHeightIn: dims.h + 'in',
+      // Labels only: a full-page document already has margins and never sat
+      // flush to the media edge in the first place. One scale for both axes,
+      // taken from whichever is tighter, so the label cannot end up stretched.
+      labelCushionClass: isLabelDoc ? 'has-label-cushion' : '',
+      labelCushionVars: (() => {
+        if (!isLabelDoc) return '';
+        const c = LABEL_PRINT_CUSHION_IN;
+        const s = Math.min((dims.w - 2 * c) / dims.w, (dims.h - 2 * c) / dims.h);
+        return '--dz-cush-w:' + (dims.w * s).toFixed(4) + 'in;'
+          + '--dz-cush-h:' + (dims.h * s).toFixed(4) + 'in;'
+          + '--dz-cush-s:' + s.toFixed(4) + ';';
+      })(),
       docMarginLeftIn: docMargin.l.toFixed(3) + 'in',
       docMarginTopIn: docMargin.t.toFixed(3) + 'in',
       docMarginWidthIn: (docMargin.r - docMargin.l).toFixed(3) + 'in',
