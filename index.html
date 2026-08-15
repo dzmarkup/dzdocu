@@ -4509,12 +4509,27 @@ class Component extends DCLogic {
     return n;
   }
 
+  // Whether a page's text has outgrown its sheet.
+  //
+  // A one-column page overflows DOWNWARD, which is what scrollHeight measures.
+  // A two-column page does not: CSS multicol answers content that won't fit by
+  // adding another column, so scrollHeight stays exactly equal to clientHeight
+  // however much is typed, while scrollWidth grows. Testing only the height
+  // meant a two-column page never flowed on to page 2 — it kept spilling into
+  // a third column that the page then clipped, and the text was simply gone
+  // from view.
+  editableOverflows(el) {
+    if (!el) return false;
+    if (el.scrollHeight > el.clientHeight + 1) return true;
+    return this.state.docColumns === 2 && el.scrollWidth > el.clientWidth + 1;
+  }
+
   async _flowLoop(startId) {
     let curId = startId, iter = 0, newPagesCreated = 0;
     while (iter < 20000) {
       const el = this.editableEls[curId];
       if (!el) return;
-      if (el.scrollHeight <= el.clientHeight + 1) return;
+      if (!this.editableOverflows(el)) return;
       const idx = this.state.pageIds.indexOf(curId);
       let nextId = this.state.pageIds[idx + 1];
       if (!nextId) {
@@ -4529,7 +4544,7 @@ class Component extends DCLogic {
       if (!fromEl || !toEl) return;
       let movedAny = false;
       let node = this.lastFlowableChild(fromEl);
-      while (fromEl.scrollHeight > fromEl.clientHeight + 1 && node) {
+      while (this.editableOverflows(fromEl) && node) {
         toEl.insertBefore(node, toEl.firstChild);
         movedAny = true;
         iter++;
