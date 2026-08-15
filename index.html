@@ -3981,11 +3981,26 @@ class Component extends DCLogic {
       c.removeAttribute('contenteditable');
       // updateColsLayout() writes the editor's on-screen arrangement onto the
       // section as INLINE styles — in a two-page spread that's
-      // `width:calc(50% - 28.8px)` plus an aspect-ratio — and inline styles
-      // outrank the sheet geometry below. That's a view of the document, not
-      // the document, so it doesn't travel.
-      ['width', 'height', 'aspect-ratio', 'margin', 'max-width', 'min-width', 'display', 'transform']
+      // `width:calc(50% - 28.8px)` plus an aspect-ratio, and floats. That's a
+      // view of the document, not the document, so it doesn't travel.
+      ['width', 'height', 'aspect-ratio', 'margin', 'max-width', 'min-width', 'display',
+        'transform', 'float', 'vertical-align', 'opacity', 'z-index']
         .forEach(p => c.style.removeProperty(p));
+      // The sheet geometry goes on INLINE as well as in the stylesheet, because
+      // webmail strips <style> before showing an attachment — and the whole
+      // page box lived in there, so a previewed document came out as one
+      // full-width column of unstyled text. Inline styles are what mail
+      // clients keep (it is how HTML email works at all), so the pages survive
+      // a preview. The stylesheet still does the finer work when the file is
+      // opened properly.
+      c.style.setProperty('width', dims.w + 'in');
+      c.style.setProperty('height', dims.h + 'in');
+      c.style.setProperty('box-sizing', 'border-box');
+      c.style.setProperty('overflow', 'hidden');
+      c.style.setProperty('background', '#ffffff');
+      c.style.setProperty('position', 'relative');
+      c.style.setProperty('margin', '0 auto 0.25in');
+      c.style.setProperty('page-break-after', 'always');
       return c.outerHTML;
     }).join('\n');
 
