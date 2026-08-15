@@ -317,6 +317,23 @@ constructor's auto-resume set their own state wholesale, and
 `resumeIfSavedMatches` short-circuits at the orientation step, so a document
 being reopened never reaches the layout choice.
 
+## FULL PAGE DOCUMENT offers one column or two
+
+The two-column option is **CSS columns on the editable**, not boxes —
+`column-count:2` with a `DOC_COLUMN_GAP_IN` gutter. Nothing to focus, nothing
+to resize, and the caret crosses the gap by itself, which is why it can be
+"set at setup, never changeable" without any UI to police. `docColumns` (1 or
+2) is chosen by `onPickFullPageDocument(cols)`, reset by `freshDocumentState`,
+and lives in **all three** persistence lists — see the warning above about
+`findAutoResumeData`; a two-column document that reverted to one on reload
+would be exactly that bug.
+
+Suppressed on PDF pages, whose artwork fills the sheet edge to edge.
+
+Every LAYOUT template now contains at least one image box. A layout made only
+of text boxes is just a page with lines drawn on it — there is nothing in it
+worth picking over FULL PAGE.
+
 ## Inserting a page mid-document shifts everyone's content
 
 Page content lives in the DOM, written imperatively (`el.innerHTML`), while
