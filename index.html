@@ -411,7 +411,14 @@ textarea.input { min-height: 90px; resize: vertical; }
       .doc-stage-wrap{padding-top:0 !important;margin-top:0 !important;}
       doc-page{background:none !important;padding:0 !important;min-width:0 !important;min-height:0 !important;}
     }
-    @media (max-width: 700px) {
+    /* `screen and` is load-bearing, not decoration. This block sits AFTER the
+       print block above and uses !important at the same specificity, so a bare
+       `(max-width:700px)` would beat the print reset wherever it matched — and
+       during printing a width query resolves against the PAGE box, which for a
+       4x6 label is 384px. That is exactly the offset that puts a one-sheet-tall
+       label onto sheet 2 and leaves sheet 1 blank. Scoping it to screen makes
+       that impossible regardless of rule order. */
+    @media screen and (max-width: 700px) {
       /* Inline style, so this needs !important to win — same reason the print
          block above does. Keeps the pre-90px gutter on phones. */
       .doc-stage-wrap{padding-top:60px !important;}
