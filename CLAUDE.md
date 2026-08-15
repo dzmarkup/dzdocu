@@ -506,6 +506,14 @@ step. Three things it must keep doing:
   nothing in the export.
 - **Restate the page box in inches**, because doc-page's geometry lives in a
   shadow root that can't travel with the clone.
+- **Write that page box onto each section INLINE as well as in the stylesheet.**
+  Webmail strips `<style>` before previewing an attachment, and the whole sheet
+  geometry lived in there — 27KB of a 28KB export — so a previewed document
+  came out as one full-width column of unstyled text (reported from Porkbun
+  webmail). Inline styles are what mail clients keep, since that is how HTML
+  email works at all. Verified by stripping every `<style>` block from a real
+  export and re-measuring: pages stay 816x1056. Anything new that the sheet
+  cannot look right without belongs inline too.
 
 The `htmlFilename`/`htmlDataUrl` fields are **additive** — a Worker predating
 them ignores both and sends the `.docu` alone, so app and Worker can be
