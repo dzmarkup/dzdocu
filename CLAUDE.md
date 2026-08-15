@@ -334,6 +334,31 @@ Every LAYOUT template now contains at least one image box. A layout made only
 of text boxes is just a page with lines drawn on it — there is nothing in it
 worth picking over FULL PAGE.
 
+## The two-page spread uses floats, and must keep doing so
+
+`COLS_STYLES.pairLeft/pairRight` lay the two pages of a spread out with
+`display:block;float:left`. This looks like the dated choice next to
+`inline-block` and it is deliberate: **an inline-block `.page` loses its
+children's layout entirely.** The section keeps its own layout box, but
+everything inside it gets none — `getClientRects()` returns 0, `offsetParent`
+is null, and there is no `display:none` anywhere in the ancestry to explain
+it. `getComputedStyle(editable).width` even reports `auto` rather than a used
+value, which is the giveaway that no box was generated.
+
+That mattered far beyond appearance, because `flowFrom`/`_flowLoop` decide
+whether a page has overflowed by **measuring it**. A page in that state always
+measured zero, so the engine concluded it was fine and stopped: pasting 120
+paragraphs kept 38, the rest sitting invisible in the DOM on a page that was
+never laid out, and every page after it came out blank. With floats the same
+paste keeps all 120.
+
+Neither `container-type:normal`, `contain:none`, `overflow:visible`, nor
+swapping `aspect-ratio` for an explicit height rescues the inline-block
+version — only changing the outer display type does. Note also that
+`updateColsLayout()` re-applies these styles as inline styles on every render,
+so poking at them from the console gives inconsistent answers; change
+`COLS_STYLES` and re-test instead.
+
 ## Inserting a page mid-document shifts everyone's content
 
 Page content lives in the DOM, written imperatively (`el.innerHTML`), while

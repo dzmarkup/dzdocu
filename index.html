@@ -5646,10 +5646,21 @@ class Component extends DCLogic {
       if (prevId && this.state.pageKinds[prevId] === 'cover') adjacentCoverId[id] = prevId;
       else if (nextId && this.state.pageKinds[nextId] === 'cover') adjacentCoverId[id] = nextId;
     });
+    // The two pages of a spread sit side by side as FLOATS, not inline-blocks.
+    // An inline-block .page here silently loses its children's layout: the
+    // section itself keeps a layout box, but everything inside it gets none —
+    // no client rects, no offsetParent, and no display:none anywhere in the
+    // ancestry to explain it. Since the flow engine measures a page to decide
+    // whether it has overflowed, a page in that state always measured zero, so
+    // the flow stopped dead at the second page of a spread and every later
+    // page came out empty while the text sat invisible in the DOM. Pasting
+    // 120 paragraphs kept 38 of them; with floats it keeps all 120.
+    // Floats look like the older, dustier choice and are exactly right here:
+    // the pages stay side by side and their contents lay out normally.
     const COLS_STYLES = {
       solo: 'display:block;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 auto 0.4in auto;',
-      pairLeft: 'display:inline-block;vertical-align:top;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 0.3in 0.4in 0;',
-      pairRight: 'display:inline-block;vertical-align:top;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 0 0.4in 0;',
+      pairLeft: 'display:block;float:left;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 0.3in 0.4in 0;',
+      pairRight: 'display:block;float:left;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 0 0.4in 0;',
       lone: 'display:block;width:calc(50% - 0.3in);aspect-ratio:var(--doc-page-ar);margin:0 auto 0.4in auto;',
     };
     let extraCoverCount = 0;
