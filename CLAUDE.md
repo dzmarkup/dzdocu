@@ -75,6 +75,38 @@ sheet:
 Both are reset in the document's print CSS. If a dark sheet ever comes back,
 check those two rules survived a rebuild.
 
+## Labels print with a cushion, and can be portrait
+
+Two things that came out of a "print preview adds a blank first page" report on
+a DYMO LabelWriter. The document was fine — Save as PDF gave one page, the
+LabelWriter gave two — so the fault was the label meeting the printer's media,
+not the layout.
+
+- **`LABEL_PRINT_CUSHION_IN` (0.125in), print only.** A label page is authored
+  exactly the size of the media, and no printer prints to its own edge, so
+  content sized to the paper can overflow the printable area and spill onto a
+  second sheet. Reproduced headlessly: paper set to exactly 6x4 printed two
+  sheets; 8in-wide paper printed one — the overflow is horizontal, not the
+  vertical gutter this looks like. The fix scales the **host** down
+  (`--dz-cush-w/h`) so the smaller box is what flows onto the sheet, and merely
+  *scales* `section.page` (`--dz-cush-s`), which keeps the label's authored inch
+  geometry intact — resizing the page instead would move every LAYOUT box, since
+  those live in absolute inches from the label's corner. One scale for both
+  axes, from whichever is tighter, so a label can't come out stretched.
+  `overflow:hidden` on the host stops the section's full-size layout box from
+  re-expanding it. Screen is untouched; the label is still full size there.
+- **Labels ask for orientation now**, addresses pasted or not.
+  `finishLabelSizePick` used to force landscape whenever addresses were
+  waiting. 4x6 stock feeds portrait, so a 6x4 page against 4x6 media is a
+  mismatch the printer resolves by scaling the label down and spilling it.
+  Portrait had to be reachable from the flow people actually use.
+
+That second change put pasted addresses through `resumeIfSavedMatches` for the
+first time, which would have reopened a saved document and swallowed them —
+it now bails on `pendingLabelAddresses`, the same way it already did for a
+dropped file. Both orientation handlers finish via `finishSetupSideEffects`,
+which already inserts parsed addresses for label sizes, so nothing else moved.
+
 ## Label addresses
 
 Which address sits on which page is keyed by **page id** (`pageAddresses`), not
