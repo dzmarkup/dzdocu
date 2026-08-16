@@ -524,6 +524,36 @@ be most of that by itself.
 The footer link back to dzdocu.com is `.dz-made`, screen-only — deliberate, and
 deliberately never printed.
 
+### E-SAVE PDF, and why it does NOT use html2canvas
+
+The second button sends a rasterised PDF instead of the HTML. It renders each
+page by cloning it into an SVG `<foreignObject>` and painting that to a canvas
+— i.e. it hands the drawing back to the engine that laid the page out.
+
+**html2canvas was tried and rejected.** It handled the two-column layout
+correctly, but it re-implements CSS text layout itself and ran words together:
+"long enough to wrap onto" came out as "longenoughto wraponto". It cannot set
+type. Don't reach for it again; `pageToJpeg()` is 30 lines and correct.
+
+Things that keep it working:
+
+- **Everything must travel inside the SVG.** It cannot reach back into the
+  document, so the whole stylesheet is inlined with the clone.
+- **No external images, ever.** One would taint the canvas and make
+  `toDataURL` throw. The app's images are already data URLs, which is the only
+  reason this works.
+- **`PDF_EXPORT_DPI` is 96** — CSS pixels 1:1, no resampling. File size grows
+  with the square (144 is 2.25x, 288 is 9x) against a 15MB Worker cap, so it
+  is a budget rather than a dial to turn idly.
+- The text is a **picture** of text: not selectable, not searchable. That is
+  inherent to rasterising and is why the `.docu` and the HTML copy still exist
+  — the HTML prints to a proper vector PDF in one keystroke. A true vector PDF
+  needs server-side rendering (Cloudflare Browser Rendering, Workers Paid).
+
+The PDF rides the **same** `htmlFilename`/`htmlDataUrl` fields the HTML uses —
+the Worker attaches any filename + data URL pair — so this needed no Worker
+change at all.
+
 ## The magnifier places the caret; it is not a second editor
 
 Clicking or dragging in the magnifier strip moves the **document's** selection
