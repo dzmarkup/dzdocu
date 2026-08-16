@@ -588,11 +588,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 <sc-if value="{{ notepadsVisible }}" hint-placeholder-val="{{ false }}">
   <div class="no-print" style="position:fixed;left:44px;top:calc(25vh + 360px);z-index:18;width:200px;">
     <div style="font-family:Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;margin-bottom:3px;">Notes</div>
-    <textarea value="{{ notepadLeft }}" sc-camel-on-change="{{ onNotepadLeftChange }}" placeholder="Park a sentence here…" style="{{ notepadStyle }}"></textarea>
+    <textarea data-notepad="left" value="{{ notepadLeft }}" sc-camel-on-change="{{ onNotepadLeftChange }}" style="{{ notepadStyle }}"></textarea>
   </div>
   <div class="no-print" style="position:fixed;right:44px;top:calc(25vh + 360px);z-index:18;width:200px;">
     <div style="font-family:Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;margin-bottom:3px;text-align:right;">Notes</div>
-    <textarea value="{{ notepadRight }}" sc-camel-on-change="{{ onNotepadRightChange }}" placeholder="…or here" style="{{ notepadStyle }}"></textarea>
+    <textarea data-notepad="right" value="{{ notepadRight }}" sc-camel-on-change="{{ onNotepadRightChange }}" style="{{ notepadStyle }}"></textarea>
   </div>
 </sc-if>
 
