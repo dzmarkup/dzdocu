@@ -1007,8 +1007,6 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <sc-if value="{{ emailSaveEnabled }}" hint-placeholder-val="{{ false }}">
           <input type="email" value="{{ emailAddress }}" sc-camel-on-change="{{ onEmailAddressChange }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:Arial, sans-serif;font-size:14px;margin-bottom:10px;color:#1d1f20;" />
           <button class="btn btn-primary" sc-camel-on-click="{{ onSendToEmail }}" disabled="{{ emailSending }}" style="width:100%;background:var(--color-accent,#5980a6);color:#fff;">{{ emailSendBtnLabel }}</button>
-          <!-- The .docu goes in both cases; this picks what rides with it. -->
-          <button class="btn" sc-camel-on-click="{{ onSendToEmailPdf }}" disabled="{{ emailSending }}" title="Sends the .docu plus a PDF of the pages. The PDF's text is a picture, not selectable — the readable copy above prints to a sharper PDF." style="width:100%;margin-top:6px;background:#111418;color:#eaf2ff;border:1px solid #2f6fb0;">{{ emailSendPdfBtnLabel }}</button>
           <sc-if value="{{ emailSendError }}" hint-placeholder-val="{{ false }}">
             <div style="font-size:12px;color:#b4433a;margin-top:8px;">{{ emailSendError }}</div>
           </sc-if>
@@ -1341,16 +1339,6 @@ const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 // rather than importing something that can't be kept.
 const MAX_PDF_PAGES = 40;
 
-// "E-SAVE PDF" rasterises each page and wraps it in a PDF. 96 DPI is CSS
-// pixels 1:1 — no resampling in either direction, so it matches the screen
-// exactly. Raising it multiplies file size by the square (144 is 2.25x, 288 is
-// 9x) and the Worker only accepts 15MB, so it is a real budget, not a dial to
-// turn idly. The text in this PDF is a picture of text: not selectable, not
-// searchable. That is inherent to rasterising, and it is why the .docu and the
-// HTML copy both still go out — the HTML prints to a proper vector PDF in one
-// keystroke.
-const PDF_EXPORT_DPI = 96;
-const PDF_EXPORT_QUALITY = 0.92;
 
 class Component extends DCLogic {
   state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docColumns: 1, docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
@@ -1454,6 +1442,32 @@ class Component extends DCLogic {
       setTimeout(() => this.pourSavedContent(data), 30);
     }
     this.loadEmailPref();
+    // Picture selection is delegated (see selectPageImage): the wrappers are
+    // rebuilt from saved HTML, so nothing may be bound to them directly.
+    this._onImgMouseDown = (e) => {
+      const wrap = this.imgWrapFromEvent(e);
+      if (!wrap) { if (this._selectedImg) this.clearPageImageSelection(); return; }
+      const r = wrap.getBoundingClientRect();
+      // Bottom-right corner belongs to the browser's own resize handle.
+      if (e.clientX > r.right - 18 && e.clientY > r.bottom - 18) return;
+      this.selectPageImage(wrap);
+      this.startPageImageDrag(wrap, e);
+    };
+    this._onImgKeyDown = (e) => {
+      if (!this._selectedImg) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        this._imgDeleteAsking = true;
+        this.renderPageImageChrome();
+      } else if (e.key === 'Escape') {
+        this.clearPageImageSelection();
+      }
+    };
+    this._onImgReposition = () => { if (this._selectedImg) this.renderPageImageChrome(); };
+    document.addEventListener('mousedown', this._onImgMouseDown, true);
+    document.addEventListener('keydown', this._onImgKeyDown, true);
+    window.addEventListener('scroll', this._onImgReposition, true);
+    window.addEventListener('resize', this._onImgReposition);
     // The toolbar's real height depends on the toggle button's rendered
     // size and the phone's safe-area inset, neither of which necessarily
     // lands before the render that reads them, and neither reliably fires
@@ -3740,6 +3754,10 @@ class Component extends DCLogic {
     window.removeEventListener('error', this._onWindowError);
     document.removeEventListener('selectionchange', this._onSelectionChange);
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
+    document.removeEventListener('mousedown', this._onImgMouseDown, true);
+    document.removeEventListener('keydown', this._onImgKeyDown, true);
+    window.removeEventListener('scroll', this._onImgReposition, true);
+    window.removeEventListener('resize', this._onImgReposition);
     document.removeEventListener('selectionchange', this._onMagnifierSync);
     document.removeEventListener('input', this._onMagnifierSync, true);
     document.removeEventListener('selectionchange', this._onSelectionFormatSync);
@@ -3793,6 +3811,12 @@ class Component extends DCLogic {
   }
 
   buildSaveData() {
+    // The selection outline is chrome, not content, so it must not be in the
+    // captured HTML — but the save is debounced and fires while the user is
+    // still looking at the picture they selected, so it is lifted for the
+    // snapshot and put straight back rather than actually deselecting.
+    const selectedImg = this._selectedImg;
+    if (selectedImg) selectedImg.style.removeProperty('outline');
     const pageHtml = {};
     this.state.pageIds.forEach(id => {
       const el = this.editableEls[id];
@@ -3803,6 +3827,7 @@ class Component extends DCLogic {
       const el = this.boxEditableEls[boxId];
       if (el) boxHtml[boxId] = el.innerHTML;
     });
+    if (selectedImg && selectedImg.isConnected) selectedImg.style.outline = '2px solid #2f6fb0';
     return {
       pageIds: this.state.pageIds,
       docTitle: this.state.docTitle,
@@ -3968,174 +3993,6 @@ class Component extends DCLogic {
     return () => { if (this._backdropPressedSelf) handler(); };
   }
 
-  // A standalone copy of the document that opens in any browser, emailed
-  // alongside the .docu. The .docu is the editable original and only DZDocu
-  // can open it; a recipient without the app used to get a file they simply
-  // couldn't read. This is the readable half — and because it carries the
-  // app's own stylesheet, printing it produces the same pages the app would,
-  // which is also how someone gets a PDF out of it (the app has no PDF
-  // writer; every PDF it makes comes from window.print()).
-  //
-  // Built by cloning the live <section class="page"> elements rather than
-  // rebuilding from state: they already render correctly, including boxes,
-  // labels, headers and full-bleed PDF pages, and there is no second code
-  // path to keep in step with the first.
-  buildStandaloneHtml() {
-    const dims = this.getDims();
-    const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
-    const sections = this.state.pageIds.map(id => this.sectionEls[id]).filter(Boolean).map(el => {
-      const c = el.cloneNode(true);
-      // Screen-only chrome (page remove, Extract Text, box handles) is not
-      // part of the document.
-      c.querySelectorAll('.no-print').forEach(n => n.remove());
-      // Nothing in an exported copy should invite typing — it has nowhere to
-      // save to.
-      c.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
-      c.removeAttribute('contenteditable');
-      // updateColsLayout() writes the editor's on-screen arrangement onto the
-      // section as INLINE styles — in a two-page spread that's
-      // `width:calc(50% - 28.8px)` plus an aspect-ratio, and floats. That's a
-      // view of the document, not the document, so it doesn't travel.
-      ['width', 'height', 'aspect-ratio', 'margin', 'max-width', 'min-width', 'display',
-        'transform', 'float', 'vertical-align', 'opacity', 'z-index']
-        .forEach(p => c.style.removeProperty(p));
-      // The sheet geometry goes on INLINE as well as in the stylesheet, because
-      // webmail strips <style> before showing an attachment — and the whole
-      // page box lived in there, so a previewed document came out as one
-      // full-width column of unstyled text. Inline styles are what mail
-      // clients keep (it is how HTML email works at all), so the pages survive
-      // a preview. The stylesheet still does the finer work when the file is
-      // opened properly.
-      c.style.setProperty('width', dims.w + 'in');
-      c.style.setProperty('height', dims.h + 'in');
-      c.style.setProperty('box-sizing', 'border-box');
-      c.style.setProperty('overflow', 'hidden');
-      c.style.setProperty('background', '#ffffff');
-      c.style.setProperty('position', 'relative');
-      c.style.setProperty('margin', '0 auto 0.25in');
-      c.style.setProperty('page-break-after', 'always');
-      return c.outerHTML;
-    }).join('\n');
-
-    // The app's whole stylesheet comes along, so .editable, fonts and the
-    // print rules behave identically. Its UI rules match nothing here.
-    const appCss = [].slice.call(document.querySelectorAll('style'))
-      .map(s => s.textContent || '').join('\n');
-
-    // Page geometry last, so it wins over anything above it. doc-page's own
-    // sizing lives in a shadow root that can't come with us, so the sheet box
-    // is restated here from the same inch values the component was given.
-    const pageCss = [
-      '@page { size: ' + dims.w + 'in ' + dims.h + 'in; margin: 0; }',
-      'html, body { margin:0; padding:0; background:#ffffff; }',
-      // !important as a second line of defence: the section's inline layout is
-      // stripped above, but this geometry is the one thing the export cannot
-      // afford to lose to a stray rule.
-      '.page { width:' + dims.w + 'in !important; height:' + dims.h + 'in !important;',
-      '  aspect-ratio:auto !important; max-width:none !important; box-sizing:border-box;',
-      '  position:relative; overflow:hidden; background:#ffffff; margin:0 auto !important;',
-      '  page-break-after:always; break-after:page; }',
-      '.page:last-of-type { page-break-after:auto; break-after:auto; }',
-      '@media screen {',
-      '  body { background:#555a5f; padding:24px 0; }',
-      '  .page { box-shadow:0 2px 14px rgba(0,0,0,0.45); margin-bottom:24px; }',
-      '}',
-      // Shown when the file is opened, never when it is printed.
-      '.dz-made { text-align:center; font-family:Arial, sans-serif; font-size:12px;',
-      '  color:#c9d4de; padding:6px 0 22px; }',
-      '.dz-made a { color:#9dc6f0; }',
-      '@media print { .dz-made { display:none !important; } }',
-    ].join('\n');
-
-    return '<!doctype html>\n<html>\n<head>\n<meta charset="utf-8">\n'
-      + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-      + '<title>' + this.escapeHtml(title) + '</title>\n'
-      + '<style>\n' + appCss + '\n' + pageCss + '\n</style>\n</head>\n<body>\n'
-      + sections + '\n'
-      + '<div class="dz-made">Made with <a href="https://dzdocu.com">DZDocu</a>'
-      + ' &middot; print this page to save it as a PDF</div>\n'
-      + '</body>\n</html>\n';
-  }
-
-  // Renders one page to a JPEG the way the BROWSER draws it, by wrapping a
-  // clone in an SVG <foreignObject> and painting that to a canvas.
-  //
-  // The obvious library for this is html2canvas, and it was tried and thrown
-  // out: it re-implements CSS text layout itself and ran words together —
-  // "long enough to wrap onto" came out as "longenoughto wraponto". It handled
-  // the two-column layout fine; it just can't set type. foreignObject has no
-  // such problem because it isn't re-implementing anything, it hands the job
-  // back to the engine that laid the page out in the first place.
-  //
-  // Everything the page needs must travel inside the SVG — it cannot reach
-  // back into the document — so the whole stylesheet goes with the clone. Any
-  // EXTERNAL image would taint the canvas and make toDataURL throw; the app's
-  // own images are data URLs already, which is why this works at all.
-  async pageToJpeg(sec, scale) {
-    const w = sec.offsetWidth, h = sec.offsetHeight;
-    const clone = sec.cloneNode(true);
-    clone.querySelectorAll('.no-print').forEach(n => n.remove());
-    clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
-    ['width', 'height', 'aspect-ratio', 'margin', 'transform', 'float', 'display',
-      'opacity', 'z-index', 'vertical-align'].forEach(p => clone.style.removeProperty(p));
-    clone.style.cssText += ';width:' + w + 'px;height:' + h + 'px;background:#ffffff;margin:0;';
-    const css = [].slice.call(document.querySelectorAll('style'))
-      .map(s => s.textContent || '').join('\n')
-      .replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">'
-      + '<foreignObject width="100%" height="100%">'
-      + '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#ffffff;">'
-      + '<style>' + css + '</style>' + clone.outerHTML
-      + '</div></foreignObject></svg>';
-    const img = new Image();
-    const loaded = new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = () => rej(new Error('Could not draw this page.'));
-    });
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    await loaded;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', PDF_EXPORT_QUALITY);
-  }
-
-  // Every page of the document as one PDF, page-sized to the real sheet so it
-  // opens and prints at the right size. Rasterised, so the text is a picture
-  // of the text rather than selectable characters — see PDF_EXPORT_DPI.
-  async buildPdfDataUrl() {
-    await this.ensureJsPdf();
-    const dims = this.getDims();
-    const scale = PDF_EXPORT_DPI / 96;   // CSS pixels are 96 per inch
-    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    if (!JsPDF) throw new Error('PDF writer failed to load.');
-    const pdf = new JsPDF({
-      orientation: dims.w > dims.h ? 'landscape' : 'portrait',
-      unit: 'in',
-      format: [dims.w, dims.h],
-    });
-    const ids = this.state.pageIds;
-    for (let i = 0; i < ids.length; i++) {
-      const sec = this.sectionEls[ids[i]];
-      if (!sec) continue;
-      const jpeg = await this.pageToJpeg(sec, scale);
-      if (i > 0) pdf.addPage([dims.w, dims.h], dims.w > dims.h ? 'landscape' : 'portrait');
-      pdf.addImage(jpeg, 'JPEG', 0, 0, dims.w, dims.h);
-    }
-    return pdf.output('datauristring');
-  }
-
-  // Same lazy-load pattern as pdf.js and mammoth: 420KB nobody pays for
-  // unless they actually ask for a PDF.
-  async ensureJsPdf() {
-    if (window.jspdf && window.jspdf.jsPDF) return;
-    await this.loadScriptOnce('assets/jspdf.umd.min.js');
-  }
-
   onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
   onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
   onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
@@ -4146,10 +4003,7 @@ class Component extends DCLogic {
   // document" — as a base64 attachment to a Cloudflare Worker, which is the
   // only piece able to actually hold an email-service key safely, since this
   // whole site is static with nowhere else to keep a secret.
-  // kind: 'html' sends the readable copy (default, cheap, prints to a proper
-  // vector PDF at the other end); 'pdf' sends a rasterised PDF instead. Both
-  // always carry the .docu, which is the actual save.
-  async onSendToEmail(kind) {
+  async onSendToEmail() {
     const email = (this.state.emailAddress || '').trim();
     if (!EMAIL_WORKER_URL) {
       this.setState({ emailSendStatus: 'error', emailSendError: "Email saving isn't set up yet." });
@@ -4165,42 +4019,11 @@ class Component extends DCLogic {
       const data = this.buildSaveData();
       const title = (this.state.docTitle || 'DOCU').trim() || 'DOCU';
       const json = JSON.stringify(data);
-      const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
-      const dataUrl = 'data:application/json;base64,' + b64(json);
-      // The readable companion. Built defensively: a document that won't
-      // export is not a reason to fail the send, since the .docu — the thing
-      // actually being saved — is fine either way.
-      // The second attachment. The Worker takes any filename + data URL pair,
-      // so the PDF rides the same two fields the HTML does and needs no
-      // Worker change to go out.
-      let extraName = title + '.html', extraDataUrl = null;
-      if (kind === 'pdf') {
-        extraName = title + '.pdf';
-        try { extraDataUrl = await this.buildPdfDataUrl(); } catch (e) {
-          this.setState({ emailSendStatus: 'error',
-            emailSendError: (e && e.message) || "Couldn't build the PDF." });
-          return;
-        }
-      } else {
-        try { extraDataUrl = 'data:text/html;base64,' + b64(this.buildStandaloneHtml()); }
-        catch (e) { extraDataUrl = null; }
-      }
-      let htmlDataUrl = extraDataUrl;
-      // The Worker refuses a payload over 15MB, and a document carrying PDF
-      // pages or photos can be most of that on its own. The .docu wins that
-      // contest — dropping the copy still delivers the document, dropping the
-      // .docu would defeat the feature.
-      if (htmlDataUrl && dataUrl.length + htmlDataUrl.length > 14 * 1024 * 1024) htmlDataUrl = null;
+      const dataUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(json)));
       const resp = await fetch(EMAIL_WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // htmlFilename/htmlDataUrl are additive: a Worker that predates them
-        // ignores both and sends the .docu alone, so the app and the Worker
-        // can be deployed in either order.
-        body: JSON.stringify({
-          email, filename: title + '.docu', dataUrl,
-          htmlFilename: extraName, htmlDataUrl,
-        }),
+        body: JSON.stringify({ email, filename: title + '.docu', dataUrl }),
       });
       const result = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(result.error || 'Send failed.');
@@ -4847,6 +4670,174 @@ class Component extends DCLogic {
       this.updateEmptyState(pageId);
     };
     img.src = dataUrl;
+  }
+
+  // ---- Selecting, deleting and moving a picture dropped into page text ----
+  //
+  // The wrapper insertImage builds is contentEditable=false, which is what
+  // makes it an atomic object rather than something the caret can wander
+  // into — and also why the caret could never reach it to delete it. So
+  // selection is handled here instead.
+  //
+  // Everything is DELEGATED from the document rather than bound to the
+  // wrapper when it is built. A wrapper does not survive as an object: it is
+  // rebuilt from saved HTML by pourSavedContent on every reopen and reload, so
+  // per-element listeners would work until the first save and then quietly
+  // stop. Delegation also picks up pasted and poured-in pictures for free.
+  //
+  // Nothing here is ever written into the document. The chrome (outline, ×,
+  // confirm) lives in the no-print overlay, and buildSaveData clears the
+  // selection before reading innerHTML, so a saved file can't carry a
+  // half-selected picture.
+  imgWrapFromEvent(e) {
+    const t = e.target;
+    if (!t || !t.closest) return null;
+    const wrap = t.closest('.img-wrap');
+    if (!wrap) return null;
+    // Only pictures in page text; a box image is the box's own content and is
+    // handled by the box code.
+    return this.findSavedEditableTarget(wrap) ? wrap : null;
+  }
+
+  selectPageImage(wrap) {
+    if (this._selectedImg === wrap) return;
+    this.clearPageImageSelection();
+    this._selectedImg = wrap;
+    if (wrap) wrap.style.outline = '2px solid #2f6fb0';
+    this.renderPageImageChrome();
+  }
+
+  clearPageImageSelection() {
+    if (this._selectedImg) this._selectedImg.style.removeProperty('outline');
+    this._selectedImg = null;
+    this._imgDeleteAsking = false;
+    this.renderPageImageChrome();
+  }
+
+  // The × and its confirmation, drawn over the picture in the fixed overlay
+  // the LAYOUT chrome already uses. Redrawn on scroll/resize so it stays put.
+  renderPageImageChrome() {
+    // Its own overlay rather than the LAYOUT chrome host, which only exists
+    // for label documents — the picture chrome has to work on every page.
+    let host = this._imgChromeHost;
+    if (!host || !host.isConnected) {
+      host = document.createElement('div');
+      host.className = 'no-print';
+      host.setAttribute('data-img-chrome-host', '1');
+      host.style.cssText = 'position:fixed;inset:0;z-index:22;pointer-events:none;';
+      document.body.appendChild(host);
+      this._imgChromeHost = host;
+    }
+    [].slice.call(host.querySelectorAll('[data-img-chrome]')).forEach(n => n.remove());
+    const wrap = this._selectedImg;
+    if (!wrap || !wrap.isConnected) return;
+    const r = wrap.getBoundingClientRect();
+    const mk = (css, text, onClick) => {
+      const b = document.createElement('button');
+      b.setAttribute('data-img-chrome', '1');
+      b.className = 'no-print';
+      b.textContent = text;
+      b.style.cssText = 'position:fixed;pointer-events:auto;z-index:22;font-family:Arial, sans-serif;'
+        + 'font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;' + css;
+      b.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); });
+      b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick(); });
+      host.appendChild(b);
+    };
+    if (!this._imgDeleteAsking) {
+      mk('left:' + Math.round(r.right - 11) + 'px;top:' + Math.round(r.top - 11) + 'px;width:22px;height:22px;'
+        + 'padding:0;line-height:1;background:#b4433a;color:#fff;border:1px solid #7d2f28;', '×',
+        () => { this._imgDeleteAsking = true; this.renderPageImageChrome(); });
+    } else {
+      // Confirmation before anything is thrown away, same as a box image.
+      mk('left:' + Math.round(r.right - 150) + 'px;top:' + Math.round(r.top - 30) + 'px;height:24px;padding:0 10px;'
+        + 'background:#b4433a;color:#fff;border:1px solid #7d2f28;', 'Delete picture',
+        () => this.deleteSelectedPageImage());
+      mk('left:' + Math.round(r.right - 46) + 'px;top:' + Math.round(r.top - 30) + 'px;height:24px;padding:0 10px;'
+        + 'background:#ffffff;color:#1d1f20;border:1px solid #999;', 'Keep',
+        () => { this._imgDeleteAsking = false; this.renderPageImageChrome(); });
+    }
+  }
+
+  deleteSelectedPageImage() {
+    const wrap = this._selectedImg;
+    if (!wrap) return;
+    const host = this.findSavedEditableTarget(wrap);
+    const pageId = host && Object.keys(this.editableEls).find(id => this.editableEls[id] === host);
+    if (pageId) this.checkpoint(pageId);
+    wrap.remove();
+    this.clearPageImageSelection();
+    if (pageId) { this.flowFrom(pageId); this.updateEmptyState(pageId); }
+    this.saveDebounced();
+  }
+
+  // Drag the picture to a new place in the text. The drop point is turned into
+  // a real caret position with caretRangeFromPoint, so the picture lands where
+  // the text would have, and the flow engine re-paginates from there.
+  startPageImageDrag(wrap, downEvent) {
+    const startX = downEvent.clientX, startY = downEvent.clientY;
+    let dragging = false;
+    const ghostAt = (x, y) => {
+      let g = document.getElementById('dz-img-ghost');
+      if (!g) {
+        g = document.createElement('div');
+        g.id = 'dz-img-ghost';
+        g.className = 'no-print';
+        g.style.cssText = 'position:fixed;z-index:23;pointer-events:none;width:2px;height:1.2em;background:#2f6fb0;';
+        document.body.appendChild(g);
+      }
+      g.style.left = x + 'px';
+      g.style.top = y + 'px';
+    };
+    const move = (e) => {
+      if (!dragging && Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) < 5) return;
+      dragging = true;
+      e.preventDefault();
+      const pos = this.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        const r = document.createRange();
+        try { r.setStart(pos.node, pos.offset); r.collapse(true); } catch (err) { return; }
+        const rect = r.getBoundingClientRect();
+        ghostAt(Math.round(rect.left), Math.round(rect.top));
+      }
+    };
+    const up = (e) => {
+      document.removeEventListener('mousemove', move, true);
+      document.removeEventListener('mouseup', up, true);
+      const g = document.getElementById('dz-img-ghost');
+      if (g) g.remove();
+      if (!dragging) return;
+      const pos = this.caretPositionFromPoint(e.clientX, e.clientY);
+      if (!pos) return;
+      const host = pos.node.nodeType === 1 ? pos.node : pos.node.parentElement;
+      const target = this.findSavedEditableTarget(host);
+      if (!target) return;                       // dropped off any page: leave it be
+      const pageId = Object.keys(this.editableEls).find(id => this.editableEls[id] === target);
+      if (pageId) this.checkpoint(pageId);
+      try {
+        const r = document.createRange();
+        r.setStart(pos.node, pos.offset);
+        r.collapse(true);
+        r.insertNode(wrap);
+      } catch (err) { return; }
+      this.renderPageImageChrome();
+      if (pageId) { this.flowFrom(pageId); this.updateEmptyState(pageId); }
+      this.saveDebounced();
+    };
+    document.addEventListener('mousemove', move, true);
+    document.addEventListener('mouseup', up, true);
+  }
+
+  // Chrome and Firefox spell this differently; same helper the magnifier uses.
+  caretPositionFromPoint(x, y) {
+    if (document.caretRangeFromPoint) {
+      const r = document.caretRangeFromPoint(x, y);
+      return r ? { node: r.startContainer, offset: r.startOffset } : null;
+    }
+    if (document.caretPositionFromPoint) {
+      const p = document.caretPositionFromPoint(x, y);
+      return p ? { node: p.offsetNode, offset: p.offset } : null;
+    }
+    return null;
   }
 
   // An image box holds exactly one image sized to fill the box — unlike
@@ -6115,11 +6106,9 @@ class Component extends DCLogic {
       onToggleEmailEnabled: () => this.onToggleEmailEnabled(),
       emailAddress: this.state.emailAddress,
       onEmailAddressChange: (e) => this.onEmailAddressChange(e),
-      onSendToEmail: () => this.onSendToEmail('html'),
-      onSendToEmailPdf: () => this.onSendToEmail('pdf'),
+      onSendToEmail: () => this.onSendToEmail(),
       emailSending: this.state.emailSendStatus === 'sending',
-      emailSendBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send .docu + readable copy',
-      emailSendPdfBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send .docu + PDF',
+      emailSendBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send',
       emailSendError: this.state.emailSendStatus === 'error' ? this.state.emailSendError : null,
       emailSent: this.state.emailSendStatus === 'sent',
       uniformBtnStyle: 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
