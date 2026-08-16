@@ -1445,6 +1445,11 @@ class Component extends DCLogic {
     // Picture selection is delegated (see selectPageImage): the wrappers are
     // rebuilt from saved HTML, so nothing may be bound to them directly.
     this._onImgMouseDown = (e) => {
+      // This runs in the CAPTURE phase, so it fires before the chrome's own
+      // buttons see the click. Without this the × and its confirm cleared the
+      // selection out from under themselves and the press never landed — the
+      // buttons appeared and did nothing.
+      if (e.target && e.target.closest && e.target.closest('[data-img-chrome]')) return;
       const wrap = this.imgWrapFromEvent(e);
       if (!wrap) { if (this._selectedImg) this.clearPageImageSelection(); return; }
       const r = wrap.getBoundingClientRect();
@@ -4529,6 +4534,54 @@ class Component extends DCLogic {
     this.saveDebounced();
   }
 
+  // The page equivalent of splitNodeForFlow, which can't be reused as-is: it
+  // decides "fits" by comparing a Range's bottom edge to the box bottom, and a
+  // two-column page doesn't overflow downward at all — it grows sideways. So
+  // the fit test here is editableOverflows itself, measured against the real
+  // DOM at each probe, which works for one column and two alike.
+  //
+  // Same deliberate narrowness as the box version: a bare text node, or an
+  // element with exactly one text child. Anything with real structure inside
+  // is left to the caller's whole-node move rather than risk mangling it.
+  splitNodeForPageFlow(node, fromEl, toEl) {
+    let textNode = null, wrapper = null;
+    if (node.nodeType === 3) {
+      textNode = node;
+    } else if (node.nodeType === 1 && node.childNodes.length === 1 && node.firstChild.nodeType === 3) {
+      wrapper = node;
+      textNode = node.firstChild;
+    } else return false;
+    const original = textNode.textContent || '';
+    if (original.length < 2) return false;
+    const fitsAt = (n) => {
+      textNode.textContent = original.slice(0, n);
+      return !this.editableOverflows(fromEl);
+    };
+    if (fitsAt(original.length)) { textNode.textContent = original; return false; }
+    let lo = 0, hi = original.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (fitsAt(mid)) lo = mid; else hi = mid - 1;
+    }
+    textNode.textContent = original;
+    // Back up to the nearest whitespace, then forward past it, so the head
+    // keeps whole words and the tail starts cleanly on the next one.
+    let cut = Math.min(lo, original.length - 1);
+    while (cut > 0 && !/\s/.test(original[cut])) cut--;
+    let splitAt = cut;
+    while (splitAt < original.length && /\s/.test(original[splitAt])) splitAt++;
+    if (splitAt <= 0 || splitAt >= original.length) return false;
+    const headText = original.slice(0, splitAt).replace(/\s+$/, '');
+    const tailText = original.slice(splitAt);
+    if (!headText || !tailText) return false;
+    textNode.textContent = headText;
+    const tailNode = wrapper
+      ? (() => { const c = wrapper.cloneNode(false); c.textContent = tailText; return c; })()
+      : document.createTextNode(tailText);
+    toEl.insertBefore(tailNode, toEl.firstChild);
+    return true;
+  }
+
   async _flowLoop(startId) {
     let curId = startId, iter = 0, newPagesCreated = 0;
     while (iter < 20000) {
@@ -4552,6 +4605,15 @@ class Component extends DCLogic {
       let movedAny = false;
       let node = this.lastFlowableChild(fromEl);
       while (this.editableOverflows(fromEl) && node) {
+        // A single node larger than a whole page can't be moved anywhere: push
+        // sends it to the next page, which then overflows too, and the pull
+        // brings it back — it settles as one page spilling into columns that
+        // run off the sheet. Pasted text with no paragraph breaks in it is
+        // exactly one such node. Split it instead.
+        if (fromEl.childNodes.length === 1 && this.splitNodeForPageFlow(node, fromEl, toEl)) {
+          movedAny = true;
+          break;
+        }
         toEl.insertBefore(node, toEl.firstChild);
         movedAny = true;
         iter++;

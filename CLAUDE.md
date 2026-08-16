@@ -359,6 +359,40 @@ version — only changing the outer display type does. Note also that
 so poking at them from the console gives inconsistent answers; change
 `COLS_STYLES` and re-test instead.
 
+## A node bigger than a page has to be split, not moved
+
+`_flowLoop` moves whole nodes. A single node larger than a whole page can
+therefore never land anywhere: push sends it to the next page, which overflows
+too, the pull brings it back, and it settles as one page spilling into columns
+that run off the sheet. **Pasted text with no paragraph breaks in it is exactly
+one such node** — a whole specification pasted in arrives as one text node.
+
+`splitNodeForPageFlow` is the escape valve, called when the node is the page's
+only child. It binary-searches the character offset where the page stops
+overflowing, snaps back to a word boundary, and leaves the head behind.
+
+It could not reuse `splitNodeForFlow` (the box version): that decides "fits" by
+comparing a Range's bottom edge against the box bottom, and a two-column page
+does not overflow downward at all. The fit test here is `editableOverflows`
+measured against the real DOM at each probe, which is correct for one column
+and two alike.
+
+Verified with 1800 numbered words pasted as one unbroken run: 4 pages, no
+sideways spill, and all 1800 words still present.
+
+## The picture chrome listens in the CAPTURE phase
+
+`_onImgMouseDown` is bound with `useCapture`, so it runs before the ×/confirm
+buttons see their own click. Without the `closest('[data-img-chrome]')` guard
+at the top it cleared the selection out from under those buttons and the press
+never landed — the buttons appeared and did nothing, which is exactly how it
+was reported.
+
+Worth knowing for testing: this only reproduces with a **real** mouse click.
+Calling `button.click()` from JS skips the capture-phase mousedown entirely, so
+a test doing that passes against broken code. Same blind spot as synthetic drag
+events.
+
 ## Pagination pushes AND pulls
 
 `_flowLoop` only ever pushed: it fills a page and moves the overflow onto the
