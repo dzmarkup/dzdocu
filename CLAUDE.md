@@ -359,6 +359,29 @@ version — only changing the outer display type does. Note also that
 so poking at them from the console gives inconsistent answers; change
 `COLS_STYLES` and re-test instead.
 
+## Pagination pushes AND pulls
+
+`_flowLoop` only ever pushed: it fills a page and moves the overflow onto the
+next one. Nothing came back, so deleting text left a short page — and at worst
+a completely empty one — with full pages after it, and the save preserved that
+gap forever. A real document turned up as seven pages: four full, page five
+empty, the last two half filled.
+
+`_pullLoop` runs after every flow and does the other half: while a page has
+room, it takes the first thing off the next page; if that tips the page over,
+it goes straight back and the pull stops there. Whole nodes only, so pages come
+out filled but not perfectly level — a node that doesn't fit ends the pull.
+
+`dropGapPages` then removes a page left with nothing on it **while later pages
+still have content**. That distinction is the whole point: a gap goes, a
+trailing empty page is one someone added to type on and stays. Cover and PDF
+pages are never touched. It snapshots page HTML by id and pours it back around
+the `setState`, because page content lives in the DOM and the list renders
+positionally — see the next section.
+
+Verified against the real document: the gap closed, the empty page ended up at
+the end, and the character count was identical either side (11,214).
+
 ## Inserting a page mid-document shifts everyone's content
 
 Page content lives in the DOM, written imperatively (`el.innerHTML`), while

@@ -4433,7 +4433,7 @@ class Component extends DCLogic {
   flowFrom(pageId, depth) {
     if (this._flowing) { this._flowQueued = this._flowQueued || new Set(); this._flowQueued.add(pageId); return; }
     this._flowing = true;
-    this._flowLoop(pageId).finally(() => {
+    this._flowLoop(pageId).then(() => this._pullLoop()).finally(() => {
       this._flowing = false;
       if (this._flowQueued && this._flowQueued.size) {
         const next = [...this._flowQueued]; this._flowQueued.clear();
@@ -4467,6 +4467,66 @@ class Component extends DCLogic {
     if (!el) return false;
     if (el.scrollHeight > el.clientHeight + 1) return true;
     return this.state.docColumns === 2 && el.scrollWidth > el.clientWidth + 1;
+  }
+
+  // The other half of pagination. _flowLoop only ever PUSHES: it fills a page
+  // and moves the overflow on. Nothing ever came back, so deleting text left a
+  // short page — and, at worst, a completely empty one — with full pages after
+  // it. A save then preserved that gap forever, which is what a real document
+  // turned up with: seven pages, four of them full, page five empty, and the
+  // last two half filled.
+  //
+  // This pulls content back up: while a page has room, take the first thing
+  // off the next page. If taking it tips the page over, put it straight back
+  // and stop — that node belongs where it was.
+  async _pullLoop() {
+    for (let i = 0; i < this.state.pageIds.length - 1; i++) {
+      const el = this.editableEls[this.state.pageIds[i]];
+      if (!el) continue;
+      let guard = 0;
+      while (guard++ < 5000) {
+        const nextEl = this.editableEls[this.state.pageIds[i + 1]];
+        if (!nextEl) break;
+        const node = nextEl.firstChild;
+        if (!node) break;
+        el.appendChild(node);
+        if (this.editableOverflows(el)) { nextEl.insertBefore(node, nextEl.firstChild); break; }
+        if (guard % 25 === 0) await new Promise(r => setTimeout(r, 0));
+      }
+    }
+    await this.dropGapPages();
+  }
+
+  // A page left with nothing on it while later pages still have content is a
+  // gap, not a page someone added to type on — so only those go. A trailing
+  // empty page is deliberate and stays.
+  //
+  // Page content lives in the DOM and the page list renders positionally, so
+  // removing one mid-list hands every later page the wrong content. The
+  // snapshot-by-id and pour-back either side of the setState is the same
+  // pattern extractOnePdfPage and pourSavedContent use.
+  async dropGapPages() {
+    const ids = this.state.pageIds;
+    const isEmpty = (id) => {
+      const el = this.editableEls[id];
+      return el && !el.firstChild;
+    };
+    let lastWithContent = -1;
+    for (let i = ids.length - 1; i >= 0; i--) { if (!isEmpty(ids[i])) { lastWithContent = i; break; } }
+    const doomed = ids.filter((id, i) => i < lastWithContent && isEmpty(id)
+      && !this.state.pdfPageIds[id] && this.state.pageKinds[id] !== 'cover');
+    if (!doomed.length) return;
+    const snapshot = {};
+    ids.forEach(id => { const el = this.editableEls[id]; if (el) snapshot[id] = el.innerHTML; });
+    doomed.forEach(id => { delete snapshot[id]; delete this.editableEls[id]; });
+    await new Promise(resolve => this.setState(
+      s => ({ pageIds: s.pageIds.filter(id => doomed.indexOf(id) < 0) }), resolve));
+    await new Promise(r => setTimeout(r, 40));
+    Object.keys(snapshot).forEach(id => {
+      const el = this.editableEls[id];
+      if (el && el.innerHTML !== snapshot[id]) el.innerHTML = snapshot[id];
+    });
+    this.saveDebounced();
   }
 
   async _flowLoop(startId) {
