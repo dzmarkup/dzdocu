@@ -317,104 +317,28 @@ constructor's auto-resume set their own state wholesale, and
 `resumeIfSavedMatches` short-circuits at the orientation step, so a document
 being reopened never reaches the layout choice.
 
-## FULL PAGE DOCUMENT offers one column or two
+## FULL PAGE DOCUMENT is one column, and a two-column option was tried
 
-The two-column option is **CSS columns on the editable**, not boxes —
-`column-count:2` with a `DOC_COLUMN_GAP_IN` gutter. Nothing to focus, nothing
-to resize, and the caret crosses the gap by itself, which is why it can be
-"set at setup, never changeable" without any UI to police. `docColumns` (1 or
-2) is chosen by `onPickFullPageDocument(cols)`, reset by `freshDocumentState`,
-and lives in **all three** persistence lists — see the warning above about
-`findAutoResumeData`; a two-column document that reverted to one on reload
-would be exactly that bug.
+A two-column FULL PAGE option existed briefly (CSS `column-count:2` on the
+editable) and was removed. **Don't rebuild it without reading this**, because
+it looks like a ten-line feature and is not.
 
-Suppressed on PDF pages, whose artwork fills the sheet edge to edge.
+A multicol page overflows **sideways**, not downward. The whole pagination
+engine asks "does the content stick out the bottom", and multicol never sticks
+out the bottom — it silently adds another column. Every bug it caused was a
+version of that mismatch: text spilling into a third column off the sheet, a
+blank page stranded mid-document, and a pasted block that never split. Each was
+fixed, and the next one surfaced behind it. The feature was pulled rather than
+keep patching a shape mismatch.
 
-Every LAYOUT template now contains at least one image box. A layout made only
-of text boxes is just a page with lines drawn on it — there is nothing in it
-worth picking over FULL PAGE.
+If two columns are ever wanted again, build them as **two side-by-side text
+boxes**. The box engine already flows content box-to-box, splits an oversized
+node, and reports overflow — it is the machinery the CSS-column version kept
+re-deriving badly.
 
-## The two-page spread uses floats, and must keep doing so
-
-`COLS_STYLES.pairLeft/pairRight` lay the two pages of a spread out with
-`display:block;float:left`. This looks like the dated choice next to
-`inline-block` and it is deliberate: **an inline-block `.page` loses its
-children's layout entirely.** The section keeps its own layout box, but
-everything inside it gets none — `getClientRects()` returns 0, `offsetParent`
-is null, and there is no `display:none` anywhere in the ancestry to explain
-it. `getComputedStyle(editable).width` even reports `auto` rather than a used
-value, which is the giveaway that no box was generated.
-
-That mattered far beyond appearance, because `flowFrom`/`_flowLoop` decide
-whether a page has overflowed by **measuring it**. A page in that state always
-measured zero, so the engine concluded it was fine and stopped: pasting 120
-paragraphs kept 38, the rest sitting invisible in the DOM on a page that was
-never laid out, and every page after it came out blank. With floats the same
-paste keeps all 120.
-
-Neither `container-type:normal`, `contain:none`, `overflow:visible`, nor
-swapping `aspect-ratio` for an explicit height rescues the inline-block
-version — only changing the outer display type does. Note also that
-`updateColsLayout()` re-applies these styles as inline styles on every render,
-so poking at them from the console gives inconsistent answers; change
-`COLS_STYLES` and re-test instead.
-
-## A node bigger than a page has to be split, not moved
-
-`_flowLoop` moves whole nodes. A single node larger than a whole page can
-therefore never land anywhere: push sends it to the next page, which overflows
-too, the pull brings it back, and it settles as one page spilling into columns
-that run off the sheet. **Pasted text with no paragraph breaks in it is exactly
-one such node** — a whole specification pasted in arrives as one text node.
-
-`splitNodeForPageFlow` is the escape valve, called when the node is the page's
-only child. It binary-searches the character offset where the page stops
-overflowing, snaps back to a word boundary, and leaves the head behind.
-
-It could not reuse `splitNodeForFlow` (the box version): that decides "fits" by
-comparing a Range's bottom edge against the box bottom, and a two-column page
-does not overflow downward at all. The fit test here is `editableOverflows`
-measured against the real DOM at each probe, which is correct for one column
-and two alike.
-
-Verified with 1800 numbered words pasted as one unbroken run: 4 pages, no
-sideways spill, and all 1800 words still present.
-
-## The picture chrome listens in the CAPTURE phase
-
-`_onImgMouseDown` is bound with `useCapture`, so it runs before the ×/confirm
-buttons see their own click. Without the `closest('[data-img-chrome]')` guard
-at the top it cleared the selection out from under those buttons and the press
-never landed — the buttons appeared and did nothing, which is exactly how it
-was reported.
-
-Worth knowing for testing: this only reproduces with a **real** mouse click.
-Calling `button.click()` from JS skips the capture-phase mousedown entirely, so
-a test doing that passes against broken code. Same blind spot as synthetic drag
-events.
-
-## Pagination pushes AND pulls
-
-`_flowLoop` only ever pushed: it fills a page and moves the overflow onto the
-next one. Nothing came back, so deleting text left a short page — and at worst
-a completely empty one — with full pages after it, and the save preserved that
-gap forever. A real document turned up as seven pages: four full, page five
-empty, the last two half filled.
-
-`_pullLoop` runs after every flow and does the other half: while a page has
-room, it takes the first thing off the next page; if that tips the page over,
-it goes straight back and the pull stops there. Whole nodes only, so pages come
-out filled but not perfectly level — a node that doesn't fit ends the pull.
-
-`dropGapPages` then removes a page left with nothing on it **while later pages
-still have content**. That distinction is the whole point: a gap goes, a
-trailing empty page is one someone added to type on and stays. Cover and PDF
-pages are never touched. It snapshots page HTML by id and pours it back around
-the `setState`, because page content lives in the DOM and the list renders
-positionally — see the next section.
-
-Verified against the real document: the gap closed, the empty page ended up at
-the end, and the character count was identical either side (11,214).
+Several fixes made during that episode are worth keeping and are unrelated to
+columns: the float-based spread, the pull-back half of pagination, gap-page
+removal, and `splitNodeForPageFlow`.
 
 ## Inserting a page mid-document shifts everyone's content
 
@@ -606,6 +530,28 @@ Scope limit worth knowing before a bug report: the bar only ever mirrors the
 rest of the page. The whole-document big-text view is Reflow, which is
 phone-only (`reflowVisible` requires `narrowScreen`) and rewrites pagination on
 the way in and out.
+
+## Copying a picture: Ctrl+C needs a real selection
+
+A `copy` event only fires when the **document** has a selection, and a selected
+picture is the app's own idea — the browser knows nothing about it. So Ctrl+C is
+caught in `_onImgKeyDown`, which puts the wrapper into the real selection and
+then deliberately does **not** prevent the default, so the native copy proceeds
+and `_onImgCopy` can replace the payload with just the picture.
+
+On paste, a copied picture must skip `sanitizeHTML` — that strips the inline
+sizing and the `contenteditable="false"` which make it one object rather than a
+loose `<img>` the caret can wander into. `imgWrapPasteHtml` pulls the wrapper
+out of the clipboard's HTML (browsers wrap copied markup in a whole document)
+and returns `''` for anything else, so ordinary pastes fall through untouched.
+
+An internal clipboard stash was tried as a fallback for when the clipboard
+arrives empty, and removed: pasting from an app that supplies no data would
+silently insert a picture nobody asked for.
+
+Testing note: during a `copy` event `clipboardData` is **write-only** —
+`getData` returns `''` by spec — and the OS clipboard round-trip is unreliable
+headless. Verify by dispatching a `paste` with a `DataTransfer` you built.
 
 ## Click-away dismissal must check where the press STARTED
 

@@ -902,12 +902,7 @@ MAKE SENSE?" rows="6" class="raw-address-input" style="width:300px;max-width:100
           <button class="btn btn-ghost" sc-camel-on-click="{{ onBackFromDocLayoutChoice }}" title="Back" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;box-sizing:border-box;padding:0;font-size:10px;line-height:1;z-index:1;background:#fff;">⌂</button>
           <div style="text-align:center;">
             <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:10px;">Full Page Document</div>
-            <div style="display:flex;gap:14px;justify-content:center;margin-bottom:20px;">
-              <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}"></button>
-              <button sc-camel-on-click="{{ fullPageThumb.onPickTwoCol }}" title="One plain page in two columns — text flows down the left column and up the right. Set now, not changeable later." style="{{ fullPageThumb.twoColWrapStyle }}">
-                <div style="{{ fullPageThumb.twoColGapStyle }}"></div>
-              </button>
-            </div>
+            <button sc-camel-on-click="{{ fullPageThumb.onPick }}" title="One plain page, no boxes — start typing right away" style="{{ fullPageThumb.wrapStyle }}margin-bottom:20px;"></button>
           </div>
           <div style="text-align:center;">
             <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--setup-text);margin-bottom:4px;">Layout Document</div>
@@ -1156,7 +1151,7 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <div sc-camel-on-click="{{ onToggleHeaderGlobal }}" class="no-print" style="position:absolute;top:0.35in;left:1in;right:1in;height:14px;border-bottom:1px dashed #ccc;cursor:pointer;"></div>
       </sc-if>
       <sc-if value="{{ p.noBoxes }}" hint-placeholder-val="{{ true }}">
-        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}{{ p.columnStyle }}"></div>
+        <div class="editable" sc-camel-content-editable="{{ p.editable }}" sc-camel-suppress-content-editable-warning="true" ref="{{ p.ref }}" sc-camel-on-paste="{{ p.onPaste }}" sc-camel-on-input="{{ p.onInput }}" sc-camel-on-focus="{{ p.onFocus }}" sc-camel-on-click="{{ p.onClick }}" sc-camel-on-key-down="{{ p.onKeyDown }}" sc-camel-on-drag-over="{{ p.onDragOver }}" sc-camel-on-drop="{{ p.onDrop }}" style="height:100%;box-sizing:border-box;padding-top:{{ p.editablePaddingTop }};padding-left:{{ p.editablePaddingX }};padding-right:{{ p.editablePaddingRight }};padding-bottom:{{ p.editablePaddingBottom }};overflow:hidden;display:{{ p.editableDisplay }};flex-direction:column;justify-content:{{ p.editableJustify }};font-family:Arial, sans-serif;font-size:14px;line-height:1.6;color:#1d1f20;background:#ffffff;{{ p.previewLockStyle }}"></div>
       </sc-if>
       <sc-if value="{{ p.boxesVisible }}" hint-placeholder-val="{{ false }}">
         <sc-for list="{{ p.boxes }}" as="b" hint-placeholder-count="1">
@@ -1291,14 +1286,9 @@ const NEWBOX_MARKER_RE = /<\s*(?:newbox|n)\s*>/i;
 // the only thing that turns one into a real page (assigning ids), so the
 // same shape doubles as both the live thumbnail preview and the template.
 const DOC_LAYOUT_THUMB_COLORS = { text: '#1d3557', image: '#b4433a', independent: '#3f8f52' };
-// Gutter between the two columns of a two-column FULL PAGE document. Chosen
-// at setup and fixed for the life of the document — it is a property of the
-// page, not something to fiddle with per paragraph.
-const DOC_COLUMN_GAP_IN = 0.4;
 const DOC_LAYOUT_TEMPLATES = [
-  { id: 'cols2', title: 'Two columns, photo top right',
-    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
-      b: { split: 'h', ratio: 0.32, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
+  { id: 'cols2', title: 'Two columns',
+    tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } },
   { id: 'col-photo-stack', title: 'Column beside a stacked photo',
     tree: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' },
       b: { split: 'h', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } } } },
@@ -1310,16 +1300,12 @@ const DOC_LAYOUT_TEMPLATES = [
   { id: 'header-photo-text', title: 'Header over a photo and text',
     tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
       b: { split: 'v', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
-  { id: 'header-cols2', title: 'Header over two columns, photo bottom left',
+  { id: 'header-cols2', title: 'Header over two columns',
     tree: { split: 'h', ratio: 0.18, a: { box: true, type: 'independent' },
-      b: { split: 'v', ratio: 0.5,
-        a: { split: 'h', ratio: 0.62, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } },
-        b: { box: true, type: 'text' } } } },
-  { id: 'rows3', title: 'Three rows, photo beside the middle',
+      b: { split: 'v', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
+  { id: 'rows3', title: 'Three rows',
     tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
-      b: { split: 'h', ratio: 0.5,
-        a: { split: 'v', ratio: 0.55, a: { box: true, type: 'text' }, b: { box: true, type: 'image' } },
-        b: { box: true, type: 'text' } } } },
+      b: { split: 'h', ratio: 0.5, a: { box: true, type: 'text' }, b: { box: true, type: 'text' } } } },
   { id: 'rows3-photo-mid', title: 'Three rows, photo in the middle',
     tree: { split: 'h', ratio: 0.3334, a: { box: true, type: 'text' },
       b: { split: 'h', ratio: 0.5, a: { box: true, type: 'image' }, b: { box: true, type: 'text' } } } },
@@ -1341,7 +1327,7 @@ const MAX_PDF_PAGES = 40;
 
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docColumns: 1, docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1389,7 +1375,6 @@ class Component extends DCLogic {
         docTitle: autoResume.docTitle || '',
         defaultSize: autoResume.defaultSize || 'letter',
         defaultOrientation: autoResume.defaultOrientation || 'portrait',
-        docColumns: autoResume.docColumns || 1,
         headerGlobalOn: !!autoResume.headerGlobalOn,
         magnifierOn: autoResume.magnifierOn !== false,
         pageHeaderTitles: autoResume.pageHeaderTitles || {},
@@ -1460,6 +1445,22 @@ class Component extends DCLogic {
     };
     this._onImgKeyDown = (e) => {
       if (!this._selectedImg) return;
+      // Ctrl+C. A `copy` event only fires when the DOCUMENT has a selection,
+      // and a selected picture is our own idea, not the browser's — so put the
+      // wrapper into the real selection and let the native copy proceed. The
+      // copy listener above then replaces the payload with just the picture.
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        const sel = window.getSelection();
+        if (sel) {
+          const r = document.createRange();
+          try {
+            r.selectNode(this._selectedImg);
+            sel.removeAllRanges();
+            sel.addRange(r);
+          } catch (err) {}
+        }
+        return;             // deliberately NOT prevented: the copy must happen
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         this._imgDeleteAsking = true;
@@ -1468,9 +1469,21 @@ class Component extends DCLogic {
         this.clearPageImageSelection();
       }
     };
+    // Ctrl+C on a selected picture. Written as real clipboard HTML rather than
+    // an internal stash so it survives between documents and tabs, and so the
+    // ordinary paste path can recognise it.
+    this._onImgCopy = (e) => {
+      if (!this._selectedImg || !e.clipboardData) return;
+      const copy = this._selectedImg.cloneNode(true);
+      copy.style.removeProperty('outline');   // the selection chrome never travels
+      e.clipboardData.setData('text/html', copy.outerHTML);
+      e.clipboardData.setData('text/plain', '');
+      e.preventDefault();
+    };
     this._onImgReposition = () => { if (this._selectedImg) this.renderPageImageChrome(); };
     document.addEventListener('mousedown', this._onImgMouseDown, true);
     document.addEventListener('keydown', this._onImgKeyDown, true);
+    document.addEventListener('copy', this._onImgCopy, true);
     window.addEventListener('scroll', this._onImgReposition, true);
     window.addEventListener('resize', this._onImgReposition);
     // The toolbar's real height depends on the toggle button's rendered
@@ -3444,9 +3457,8 @@ class Component extends DCLogic {
     if (node.box) return { box: true, id: this.newBoxId(), type: node.type, number: null, ...this.defaultBoxAlign(node.type) };
     return { split: node.split, ratio: node.ratio, a: this.instantiateBoxTemplate(node.a), b: this.instantiateBoxTemplate(node.b) };
   }
-  onPickFullPageDocument(cols) {
-    this.setState(this.freshDocumentState({ docColumns: cols === 2 ? 2 : 1 }),
-      () => this.finishSetupSideEffects());
+  onPickFullPageDocument() {
+    this.setState(this.freshDocumentState(), () => this.finishSetupSideEffects());
   }
   onPickDocLayoutTemplate(templateId) {
     const template = DOC_LAYOUT_TEMPLATES.find(t => t.id === templateId);
@@ -3491,7 +3503,6 @@ class Component extends DCLogic {
       pdfNoticeOpen: false,
       pdfWasResized: false,
       docTitle: '',
-      docColumns: 1,
       headerGlobalOn: false,
       docLayoutMode: false,
       docStreamOpen: false,
@@ -3761,6 +3772,7 @@ class Component extends DCLogic {
     document.removeEventListener('selectionchange', this._onSelectionChangeAny);
     document.removeEventListener('mousedown', this._onImgMouseDown, true);
     document.removeEventListener('keydown', this._onImgKeyDown, true);
+    document.removeEventListener('copy', this._onImgCopy, true);
     window.removeEventListener('scroll', this._onImgReposition, true);
     window.removeEventListener('resize', this._onImgReposition);
     document.removeEventListener('selectionchange', this._onMagnifierSync);
@@ -3837,7 +3849,6 @@ class Component extends DCLogic {
       pageIds: this.state.pageIds,
       docTitle: this.state.docTitle,
       defaultSize: this.state.defaultSize,
-      docColumns: this.state.docColumns || 1,
       defaultOrientation: this.state.defaultOrientation,
       headerGlobalOn: this.state.headerGlobalOn,
       magnifierOn: this.state.magnifierOn !== false,
@@ -3874,7 +3885,6 @@ class Component extends DCLogic {
     this.setState({
       pageIds: data.pageIds,
       docTitle: data.docTitle || '',
-      docColumns: data.docColumns || 1,
       defaultSize: data.defaultSize || data.size || 'letter',
       defaultOrientation: data.defaultOrientation || data.orientation || 'portrait',
       headerGlobalOn: !!data.headerGlobalOn,
@@ -4459,19 +4469,11 @@ class Component extends DCLogic {
     return n;
   }
 
-  // Whether a page's text has outgrown its sheet.
-  //
-  // A one-column page overflows DOWNWARD, which is what scrollHeight measures.
-  // A two-column page does not: CSS multicol answers content that won't fit by
-  // adding another column, so scrollHeight stays exactly equal to clientHeight
-  // however much is typed, while scrollWidth grows. Testing only the height
-  // meant a two-column page never flowed on to page 2 — it kept spilling into
-  // a third column that the page then clipped, and the text was simply gone
-  // from view.
+  // Whether a page's text has outgrown its sheet. Pages flow in one column, so
+  // "too much" always means too tall. Kept as its own method because the flow
+  // loop and splitNodeForPageFlow must agree on the answer exactly.
   editableOverflows(el) {
-    if (!el) return false;
-    if (el.scrollHeight > el.clientHeight + 1) return true;
-    return this.state.docColumns === 2 && el.scrollWidth > el.clientWidth + 1;
+    return !!el && el.scrollHeight > el.clientHeight + 1;
   }
 
   // The other half of pagination. _flowLoop only ever PUSHES: it fills a page
@@ -5638,6 +5640,20 @@ class Component extends DCLogic {
     }
   }
 
+  // Pulls just the picture out of clipboard HTML. Browsers wrap copied markup
+  // in a whole document with fragment markers around it, and none of the rest
+  // is wanted. Returns '' when the clipboard holds anything else, so ordinary
+  // pastes fall through untouched.
+  imgWrapPasteHtml(html) {
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const wrap = doc.querySelector('.img-wrap');
+      if (!wrap || !wrap.querySelector('img')) return '';
+      wrap.style.removeProperty('outline');   // the selection chrome never travels
+      return wrap.outerHTML;
+    } catch (err) { return ''; }
+  }
+
   onPaste(e, pageId) {
     e.preventDefault();
     this.checkpoint(pageId);
@@ -5657,7 +5673,14 @@ class Component extends DCLogic {
     if (!handledImage) {
       const html = e.clipboardData.getData('text/html');
       const text = e.clipboardData.getData('text/plain');
-      if (html) {
+      // A picture copied out of a DZDocu page arrives as its own wrapper.
+      // It must NOT go through sanitizeHTML, which strips the inline sizing and
+      // the contenteditable=false that make it a single object rather than a
+      // loose <img> the caret can wander into.
+      const picture = html && this.imgWrapPasteHtml(html);
+      if (picture) {
+        this.insertHTML(pageId, picture);
+      } else if (html) {
         this.insertHTML(pageId, this.sanitizeHTML(html));
       } else if (text) {
         const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
@@ -5968,12 +5991,6 @@ class Component extends DCLogic {
         onAddBox: (dir) => this.splitPageIntoBoxes(id, dir),
         boxSplitPromptOpenHere: this.state.boxSplitPromptOpen && this.focusedPageId === id,
         previewLockStyle: this.state.narrowScreen ? 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;' : '',
-        // A two-column FULL PAGE document is ordinary flowing text in CSS
-        // columns, not boxes — nothing to focus, nothing to resize, and the
-        // caret crosses the gap by itself. Suppressed on a PDF page, whose
-        // artwork fills the sheet edge to edge.
-        columnStyle: (this.state.docColumns === 2 && !this.state.pdfPageIds[id])
-          ? 'column-count:2;column-gap:' + DOC_COLUMN_GAP_IN + 'in;column-fill:auto;' : '',
         sectionRef: (el) => { if (el) this.sectionEls[id] = el; },
         onPaste: (e) => this.onPaste(e, id),
         onInput: () => this.handleInput(id),
@@ -6126,14 +6143,8 @@ class Component extends DCLogic {
         const dims = this.dimsFor(this.state.defaultSize, this.state.defaultOrientation);
         const h = 108, w = Math.round(h * (dims.w / dims.h));
         return {
-          onPick: () => this.onPickFullPageDocument(1),
+          onPick: () => this.onPickFullPageDocument(),
           wrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:inline-block;',
-          // Same sheet, drawn with the gutter down the middle so the two
-          // options read as the same kind of thing — one plain, one in two
-          // columns — rather than as a page next to a diagram.
-          onPickTwoCol: () => this.onPickFullPageDocument(2),
-          twoColWrapStyle: 'position:relative;width:' + w + 'px;height:' + h + 'px;background:' + DOC_LAYOUT_THUMB_COLORS.text + ';border:0;padding:0;border-radius:4px;overflow:hidden;cursor:pointer;display:inline-block;',
-          twoColGapStyle: 'position:absolute;top:0;bottom:0;left:50%;width:5px;transform:translateX(-50%);background:var(--setup-panel-bg);',
         };
       })(),
       docLayoutTemplates: (() => {
