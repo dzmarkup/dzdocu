@@ -359,6 +359,29 @@ version — only changing the outer display type does. Note also that
 so poking at them from the console gives inconsistent answers; change
 `COLS_STYLES` and re-test instead.
 
+## Pagination pushes AND pulls
+
+`_flowLoop` only ever pushed: it fills a page and moves the overflow onto the
+next one. Nothing came back, so deleting text left a short page — and at worst
+a completely empty one — with full pages after it, and the save preserved that
+gap forever. A real document turned up as seven pages: four full, page five
+empty, the last two half filled.
+
+`_pullLoop` runs after every flow and does the other half: while a page has
+room, it takes the first thing off the next page; if that tips the page over,
+it goes straight back and the pull stops there. Whole nodes only, so pages come
+out filled but not perfectly level — a node that doesn't fit ends the pull.
+
+`dropGapPages` then removes a page left with nothing on it **while later pages
+still have content**. That distinction is the whole point: a gap goes, a
+trailing empty page is one someone added to type on and stays. Cover and PDF
+pages are never touched. It snapshots page HTML by id and pours it back around
+the `setState`, because page content lives in the DOM and the list renders
+positionally — see the next section.
+
+Verified against the real document: the gap closed, the empty page ended up at
+the end, and the character count was identical either side (11,214).
+
 ## Inserting a page mid-document shifts everyone's content
 
 Page content lives in the DOM, written imperatively (`el.innerHTML`), while
@@ -477,82 +500,36 @@ only act while `setupStep === 'size'` / `docCreated` is false — this is what
 stops them from hijacking the orientation/label-address steps' own text
 fields, which share the same overlay and background.
 
-## E-SAVE sends two files, and why the second one isn't a PDF
+## E-SAVE sends the .docu, and only the .docu
 
-The email carries the `.docu` **and** a standalone `.html` copy. The `.docu` is
-the editable original that only DZDocu opens; the HTML is so a recipient
-without the app gets something they can actually read — and, because it ships
-with the app's own stylesheet, printing it produces the same pages the app
-would. That is also the PDF story: **the app has no PDF writer.** Every PDF it
-makes comes from `window.print()`, and the browser hands that file straight to
-the save dialog — JavaScript never sees the bytes, so a PDF simply cannot be
-attached without either a rasterising library (loses real text, and none of the
-print CSS) or server-side rendering (Cloudflare Browser Rendering, a paid
-add-on). Neither was worth it; the HTML gets a recipient to a correct PDF in
-one keystroke.
+It briefly sent a second, readable attachment as well. Both versions were
+built, tested and then withdrawn — don't rebuild either without reading this.
 
-`buildStandaloneHtml()` **clones the live `<section class="page">` elements**
-rather than rebuilding from state — they already render boxes, labels, headers
-and full-bleed PDF pages correctly, and there is no second code path to keep in
-step. Three things it must keep doing:
+- **A standalone HTML copy.** Correct when opened directly, but webmail strips
+  `<style>` before previewing an attachment, and the sheet geometry lived
+  there. That was fixed by writing the page box onto each section inline as
+  well — and it *still* previewed as one giant page in Porkbun webmail, so the
+  approach was abandoned rather than chased further.
+- **A rasterised PDF.** Each page was drawn by cloning it into an SVG
+  `<foreignObject>` and painting that to a canvas — which works, and is the
+  right technique if this is ever revisited. **html2canvas was tried first and
+  is not the answer**: it renders two-column layouts fine but re-implements CSS
+  text layout and runs words together ("long enough to wrap onto" became
+  "longenoughto wraponto"). What killed the PDF was scale: a real document ran
+  to 63 pages, which fails outright ("Could not draw this page") and would blow
+  past the Worker's 15MB cap long before that.
 
-- **Strip the inline layout `updateColsLayout()` writes onto each section.** In
-  a two-page spread that's `width:calc(50% - 28.8px)` plus an `aspect-ratio`,
-  and being inline it beats the exported sheet geometry — the export came out
-  654px wide and spilled onto a third sheet until this was cleared. The sheet
-  rules also carry `!important` as a second line of defence.
-- **Carry the whole app stylesheet** (every `<style>` in the document), so
-  `.editable`, fonts and the print rules behave identically. Its UI rules match
-  nothing in the export.
-- **Restate the page box in inches**, because doc-page's geometry lives in a
-  shadow root that can't travel with the clone.
-- **Write that page box onto each section INLINE as well as in the stylesheet.**
-  Webmail strips `<style>` before previewing an attachment, and the whole sheet
-  geometry lived in there — 27KB of a 28KB export — so a previewed document
-  came out as one full-width column of unstyled text (reported from Porkbun
-  webmail). Inline styles are what mail clients keep, since that is how HTML
-  email works at all. Verified by stripping every `<style>` block from a real
-  export and re-measuring: pages stay 816x1056. Anything new that the sheet
-  cannot look right without belongs inline too.
+**The app has no PDF writer and cannot get one cheaply.** Every PDF it makes
+comes from `window.print()`, and the browser hands that file straight to the
+save dialog — JavaScript never sees the bytes. A true vector PDF needs
+server-side rendering (Cloudflare Browser Rendering, Workers Paid, $5/mo).
+Rasterising is the only client-side route and produces a picture of the text:
+not selectable, not searchable, and enormous for a long document.
 
-The `htmlFilename`/`htmlDataUrl` fields are **additive** — a Worker predating
-them ignores both and sends the `.docu` alone, so app and Worker can be
-deployed in either order. The client drops the HTML (keeping the `.docu`) if
-the pair would exceed the Worker's 15MB cap; a document full of PDF pages can
-be most of that by itself.
-
-The footer link back to dzdocu.com is `.dz-made`, screen-only — deliberate, and
-deliberately never printed.
-
-### E-SAVE PDF, and why it does NOT use html2canvas
-
-The second button sends a rasterised PDF instead of the HTML. It renders each
-page by cloning it into an SVG `<foreignObject>` and painting that to a canvas
-— i.e. it hands the drawing back to the engine that laid the page out.
-
-**html2canvas was tried and rejected.** It handled the two-column layout
-correctly, but it re-implements CSS text layout itself and ran words together:
-"long enough to wrap onto" came out as "longenoughto wraponto". It cannot set
-type. Don't reach for it again; `pageToJpeg()` is 30 lines and correct.
-
-Things that keep it working:
-
-- **Everything must travel inside the SVG.** It cannot reach back into the
-  document, so the whole stylesheet is inlined with the clone.
-- **No external images, ever.** One would taint the canvas and make
-  `toDataURL` throw. The app's images are already data URLs, which is the only
-  reason this works.
-- **`PDF_EXPORT_DPI` is 96** — CSS pixels 1:1, no resampling. File size grows
-  with the square (144 is 2.25x, 288 is 9x) against a 15MB Worker cap, so it
-  is a budget rather than a dial to turn idly.
-- The text is a **picture** of text: not selectable, not searchable. That is
-  inherent to rasterising and is why the `.docu` and the HTML copy still exist
-  — the HTML prints to a proper vector PDF in one keystroke. A true vector PDF
-  needs server-side rendering (Cloudflare Browser Rendering, Workers Paid).
-
-The PDF rides the **same** `htmlFilename`/`htmlDataUrl` fields the HTML uses —
-the Worker attaches any filename + data URL pair — so this needed no Worker
-change at all.
+The Worker still accepts optional `htmlFilename`/`htmlDataUrl` fields and will
+attach whatever filename + data URL pair it is given. The app no longer sends
+them, so nothing needs redeploying, and a future second attachment would need
+no Worker change.
 
 ## The magnifier places the caret; it is not a second editor
 
