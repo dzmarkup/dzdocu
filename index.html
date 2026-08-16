@@ -1007,6 +1007,8 @@ FOR MULTIPLE ADDRESSES, LEAVE A BLANK LINE BETWEEN EACH ONE." rows="6" class="ra
         <sc-if value="{{ emailSaveEnabled }}" hint-placeholder-val="{{ false }}">
           <input type="email" value="{{ emailAddress }}" sc-camel-on-change="{{ onEmailAddressChange }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:Arial, sans-serif;font-size:14px;margin-bottom:10px;color:#1d1f20;" />
           <button class="btn btn-primary" sc-camel-on-click="{{ onSendToEmail }}" disabled="{{ emailSending }}" style="width:100%;background:var(--color-accent,#5980a6);color:#fff;">{{ emailSendBtnLabel }}</button>
+          <!-- The .docu goes in both cases; this picks what rides with it. -->
+          <button class="btn" sc-camel-on-click="{{ onSendToEmailPdf }}" disabled="{{ emailSending }}" title="Sends the .docu plus a PDF of the pages. The PDF's text is a picture, not selectable — the readable copy above prints to a sharper PDF." style="width:100%;margin-top:6px;background:#111418;color:#eaf2ff;border:1px solid #2f6fb0;">{{ emailSendPdfBtnLabel }}</button>
           <sc-if value="{{ emailSendError }}" hint-placeholder-val="{{ false }}">
             <div style="font-size:12px;color:#b4433a;margin-top:8px;">{{ emailSendError }}</div>
           </sc-if>
@@ -1338,6 +1340,17 @@ const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 // and the save silently starts failing. Refused up front with a plain message
 // rather than importing something that can't be kept.
 const MAX_PDF_PAGES = 40;
+
+// "E-SAVE PDF" rasterises each page and wraps it in a PDF. 96 DPI is CSS
+// pixels 1:1 — no resampling in either direction, so it matches the screen
+// exactly. Raising it multiplies file size by the square (144 is 2.25x, 288 is
+// 9x) and the Worker only accepts 15MB, so it is a real budget, not a dial to
+// turn idly. The text in this PDF is a picture of text: not selectable, not
+// searchable. That is inherent to rasterising, and it is why the .docu and the
+// HTML copy both still go out — the HTML prints to a proper vector PDF in one
+// keystroke.
+const PDF_EXPORT_DPI = 96;
+const PDF_EXPORT_QUALITY = 0.92;
 
 class Component extends DCLogic {
   state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docColumns: 1, docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
@@ -4044,6 +4057,85 @@ class Component extends DCLogic {
       + '</body>\n</html>\n';
   }
 
+  // Renders one page to a JPEG the way the BROWSER draws it, by wrapping a
+  // clone in an SVG <foreignObject> and painting that to a canvas.
+  //
+  // The obvious library for this is html2canvas, and it was tried and thrown
+  // out: it re-implements CSS text layout itself and ran words together —
+  // "long enough to wrap onto" came out as "longenoughto wraponto". It handled
+  // the two-column layout fine; it just can't set type. foreignObject has no
+  // such problem because it isn't re-implementing anything, it hands the job
+  // back to the engine that laid the page out in the first place.
+  //
+  // Everything the page needs must travel inside the SVG — it cannot reach
+  // back into the document — so the whole stylesheet goes with the clone. Any
+  // EXTERNAL image would taint the canvas and make toDataURL throw; the app's
+  // own images are data URLs already, which is why this works at all.
+  async pageToJpeg(sec, scale) {
+    const w = sec.offsetWidth, h = sec.offsetHeight;
+    const clone = sec.cloneNode(true);
+    clone.querySelectorAll('.no-print').forEach(n => n.remove());
+    clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+    ['width', 'height', 'aspect-ratio', 'margin', 'transform', 'float', 'display',
+      'opacity', 'z-index', 'vertical-align'].forEach(p => clone.style.removeProperty(p));
+    clone.style.cssText += ';width:' + w + 'px;height:' + h + 'px;background:#ffffff;margin:0;';
+    const css = [].slice.call(document.querySelectorAll('style'))
+      .map(s => s.textContent || '').join('\n')
+      .replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">'
+      + '<foreignObject width="100%" height="100%">'
+      + '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#ffffff;">'
+      + '<style>' + css + '</style>' + clone.outerHTML
+      + '</div></foreignObject></svg>';
+    const img = new Image();
+    const loaded = new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error('Could not draw this page.'));
+    });
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await loaded;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', PDF_EXPORT_QUALITY);
+  }
+
+  // Every page of the document as one PDF, page-sized to the real sheet so it
+  // opens and prints at the right size. Rasterised, so the text is a picture
+  // of the text rather than selectable characters — see PDF_EXPORT_DPI.
+  async buildPdfDataUrl() {
+    await this.ensureJsPdf();
+    const dims = this.getDims();
+    const scale = PDF_EXPORT_DPI / 96;   // CSS pixels are 96 per inch
+    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPDF) throw new Error('PDF writer failed to load.');
+    const pdf = new JsPDF({
+      orientation: dims.w > dims.h ? 'landscape' : 'portrait',
+      unit: 'in',
+      format: [dims.w, dims.h],
+    });
+    const ids = this.state.pageIds;
+    for (let i = 0; i < ids.length; i++) {
+      const sec = this.sectionEls[ids[i]];
+      if (!sec) continue;
+      const jpeg = await this.pageToJpeg(sec, scale);
+      if (i > 0) pdf.addPage([dims.w, dims.h], dims.w > dims.h ? 'landscape' : 'portrait');
+      pdf.addImage(jpeg, 'JPEG', 0, 0, dims.w, dims.h);
+    }
+    return pdf.output('datauristring');
+  }
+
+  // Same lazy-load pattern as pdf.js and mammoth: 420KB nobody pays for
+  // unless they actually ask for a PDF.
+  async ensureJsPdf() {
+    if (window.jspdf && window.jspdf.jsPDF) return;
+    await this.loadScriptOnce('assets/jspdf.umd.min.js');
+  }
+
   onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
   onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
   onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
@@ -4054,7 +4146,10 @@ class Component extends DCLogic {
   // document" — as a base64 attachment to a Cloudflare Worker, which is the
   // only piece able to actually hold an email-service key safely, since this
   // whole site is static with nowhere else to keep a secret.
-  async onSendToEmail() {
+  // kind: 'html' sends the readable copy (default, cheap, prints to a proper
+  // vector PDF at the other end); 'pdf' sends a rasterised PDF instead. Both
+  // always carry the .docu, which is the actual save.
+  async onSendToEmail(kind) {
     const email = (this.state.emailAddress || '').trim();
     if (!EMAIL_WORKER_URL) {
       this.setState({ emailSendStatus: 'error', emailSendError: "Email saving isn't set up yet." });
@@ -4075,10 +4170,22 @@ class Component extends DCLogic {
       // The readable companion. Built defensively: a document that won't
       // export is not a reason to fail the send, since the .docu — the thing
       // actually being saved — is fine either way.
-      let htmlDataUrl = null;
-      try {
-        htmlDataUrl = 'data:text/html;base64,' + b64(this.buildStandaloneHtml());
-      } catch (e) { htmlDataUrl = null; }
+      // The second attachment. The Worker takes any filename + data URL pair,
+      // so the PDF rides the same two fields the HTML does and needs no
+      // Worker change to go out.
+      let extraName = title + '.html', extraDataUrl = null;
+      if (kind === 'pdf') {
+        extraName = title + '.pdf';
+        try { extraDataUrl = await this.buildPdfDataUrl(); } catch (e) {
+          this.setState({ emailSendStatus: 'error',
+            emailSendError: (e && e.message) || "Couldn't build the PDF." });
+          return;
+        }
+      } else {
+        try { extraDataUrl = 'data:text/html;base64,' + b64(this.buildStandaloneHtml()); }
+        catch (e) { extraDataUrl = null; }
+      }
+      let htmlDataUrl = extraDataUrl;
       // The Worker refuses a payload over 15MB, and a document carrying PDF
       // pages or photos can be most of that on its own. The .docu wins that
       // contest — dropping the copy still delivers the document, dropping the
@@ -4092,7 +4199,7 @@ class Component extends DCLogic {
         // can be deployed in either order.
         body: JSON.stringify({
           email, filename: title + '.docu', dataUrl,
-          htmlFilename: title + '.html', htmlDataUrl,
+          htmlFilename: extraName, htmlDataUrl,
         }),
       });
       const result = await resp.json().catch(() => ({}));
@@ -6008,9 +6115,11 @@ class Component extends DCLogic {
       onToggleEmailEnabled: () => this.onToggleEmailEnabled(),
       emailAddress: this.state.emailAddress,
       onEmailAddressChange: (e) => this.onEmailAddressChange(e),
-      onSendToEmail: () => this.onSendToEmail(),
+      onSendToEmail: () => this.onSendToEmail('html'),
+      onSendToEmailPdf: () => this.onSendToEmail('pdf'),
       emailSending: this.state.emailSendStatus === 'sending',
-      emailSendBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send',
+      emailSendBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send .docu + readable copy',
+      emailSendPdfBtnLabel: this.state.emailSendStatus === 'sending' ? 'Sending…' : 'Send .docu + PDF',
       emailSendError: this.state.emailSendStatus === 'error' ? this.state.emailSendError : null,
       emailSent: this.state.emailSendStatus === 'sent',
       uniformBtnStyle: 'background:#ffffff;border:2px solid #000000;box-shadow:3px 3px 6px 0 rgba(0,0,0,0.7),inset 2px 2px 5px 0 rgba(0,0,0,0.6);',
