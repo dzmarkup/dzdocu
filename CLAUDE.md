@@ -531,6 +531,23 @@ rest of the page. The whole-document big-text view is Reflow, which is
 phone-only (`reflowVisible` requires `narrowScreen`) and rewrites pagination on
 the way in and out.
 
+## The desk notepads are workspace, not document
+
+Two sticky-note pads sit on the desk either side of the page, for parking a
+sentence while something else is moved around. Three deliberate choices:
+
+- **They are NOT in `buildSaveData`.** A `.docu` gets emailed, and a scratch
+  note is exactly what you would not want travelling with it. They live in
+  their own `dzdocu-notepads` localStorage key, so they survive a reload and
+  follow you between documents — which is what a note left on a desk should
+  do. Do not "fix" this by adding them to the document's save data.
+- **Sticky-note blue, never white.** A pad must not be mistakable for paper.
+- **Gated on `deskRoomy`** (`NOTEPAD_MIN_WINDOW_PX`, 1180) as well as
+  `narrowScreen`. Below that the page fills the window and there is nowhere to
+  put a pad without covering it, so they simply aren't rendered.
+
+`.no-print`, like the rest of the desk furniture.
+
 ## Copying a picture: Ctrl+C needs a real selection
 
 A `copy` event only fires when the **document** has a selection, and a selected

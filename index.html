@@ -581,6 +581,21 @@ textarea.input { min-height: 90px; resize: vertical; }
 </div>
 </sc-if>
 
+<!-- Two scratch pads on the desk, one either side of the page, for parking a
+     sentence while something else is moved around. Desktop only and only when
+     the window is wide enough that they aren't covering the page; never
+     printed; never saved into the document (see loadNotepads). -->
+<sc-if value="{{ notepadsVisible }}" hint-placeholder-val="{{ false }}">
+  <div class="no-print" style="position:fixed;left:44px;top:calc(25vh + 360px);z-index:18;width:200px;">
+    <div style="font-family:Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;margin-bottom:3px;">Notes</div>
+    <textarea value="{{ notepadLeft }}" sc-camel-on-change="{{ onNotepadLeftChange }}" placeholder="Park a sentence here…" style="{{ notepadStyle }}"></textarea>
+  </div>
+  <div class="no-print" style="position:fixed;right:44px;top:calc(25vh + 360px);z-index:18;width:200px;">
+    <div style="font-family:Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9dc6f0;margin-bottom:3px;text-align:right;">Notes</div>
+    <textarea value="{{ notepadRight }}" sc-camel-on-change="{{ onNotepadRightChange }}" placeholder="…or here" style="{{ notepadStyle }}"></textarea>
+  </div>
+</sc-if>
+
 <!-- The magnifier. A read-only mirror of the line being typed, at a size that
      can be read at arm's length. It never takes focus and never prints; it
      only reads from the page. Documents only for now. -->
@@ -1325,9 +1340,18 @@ const EMAIL_WORKER_URL = 'https://dzdocu.dzmarkup.workers.dev';
 // rather than importing something that can't be kept.
 const MAX_PDF_PAGES = 40;
 
+// The two scratch notepads that sit on the desk either side of the page.
+// Desk space is what decides whether they appear at all: below this the page
+// fills the window and there is nowhere to put them without covering it.
+const NOTEPAD_MIN_WINDOW_PX = 1180;
+// About a paragraph each. Not a size limit so much as a statement of intent —
+// this is somewhere to park a sentence while you move something else, not a
+// second document.
+const NOTEPAD_MAX_CHARS = 900;
+
 
 class Component extends DCLogic {
-  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false };
+  state = { pageIds: ['p1'], defaultSize: 'letter', defaultOrientation: 'portrait', docTitle: '', pageKinds: {}, headerGlobalOn: false, pageHeaderTitles: {}, pageEmptyMap: {}, docCreated: false, setupStep: 'size', customFonts: [], fontPickerOpen: false, fontSearch: '', labelAddressRaw: '', pendingLabelAddresses: null, pageAddresses: {}, addPageStep: null, addPageAddressRaw: '', showReturnOnLabel: false, charSearch: '', charPickerOpen: false, returnAddressRaw: '', returnAddressIsDefault: false, layoutMode: false, layoutBox: 'main', layoutStep: 0, layoutFullMenu: false, labelLayouts: {}, pageBoxTrees: {}, boxSplitPromptOpen: false, docLayoutMode: false, docStreamOpen: false, docPreviewOn: false, docBoxOverflowId: null, boxDeletePromptId: null, emailSaveEnabled: false, emailPromptOpen: false, emailAddress: '', emailSendStatus: 'idle', emailSendError: null, magnifierLines: 1, fontPendingFamily: null, fontPendingSize: null, addPageKind: null, selectedImageBoxId: null, imageDeletePromptId: null, vertAlignNoticeMsg: null, autoResumeBannerOpen: false, queuedDropNames: [], pdfPageIds: {}, pdfPageText: {}, pdfNoticeOpen: false, pdfWasResized: false, selFontFamily: '', selFontSize: '', selBold: false, selItalic: false, selUnderline: false, notepads: ['', ''], deskRoomy: true };
 
   static CHAR_LIST = [
     ['—', 'em dash'], ['–', 'en dash'], ['…', 'ellipsis'], ['•', 'bullet'], ['·', 'middle dot'],
@@ -1504,10 +1528,14 @@ class Component extends DCLogic {
         if (!narrow) this.setPreviewLocked(false);
         this.setState({ narrowScreen: narrow });
       }
+      const roomy = window.innerWidth >= NOTEPAD_MIN_WINDOW_PX;
+      if (roomy !== this.state.deskRoomy) this.setState({ deskRoomy: roomy });
       this.syncMagnifierPosition();
     };
     window.addEventListener('resize', this._onResize);
     if (window.innerWidth <= 700) this.setState({ narrowScreen: true });
+    if (window.innerWidth < NOTEPAD_MIN_WINDOW_PX) this.setState({ deskRoomy: false });
+    this.loadNotepads();
     // The magnifier follows the caret, so it listens to selection as well as
     // typing — arrow keys and taps move the caret without firing input.
     this._onMagnifierSync = () => {
@@ -4008,6 +4036,32 @@ class Component extends DCLogic {
     return () => { if (this._backdropPressedSelf) handler(); };
   }
 
+  // Notepads are workspace, not document. They deliberately do NOT go into
+  // buildSaveData: a .docu gets emailed, and a scratch note is exactly the
+  // sort of thing you would not want travelling with it. Kept in their own
+  // localStorage key so they survive a reload and follow you between
+  // documents, which is what a note parked on the desk should do.
+  loadNotepads() {
+    try {
+      const raw = localStorage.getItem('dzdocu-notepads');
+      if (!raw) return;
+      const pads = JSON.parse(raw);
+      if (Array.isArray(pads)) this.setState({ notepads: [pads[0] || '', pads[1] || ''] });
+    } catch (e) {}
+  }
+
+  saveNotepads() {
+    try { localStorage.setItem('dzdocu-notepads', JSON.stringify(this.state.notepads)); } catch (e) {}
+  }
+
+  onNotepadChange(i, value) {
+    this.setState(s => {
+      const notepads = [...s.notepads];
+      notepads[i] = (value || '').slice(0, NOTEPAD_MAX_CHARS);
+      return { notepads };
+    }, () => this.saveNotepads());
+  }
+
   onOpenEmailPanel() { this.setState({ emailPromptOpen: true, emailSendStatus: 'idle', emailSendError: null }); }
   onCloseEmailPanel() { this.setState({ emailPromptOpen: false }); }
   onToggleEmailEnabled() { this.setState(s => ({ emailSaveEnabled: !s.emailSaveEnabled }), () => this.saveEmailPref()); }
@@ -6461,6 +6515,20 @@ class Component extends DCLogic {
         if (this.state.reflowOn !== false) { this.commitReflowStream(); this.setPreviewLocked(true); this.setState({ reflowOn: false }, () => this.applyFitScale()); }
         else { this.setPreviewLocked(false); if (this.reflowStreamEl) delete this.reflowStreamEl.dataset.built; this.setState({ reflowOn: true }, () => this.applyFitScale()); }
       },
+      // Hidden on a phone (no desk to speak of) and on any window too narrow
+      // for the pads to sit clear of the page.
+      notepadsVisible: this.state.docCreated && !this.state.narrowScreen && this.state.deskRoomy,
+      // Sticky-note blue, deliberately not white: a pad must never be mistaken
+      // for the paper. Slight lift and a soft edge so it reads as something
+      // lying ON the desk rather than part of the document.
+      notepadStyle: 'width:200px;height:150px;box-sizing:border-box;resize:none;padding:9px;'
+        + 'background:#d6eaf8;color:#1d2b36;border:1px solid #9cc4e0;border-top:3px solid #7fb2d6;'
+        + 'border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,0.45);font-family:Arial, sans-serif;'
+        + 'font-size:12px;line-height:1.45;outline:none;',
+      notepadLeft: this.state.notepads[0],
+      notepadRight: this.state.notepads[1],
+      onNotepadLeftChange: (e) => this.onNotepadChange(0, e.target.value),
+      onNotepadRightChange: (e) => this.onNotepadChange(1, e.target.value),
       magnifierRef: (el) => {
         this.magnifierEl = el;
         if (el) { this.syncMagnifierPosition(); setTimeout(() => this.paintMagnifier(), 20); }
