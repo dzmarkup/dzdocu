@@ -4092,7 +4092,10 @@ class Component extends DCLogic {
       const resp = await fetch(EMAIL_WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, filename: title + '.docu', dataUrl }),
+        // `app` tells the shared DZ Drop Zone Worker which app is asking, so
+        // the mail goes out as DZDocu rather than under the generic name. The
+        // Worker keeps the sender list itself -- this only names the app.
+        body: JSON.stringify({ app: 'dzdocu', email, filename: title + '.docu', dataUrl }),
       });
       const result = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(result.error || 'Send failed.');
