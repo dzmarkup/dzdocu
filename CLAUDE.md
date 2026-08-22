@@ -1,15 +1,32 @@
 # DZDocu — working notes for Claude
 
-This repo serves **dzdocu.com**: `CNAME`, `index.html`, and the `assets/`
-folder it loads from. `index.html` is the application. Work here and nowhere
-else.
+## THE APP IS NOT HERE ANY MORE. READ THIS FIRST.
 
-## There is an older copy of this app elsewhere — ignore it
+DZDocu now lives in **`dzmarkup/dzdropzone`, in the `dzdocu/` folder**,
+served at **dzdropzone.com/dzdocu/** alongside DZMarkup and DZVidStitch.
+**That is the live one. Every change goes there.**
 
-The same app also sits at `bluejetty.ca/docu/index.html`, in the unrelated
-`bluejetty/bluejetty` repo. That was the test bed before DOCU got its own
-domain. **This repo is the live one.** If the two ever differ, this one wins;
-do not try to reconcile them, and do not go looking for that repo.
+What is left in this repo is a redirect: `index.html` is a small page that
+sends anyone arriving at dzdocu.com to dzdropzone.com. It is not the app.
+
+- **Do not "restore" the application here.** If you find yourself editing a
+  391 KB `index.html` in this repo, you are in the wrong place — the file
+  you want is `dzdocu/index.html` in the dzdropzone repo.
+- `assets/` is still here and is dead weight. Left alone on purpose: it
+  costs nothing, and it is where the standalone copy's history lives.
+- The domain is expected to lapse eventually, at which point this repo can
+  be archived.
+
+**Everything below this line describes the application**, and is kept
+because it is the accumulated knowledge of what breaks and why. It is still
+accurate about the code — but that code is in dzdropzone now, so read it as
+reference and make the edits over there.
+
+## There was an older copy of this app elsewhere too
+
+The same app also sat at `bluejetty.ca/docu/index.html`, in the unrelated
+`bluejetty/bluejetty` repo — the test bed before DOCU got its own domain.
+Do not go looking for it, and do not try to reconcile anything with it.
 
 ## Standing preferences
 
